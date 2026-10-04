@@ -30,6 +30,7 @@ declare module 'sodium-native' {
     crypto_box_keypair(pk: Buffer, sk: Buffer): void;
     crypto_box_seal(c: Buffer, m: Buffer, pk: Buffer): void;
     crypto_box_seal_open(m: Buffer, c: Buffer, pk: Buffer, sk: Buffer): boolean;
+    crypto_generichash(out: Buffer, input: Buffer, key?: Buffer): void;
   };
   export default sodium;
 }

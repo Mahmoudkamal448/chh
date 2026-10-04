@@ -12,6 +12,8 @@ import { defaultSshConfigPath, type SshConfigIO } from '../ssh-config-io';
 import { CryptoError } from '@chh/vault-crypto';
 import type { LockManager } from '../lock';
 import type { SyncEngine } from '../sync/engine';
+import type { TeamService } from '../sync/teams';
+import type { UpdateService } from '../updater';
 import type { AiProvider } from '../ai';
 import { awsProfiles, listAws, listDigitalOcean } from '../cloud/providers';
 import type { CloudImporter } from '../cloud/import';
@@ -42,6 +44,7 @@ export interface HandlerDeps {
   history: HistoryRepo;
   sshConfig: SshConfigIO;
   sync: SyncEngine;
+  teams: TeamService;
   ai: AiProvider;
   cloud: CloudImporter;
 }
@@ -91,7 +94,7 @@ async function readLimited(path: string, max: number): Promise<string> {
   return readFile(path, 'utf8');
 }
 
-export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keystore: KeystoreKind; lock: LockManager }): Handlers {
+export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keystore: KeystoreKind; lock: LockManager; updates: UpdateService }): Handlers {
   // Data handlers need the open database; while it's closed (master password not entered yet) they fail.
   const d = new Proxy({} as HandlerDeps, {
     get(_t, k: keyof HandlerDeps) {
@@ -121,6 +124,7 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
       setSettings: (patch, e) => {
         const next = d.settings.setApp(patch);
         nativeTheme.themeSource = next.uiTheme;
+        if (patch.updates) extras.updates.start();
         emit(e.sender, 'data.changed', { kinds: ['settings'] });
         return next;
       },
@@ -193,6 +197,7 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
         });
         if (res.canceled || !res.filePath) return { saved: false };
         await writeFile(res.filePath, await d.keys.exportPrivate(id, passphrase), { mode: 0o600 });
+        d.sync.reportAudit(key.vaultId, 'secret.exported', id);
         await writeFile(`${res.filePath}.pub`, `${key.publicKey}\n`, { mode: 0o644 });
         return { saved: true };
       },
@@ -323,6 +328,31 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
         await writeFile(res.filePath, d.sshConfig.exportText(hostIds), { mode: 0o600 });
         return { saved: true };
       },
+    },
+    teams: {
+      list: () => syncCall(() => d.teams.list()),
+      create: ({ name }) => syncCall(() => d.teams.create(name)),
+      rename: ({ teamId, name }) => syncCall(() => d.teams.rename(teamId, name)),
+      members: ({ teamId }) => syncCall(() => d.teams.members(teamId)),
+      invite: ({ teamId, email, role }) => syncCall(() => d.teams.invite(teamId, email, role)),
+      cancelInvite: ({ teamId, inviteId }) => syncCall(() => d.teams.cancelInvite(teamId, inviteId)),
+      acceptInvite: ({ inviteId }) => syncCall(() => d.teams.acceptInvite(inviteId)),
+      declineInvite: ({ inviteId }) => syncCall(() => d.teams.declineInvite(inviteId)),
+      confirm: ({ teamId, userId, fingerprint }) => syncCall(() => d.teams.confirm(teamId, userId, fingerprint)),
+      setRole: ({ teamId, userId, role }) => syncCall(() => d.teams.setRole(teamId, userId, role)),
+      remove: ({ teamId, userId }) => syncCall(() => d.teams.remove(teamId, userId)),
+      rotateKey: ({ teamId }) => syncCall(() => d.teams.rotateKey(teamId)),
+      leave: ({ teamId }) => syncCall(() => d.teams.leave(teamId)),
+      delete: ({ teamId }) => syncCall(() => d.teams.delete(teamId)),
+      audit: ({ teamId, before }) => syncCall(() => d.teams.audit(teamId, before)),
+      vaults: () => d.teams.vaults(),
+      move: ({ kind, ids, vaultId }) => d.teams.move(kind, ids, vaultId),
+    },
+    updates: {
+      status: () => extras.updates.get(),
+      check: () => extras.updates.check(),
+      download: () => extras.updates.download(),
+      install: () => extras.updates.install(),
     },
     sync: {
       status: () => d.sync.status(),

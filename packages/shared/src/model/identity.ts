@@ -14,6 +14,9 @@ export type IdentityFields = z.infer<typeof IdentityFieldsSchema>;
 
 export const IdentitySchema = IdentityFieldsSchema.omit({ password: true }).extend({
   id: IdSchema,
+  /** Vault the item lives in: the personal vault or a team vault. */
+  vaultId: IdSchema,
+
   hasPassword: z.boolean(),
   updatedAt: z.number(),
 });
@@ -24,6 +27,7 @@ export const IdentityInputSchema = z.object({
   username: z.string().max(255).default(''),
   keyId: IdSchema.nullable().default(null),
   password: SecretInputSchema,
+  vaultId: IdSchema.optional(),
 });
 export type IdentityInput = z.input<typeof IdentityInputSchema>;
 

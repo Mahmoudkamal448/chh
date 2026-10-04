@@ -131,6 +131,8 @@ export const PullResponse = z.object({
   keyGen: z.number().int().optional(),
 });
 
+export type PullResponseWire = z.infer<typeof PullResponse>;
+
 export const PushChangeSchema = z.object({
   itemId: id,
   /** Revision the client last saw (0 = new item). */
@@ -221,6 +223,7 @@ export const RotateRequest = z.object({
 });
 
 export const AUDIT_CLIENT_ACTIONS = ['host.connected', 'secret.exported', 'secret.copied'] as const;
+export type ClientAuditAction = (typeof AUDIT_CLIENT_ACTIONS)[number];
 export const ReportEventsRequest = z.object({
   events: z
     .array(z.object({ action: z.enum(AUDIT_CLIENT_ACTIONS), itemId: id.nullable(), at: z.number().int() }))

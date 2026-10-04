@@ -99,8 +99,8 @@ export class KeysRepo {
 
   /** Main-process only: the decrypted OpenSSH private key for connecting or exporting. */
   getPrivate(id: string): string {
-    const f = this.getStored(id).fields;
-    return this.vault.open(f.privateKey, { itemId: id, field: PRIVATE_FIELD });
+    const item = this.getStored(id);
+    return this.vault.open(item.fields.privateKey, { itemId: id, field: PRIVATE_FIELD, vaultId: item.vaultId });
   }
 
   /** OpenSSH-format export, re-encrypted with `passphrase` if given. */
@@ -136,5 +136,5 @@ export class KeysRepo {
 
 function toKey(item: StoredItem<KeyFields>): Key {
   const { privateKey: _secret, ...rest } = item.fields;
-  return { ...rest, id: item.id, updatedAt: item.updatedAt };
+  return { ...rest, id: item.id, vaultId: item.vaultId, updatedAt: item.updatedAt };
 }

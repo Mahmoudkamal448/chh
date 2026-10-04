@@ -10,7 +10,7 @@ export const SnippetFieldsSchema = z.object({
 });
 export type SnippetFields = z.infer<typeof SnippetFieldsSchema>;
 
-export const SnippetSchema = SnippetFieldsSchema.extend({ id: IdSchema, updatedAt: z.number() });
+export const SnippetSchema = SnippetFieldsSchema.extend({ id: IdSchema, vaultId: IdSchema, updatedAt: z.number() });
 export type Snippet = z.infer<typeof SnippetSchema>;
 
 export const SnippetInputSchema = z.object({
@@ -18,6 +18,7 @@ export const SnippetInputSchema = z.object({
   script: z.string().min(1).max(65_536),
   description: z.string().max(2000).default(''),
   tags: z.array(z.string().trim().min(1).max(50)).max(50).default([]),
+  vaultId: IdSchema.optional(),
 });
 export type SnippetInput = z.input<typeof SnippetInputSchema>;
 

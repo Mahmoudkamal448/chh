@@ -20,6 +20,7 @@ import { SshConfigIO } from './ssh-config-io';
 import { AiProvider } from './ai';
 import { CloudImporter } from './cloud/import';
 import { SyncEngine } from './sync/engine';
+import { TeamService } from './sync/teams';
 import { LocalVault } from './vault/local-vault';
 import type { EventName, EventPayload } from '@chh/shared';
 
@@ -52,6 +53,7 @@ export function openContext(userData: string, key: Buffer, mainDir: string) {
   nativeTheme.themeSource = settings.getApp().uiTheme;
 
   const store = new ItemStore(db, deviceId, vault.id);
+  store.setWritePolicy((vaultId) => vault.canWrite(vaultId));
   const groups = new GroupsRepo(store);
   const hosts = new HostsRepo(store, vault, groups);
   const knownHosts = new KnownHostsRepo(store);
@@ -80,14 +82,22 @@ export function openContext(userData: string, key: Buffer, mainDir: string) {
     knownHosts,
     shells: detectShells,
     defaultShellId: () => settings.getApp().defaultShell,
+    onHostOpened: (hostId) => {
+      const vaultId = store.vaultOf(hostId);
+      if (vaultId) sync.reportAudit(vaultId, 'host.connected', hostId);
+    },
   });
+  const onRemoteChange = (types: Set<ItemType>) => broadcast('data.changed', { kinds: [...new Set([...types].map((t) => KIND_FOR[t]))] });
+  const onTeamsChanged = () => broadcast('teams.changed', {});
   const sync = new SyncEngine({
     db,
     store,
     vault,
     onStatus: (s) => broadcast('sync.state', s),
-    onRemoteChange: (types) => broadcast('data.changed', { kinds: [...new Set([...types].map((t) => KIND_FOR[t]))] }),
+    onRemoteChange,
+    onTeamsChanged,
   });
+  const teams = new TeamService({ sync, vault, store, onRemoteChange, onTeamsChanged });
 
   const ai = new AiProvider(settings, vault);
   const cloud = new CloudImporter(hosts, groups);
@@ -110,6 +120,7 @@ export function openContext(userData: string, key: Buffer, mainDir: string) {
     sshConfig,
     sessions,
     sync,
+    teams,
     close() {
       sync.stop();
       sessions.shutdown();

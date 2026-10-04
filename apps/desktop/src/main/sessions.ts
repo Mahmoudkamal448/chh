@@ -70,6 +70,8 @@ export class SessionManager {
       broadcast: <E extends EventName>(event: E, payload: EventPayload<E>) => void;
       shells: () => LocalShell[];
       defaultShellId: () => string | null;
+      /** A terminal or SFTP session to a saved host is being opened (team audit). */
+      onHostOpened?: (hostId: string) => void;
     },
   ) {}
 
@@ -225,6 +227,7 @@ export class SessionManager {
   /** Opens a terminal to a host using its protocol: SSH, Telnet or Mosh. */
   async openHost(wc: WebContents, opts: { hostId: string; cols: number; rows: number }): Promise<{ sessionId: string }> {
     const fields = this.deps.hosts.getFields(opts.hostId);
+    this.deps.onHostOpened?.(opts.hostId);
     const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
     const { id, hostPort } = this.register(wc, { kind: 'ssh', hostId: opts.hostId, label: fields.label });
     const fail = (message: string) => {
@@ -414,6 +417,7 @@ export class SessionManager {
 
   /** Opens an SFTP session; resolves once connected and authenticated. */
   async openSftp(wc: WebContents, hostId: string): Promise<{ sessionId: string }> {
+    this.deps.onHostOpened?.(hostId);
     const fields = this.deps.hosts.getFields(hostId);
     const id = this.registerNoPort(wc, { kind: 'sftp', hostId, label: fields.label });
     try {

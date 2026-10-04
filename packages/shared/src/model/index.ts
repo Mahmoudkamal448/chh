@@ -14,3 +14,5 @@ export * from './history';
 export * from './ssh-import';
 export * from './sync';
 export * from './run';
+export * from './team';
+export * from './update';

@@ -22,7 +22,7 @@ export const KeyFieldsSchema = z.object({
 export type KeyFields = z.infer<typeof KeyFieldsSchema>;
 
 /** Renderer view: no private material. */
-export const KeySchema = KeyFieldsSchema.omit({ privateKey: true }).extend({ id: IdSchema, updatedAt: z.number() });
+export const KeySchema = KeyFieldsSchema.omit({ privateKey: true }).extend({ id: IdSchema, vaultId: IdSchema, updatedAt: z.number() });
 export type Key = z.infer<typeof KeySchema>;
 
 export const GenerateKeyInputSchema = z.discriminatedUnion('algorithm', [

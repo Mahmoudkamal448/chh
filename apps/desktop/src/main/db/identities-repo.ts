@@ -34,13 +34,14 @@ export class IdentitiesRepo {
     const data = IdentityInputSchema.parse(input);
     if (data.keyId) this.assertKey(data.keyId);
     const id = uuidv7();
+    const vaultId = data.vaultId ?? this.store.vaultId;
     const fields = IdentityFieldsSchema.parse({
       label: data.label,
       username: data.username,
       keyId: data.keyId,
-      password: data.password ? this.vault.seal(data.password, { itemId: id, field: PASSWORD_FIELD }) : null,
+      password: data.password ? this.vault.seal(data.password, { itemId: id, field: PASSWORD_FIELD, vaultId }) : null,
     });
-    return toIdentity(this.store.insert('identity', fields, id));
+    return toIdentity(this.store.insert('identity', fields, id, vaultId));
   }
 
   update(id: string, input: IdentityPatch): Identity {
@@ -49,7 +50,7 @@ export class IdentitiesRepo {
     const { password, ...rest } = patch;
     const next: Partial<IdentityFields> = { ...rest };
     if (password === null) next.password = null;
-    else if (typeof password === 'string') next.password = this.vault.seal(password, { itemId: id, field: PASSWORD_FIELD });
+    else if (typeof password === 'string') next.password = this.vault.seal(password, { itemId: id, field: PASSWORD_FIELD, vaultId: this.getStored(id).vaultId });
     const updated = this.store.update<IdentityFields>(id, 'identity', next);
     if (!updated) throw new NotFoundError();
     return toIdentity(updated);
@@ -77,7 +78,7 @@ export class IdentitiesRepo {
     const f = item.fields;
     return {
       username: f.username,
-      password: f.password ? this.vault.open(f.password, { itemId: id, field: PASSWORD_FIELD }) : null,
+      password: f.password ? this.vault.open(f.password, { itemId: id, field: PASSWORD_FIELD, vaultId: item.vaultId }) : null,
       keyId: f.keyId,
     };
   }
@@ -95,5 +96,5 @@ export class IdentitiesRepo {
 
 function toIdentity(item: StoredItem<IdentityFields>): Identity {
   const { password, ...rest } = item.fields;
-  return { ...rest, id: item.id, hasPassword: !!password, updatedAt: item.updatedAt };
+  return { ...rest, id: item.id, vaultId: item.vaultId, hasPassword: !!password, updatedAt: item.updatedAt };
 }

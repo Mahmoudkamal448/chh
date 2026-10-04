@@ -42,6 +42,7 @@ function toIpcError(err: unknown): IpcError {
   const code = (err as { code?: unknown })?.code;
   if (code === 'not_found') return { code: 'not_found', messageKey: 'errors.notFound' };
   if (code === 'validation') return { code: 'validation', messageKey: 'errors.validation' };
+  if (code === 'read_only') return { code: 'read_only', messageKey: 'errors.readOnly' };
   return { code: 'internal', messageKey: 'errors.internal' };
 }
 

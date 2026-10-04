@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { app, dialog, Menu, type BrowserWindow } from 'electron';
 import { BRAND } from '@chh/shared';
@@ -9,6 +10,7 @@ import { migrateLegacyUserData } from './legacy';
 import { LockManager } from './lock';
 import { errInfo, initLogger, log } from './log';
 import { createLocalKey, keystoreKind, memzero, readKeyFile } from './secrets/local-key';
+import { UpdateService, detectUpdateSupport, type UpdaterLike } from './updater';
 import { createMainWindow, isTrustedSender } from './window';
 
 app.setName(BRAND.productName);
@@ -20,6 +22,7 @@ if (!app.requestSingleInstanceLock()) {
   let mainWindow: BrowserWindow | null = null;
   let ctx: AppContext | null = null;
   let lock: LockManager | null = null;
+  let updates: UpdateService | null = null;
 
   app.on('second-instance', () => {
     if (mainWindow) {
@@ -61,6 +64,7 @@ if (!app.requestSingleInstanceLock()) {
       memzero(key);
     }
     ctx.sync.start();
+    updates?.start();
     const c = ctx;
     const startForwards = () => {
       for (const f of c.forwards.list().filter((x) => x.autoStart)) {
@@ -100,8 +104,9 @@ if (!app.requestSingleInstanceLock()) {
 
     lock = new LockManager({ userData, emit: (s) => broadcast('lock.changed', s), openWithKey: open });
     const l = lock;
+    updates = createUpdateService();
     registerHandlers(
-      createHandlers(() => ctx, { keystore, lock: l }),
+      createHandlers(() => ctx, { keystore, lock: l, updates }),
       isTrustedSender,
       // While locked, only the lock screen's calls get through.
       (ns, m) => !l.isLocked() || ns === 'lock' || (ns === 'app' && m === 'info'),
@@ -119,6 +124,37 @@ if (!app.requestSingleInstanceLock()) {
       l.lockNow();
     }
     mainWindow.on('closed', () => (mainWindow = null));
+  }
+
+  function createUpdateService(): UpdateService {
+    const read = (path: string) => (existsSync(path) ? readFileSync(path, 'utf8').trim() : null);
+    let signed = false;
+    try {
+      // Written into the packaged package.json by electron-builder.config.cjs.
+      signed = JSON.parse(read(join(app.getAppPath(), 'package.json')) ?? '{}').chhSigned === true;
+    } catch {
+      // unreadable: treat as unsigned
+    }
+    const support = detectUpdateSupport({
+      isPackaged: app.isPackaged,
+      platform: process.platform,
+      env: process.env,
+      linuxPackageType: app.isPackaged ? read(join(process.resourcesPath, 'package-type')) : null,
+      signed,
+    });
+    log.info({ support }, 'auto-update');
+    return new UpdateService({
+      currentVersion: app.getVersion(),
+      support,
+      releasesUrl: `${BRAND.homepage}/releases`,
+      settings: () => ctx?.settings.getApp().updates ?? null,
+      loadUpdater: async () => {
+        const { autoUpdater } = await import('electron-updater');
+        autoUpdater.logger = null;
+        return autoUpdater as unknown as UpdaterLike;
+      },
+      onStatus: (s) => broadcast('update.status', s),
+    });
   }
 
   function buildMenu(): void {
@@ -163,6 +199,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('before-quit', () => {
+    updates?.stop();
     ctx?.close();
     ctx = null;
   });

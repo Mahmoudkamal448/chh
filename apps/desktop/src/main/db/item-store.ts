@@ -69,10 +69,18 @@ const toSyncRow = (r: FullRow): SyncRow => ({
   updatedAt: r.updated_at,
 });
 
+export class ReadOnlyItemError extends Error {
+  readonly code = 'read_only';
+}
+
+/** Marks a tombstone left in a vault an item was moved out of. */
+export const MOVED_FIELD = '_moved';
+
 export class ItemStore {
   private readonly hlc: Hlc;
   private readonly listeners = new Set<(type: ItemType) => void>();
   private vaultIdValue: string;
+  private canWrite: (vaultId: string) => boolean = () => true;
 
   constructor(
     readonly db: Db,
@@ -95,6 +103,64 @@ export class ItemStore {
 
   get device(): string {
     return this.deviceId;
+  }
+
+  /** Which vaults this device may change (team viewers are read-only). */
+  setWritePolicy(fn: (vaultId: string) => boolean): void {
+    this.canWrite = fn;
+  }
+
+  private assertWritable(vaultId: string): void {
+    if (!this.canWrite(vaultId)) throw new ReadOnlyItemError();
+  }
+
+  /** Vault an item lives in (null if unknown). */
+  vaultOf(id: string): string | null {
+    const r = this.db.prepare('SELECT vault_id FROM items WHERE id = ?').get(id) as { vault_id: string } | undefined;
+    return r?.vault_id ?? null;
+  }
+
+  /**
+   * Moves an item to another vault: its sealed fields are re-sealed by `reseal`, it is uploaded
+   * there as a new item, and a tombstone is queued for the old vault (if the server had it).
+   */
+  moveToVault(id: string, target: string, reseal: (fields: Record<string, unknown>, from: string) => Record<string, unknown>): boolean {
+    const row = this.getSyncRow(id);
+    if (!row || row.deleted || row.vaultId === target) return false;
+    this.assertWritable(row.vaultId);
+    this.assertWritable(target);
+    const vv = incrementVv(row.vv, this.deviceId);
+    const fields = reseal(row.fields, row.vaultId);
+    this.db.transaction(() => {
+      if (row.serverRev !== null) {
+        this.db
+          .prepare(
+            `INSERT INTO vault_moves (vault_id, item_id, type, base_rev, vv) VALUES (?, ?, ?, ?, ?)
+             ON CONFLICT(vault_id, item_id) DO UPDATE SET base_rev = excluded.base_rev, vv = excluded.vv, type = excluded.type`,
+          )
+          .run(row.vaultId, id, row.type, row.serverRev, JSON.stringify(vv));
+      }
+      // Moving back into a vault it was moved out of earlier: nothing to tombstone there any more.
+      this.db.prepare('DELETE FROM vault_moves WHERE vault_id = ? AND item_id = ?').run(target, id);
+      this.db
+        .prepare('UPDATE items SET vault_id = ?, fields = ?, vv = ?, server_rev = NULL, dirty = 1, updated_at = ? WHERE id = ?')
+        .run(target, JSON.stringify(fields), JSON.stringify(vv), Date.now(), id);
+    })();
+    this.changed(row.type);
+    return true;
+  }
+
+  /** Tombstones waiting to be uploaded to vaults items were moved out of. */
+  pendingMoves(vaultId: string): Array<{ itemId: string; type: ItemType; baseRev: number; vv: VersionVector }> {
+    return (this.db.prepare('SELECT item_id, type, base_rev, vv FROM vault_moves WHERE vault_id = ?').all(vaultId) as Array<{ item_id: string; type: ItemType; base_rev: number; vv: string }>).map(
+      (r) => ({ itemId: r.item_id, type: r.type, baseRev: r.base_rev, vv: JSON.parse(r.vv) }),
+    );
+  }
+
+  /** The move tombstone was stored on the server (or a newer revision must be overwritten). */
+  resolveMove(vaultId: string, itemId: string, nextBaseRev?: number): void {
+    if (nextBaseRev === undefined) this.db.prepare('DELETE FROM vault_moves WHERE vault_id = ? AND item_id = ?').run(vaultId, itemId);
+    else this.db.prepare('UPDATE vault_moves SET base_rev = ? WHERE vault_id = ? AND item_id = ?').run(nextBaseRev, vaultId, itemId);
   }
 
   /** Notified after every local write (used to schedule a sync push). */
@@ -127,6 +193,11 @@ export class ItemStore {
         // absurd remote clock: ignore (merge still orders deterministically)
       }
     }
+  }
+
+  /** Records the server revision of an item without changing it (it stays dirty). */
+  setServerRev(id: string, rev: number): void {
+    this.db.prepare('UPDATE items SET server_rev = ? WHERE id = ?').run(rev, id);
   }
 
   /** Writes a merged/remote version of an item. */
@@ -195,8 +266,8 @@ export class ItemStore {
     return r.n;
   }
 
-  insert<F extends object>(type: ItemType, fields: F, id: string = uuidv7()): StoredItem<F> {
-    const vaultId = this.vaultId;
+  insert<F extends object>(type: ItemType, fields: F, id: string = uuidv7(), vaultId: string = this.vaultId): StoredItem<F> {
+    this.assertWritable(vaultId);
     const { replica } = applyLocalPatch({ fields: {}, clocks: {}, vv: {} }, fields as Record<string, unknown>, () =>
       this.hlc.tick(),
     );
@@ -218,6 +289,7 @@ export class ItemStore {
       .prepare('SELECT id, vault_id, type, fields, clocks, vv, updated_at FROM items WHERE id = ? AND type = ? AND deleted = 0')
       .get(id, type) as Row | undefined;
     if (!row) return null;
+    this.assertWritable(row.vault_id);
     const current: Replica = { fields: JSON.parse(row.fields), clocks: JSON.parse(row.clocks), vv: JSON.parse(row.vv) };
     const { replica, changed } = applyLocalPatch(current, patch as Record<string, unknown>, () => this.hlc.tick());
     if (changed.length === 0) return toItem<F>(row);
@@ -233,9 +305,10 @@ export class ItemStore {
   /** Soft delete (tombstone) so the deletion can sync; payload fields are cleared. */
   remove(id: string, type: ItemType): boolean {
     const row = this.db
-      .prepare('SELECT clocks, vv FROM items WHERE id = ? AND type = ? AND deleted = 0')
-      .get(id, type) as Pick<Row, 'clocks' | 'vv'> | undefined;
+      .prepare('SELECT vault_id, clocks, vv FROM items WHERE id = ? AND type = ? AND deleted = 0')
+      .get(id, type) as Pick<Row, 'vault_id' | 'clocks' | 'vv'> | undefined;
     if (!row) return false;
+    this.assertWritable(row.vault_id);
     const stamp = this.hlc.tick();
     const clocks = { ...JSON.parse(row.clocks), [DELETED_FIELD]: stamp };
     const vv = incrementVv(JSON.parse(row.vv), this.deviceId);

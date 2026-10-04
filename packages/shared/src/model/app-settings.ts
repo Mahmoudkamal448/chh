@@ -36,6 +36,13 @@ export const AppSettingsSchema = z.object({
     /** Include the last few commands of this session as context. */
     sendHistory: z.boolean(),
   }),
+  /** Automatic updates (signed releases only). */
+  updates: z.object({
+    /** Check in the background and download new versions automatically. */
+    auto: z.boolean(),
+    /** "beta" also offers pre-releases. */
+    channel: z.enum(['latest', 'beta']),
+  }),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -49,4 +56,5 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   sshAgent: '',
   autocomplete: { enabled: true },
   ai: { enabled: false, endpoint: '', model: '', sendHistory: false },
+  updates: { auto: true, channel: 'latest' },
 };

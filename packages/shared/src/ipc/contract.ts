@@ -41,6 +41,16 @@ import {
   IdSchema,
   LocalShellSchema,
   SessionStatusSchema,
+  AuditEntryViewSchema,
+  InviteRoleSchema,
+  MovableKindSchema,
+  MyInviteSchema,
+  PendingInviteSchema,
+  TeamMemberSchema,
+  TeamRoleSchema,
+  TeamSummarySchema,
+  UpdateStatusSchema,
+  VaultSummarySchema,
 } from '../model';
 
 /** Declares one request/response IPC method. */
@@ -250,6 +260,36 @@ export const contract = {
     totpDisable: method(z.object({ code: z.string().max(6).optional(), recoveryCode: z.string().max(64).optional() }), Void),
     deleteAccount: method(z.object({ password: z.string().min(1).max(1024) }), Void),
   },
+  /** Shared team vaults (need a sync account). */
+  teams: {
+    list: method(Empty, z.object({ teams: z.array(TeamSummarySchema), invites: z.array(MyInviteSchema), myFingerprint: z.string().nullable() })),
+    create: method(z.object({ name: z.string().trim().min(1).max(100) }), TeamSummarySchema),
+    rename: method(z.object({ teamId: IdSchema, name: z.string().trim().min(1).max(100) }), Void),
+    members: method(z.object({ teamId: IdSchema }), z.object({ members: z.array(TeamMemberSchema), invites: z.array(PendingInviteSchema) })),
+    invite: method(z.object({ teamId: IdSchema, email: z.string().trim().email().max(254), role: InviteRoleSchema }), Void),
+    cancelInvite: method(z.object({ teamId: IdSchema, inviteId: IdSchema }), Void),
+    acceptInvite: method(z.object({ inviteId: IdSchema }), Void),
+    declineInvite: method(z.object({ inviteId: IdSchema }), Void),
+    /** Shares the team key with an accepted member; `fingerprint` is what the admin compared. */
+    confirm: method(z.object({ teamId: IdSchema, userId: IdSchema, fingerprint: z.string().max(64) }), Void),
+    setRole: method(z.object({ teamId: IdSchema, userId: IdSchema, role: TeamRoleSchema }), Void),
+    /** Removes a member; confirmed members trigger a key rotation. */
+    remove: method(z.object({ teamId: IdSchema, userId: IdSchema }), Void),
+    rotateKey: method(z.object({ teamId: IdSchema }), Void),
+    leave: method(z.object({ teamId: IdSchema }), Void),
+    delete: method(z.object({ teamId: IdSchema }), Void),
+    audit: method(z.object({ teamId: IdSchema, before: z.number().int().optional() }), z.object({ entries: z.array(AuditEntryViewSchema), hasMore: z.boolean() })),
+    vaults: method(Empty, z.array(VaultSummarySchema)),
+    /** Moves items between the personal vault and team vaults. */
+    move: method(z.object({ kind: MovableKindSchema, ids: z.array(IdSchema).min(1).max(5000), vaultId: IdSchema }), z.object({ moved: z.number() })),
+  },
+  updates: {
+    status: method(Empty, UpdateStatusSchema),
+    check: method(Empty, UpdateStatusSchema),
+    download: method(Empty, Void),
+    /** Quits and installs a downloaded update. */
+    install: method(Empty, Void),
+  },
   serial: {
     ports: method(
       Empty,
@@ -327,6 +367,9 @@ export const events = {
   'transfer.update': TransferSchema,
   'forward.update': ForwardStatusSchema,
   'sync.state': SyncStatusSchema,
+  /** Team list, roles or invites changed. */
+  'teams.changed': z.object({}),
+  'update.status': UpdateStatusSchema,
   'lock.changed': LockStateSchema,
   'run.status': RunHostStatusSchema,
   'run.output': RunOutputSchema,
