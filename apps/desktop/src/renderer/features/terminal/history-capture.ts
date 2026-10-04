@@ -3,6 +3,11 @@ import type { Terminal } from '@xterm/xterm';
 /** Delay after Enter before reading the line, so the remote echo has arrived. */
 const SETTLE_MS = 250;
 const MAX_WRAPPED_LINES = 20;
+/**
+ * Replies xterm sends through onData on the shell's behalf: focus in/out (Windows ConPTY turns focus
+ * reporting on), cursor position and device attribute reports, mode reports and OSC replies.
+ */
+const TERMINAL_REPORT = /^(?:\x1b\[[IO]|\x1b\[\??\d+;\d+R|\x1b\[[?>=][\d;]*c|\x1b\[\??[\d;]+\$y|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\))+$/;
 /** How far up from the cursor to look for the echoed command (it may have printed output since). */
 const SEARCH_LINES = 200;
 
@@ -29,6 +34,7 @@ export class HistoryCapture {
       this.start = null; // full-screen apps (vim, less, top): nothing to record
       return;
     }
+    if (TERMINAL_REPORT.test(data)) return; // the terminal answering the shell, not the user typing
     if (data === '\x03' || data === '\x04') {
       this.start = null; // Ctrl+C / Ctrl+D abandon the line
       return;

@@ -99,4 +99,24 @@ describe('HistoryCapture', () => {
     expect(seen).toEqual(['cat README.md']);
     vi.useRealTimers();
   });
+
+  it('ignores focus and cursor reports the terminal sends before the prompt is drawn', () => {
+    vi.useFakeTimers();
+    const lines = [''];
+    const cursor = { x: 0, y: 0 };
+    const seen: string[] = [];
+    const cap = new HistoryCapture(fakeTerm(lines, cursor), (c) => seen.push(c));
+    cap.input('\x1b[1;1R'); // ConPTY asks for the cursor position at startup
+    cap.input('\x1b[I'); // ...and turns on focus reporting
+    lines[0] = 'PS C:\\Users\\me> ';
+    cursor.x = lines[0].length;
+    cap.input('\x1b[O\x1b[I');
+    cap.input('echo hi');
+    cap.input('\x1b[A'); // recalled history: falls back to reading the screen from the start column
+    lines[0] = 'PS C:\\Users\\me> echo hello';
+    cap.input('\r');
+    vi.runAllTimers();
+    expect(seen).toEqual(['echo hello']);
+    vi.useRealTimers();
+  });
 });
