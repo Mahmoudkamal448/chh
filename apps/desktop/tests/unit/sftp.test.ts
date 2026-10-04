@@ -30,6 +30,16 @@ const callbacks = (answers: string[][] = []): ConnectCallbacks => ({
 
 const config = (over: Partial<SshConnectConfig> = {}): SshConnectConfig => sshConfig(server.port, over);
 
+/**
+ * Like connectChain does in the app, handle errors after login: closing the test server can reset
+ * a connection that is still shutting down, which would otherwise be an uncaught exception.
+ */
+const connect = async (cfg: SshConnectConfig, cb: ConnectCallbacks) => {
+  const client = await connectSsh(cfg, cb);
+  client.on('error', () => client.end());
+  return client;
+};
+
 beforeAll(async () => {
   remoteRoot = mkdtempSync(join(tmpdir(), 'cy-remote-'));
   server = await startSshServer({ sftpRoot: remoteRoot, authorizedKeys: [publicKeyLine(key)] });
@@ -48,7 +58,7 @@ beforeEach(() => {
 describe('connectSsh auth', () => {
   it('authenticates with a vault key (no prompts)', async () => {
     const prompts: string[] = [];
-    const client = await connectSsh(config({ privateKey: writeOpenSshPrivate(key) }), {
+    const client = await connect(config({ privateKey: writeOpenSshPrivate(key) }), {
       ...callbacks(),
       requestAuth: async (r) => {
         prompts.push(r.kind);
@@ -63,7 +73,7 @@ describe('connectSsh auth', () => {
     const seen: boolean[] = [];
     let remembered: string | null = null;
     const answers = [['wrong'], ['secret']];
-    const client = await connectSsh(config(), {
+    const client = await connect(config(), {
       ...callbacks(),
       requestAuth: async (r) => {
         seen.push(r.retry);
@@ -83,7 +93,7 @@ describe('connectSsh auth', () => {
 
 describe('SftpFs + TransferManager', () => {
   beforeAll(async () => {
-    sftp = await SftpFs.open(await connectSsh(config({ password: 'secret' }), callbacks()));
+    sftp = await SftpFs.open(await connect(config({ password: 'secret' }), callbacks()));
   });
 
   const run = (src: FsProvider, srcPaths: string[], dst: FsProvider, dir: string, conflict: 'overwrite' | 'skip' | 'rename' = 'overwrite') =>
