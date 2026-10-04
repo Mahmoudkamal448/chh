@@ -3,7 +3,7 @@ import { isIP } from 'node:net';
 import * as pty from 'node-pty';
 import type { Client } from 'ssh2';
 import type { MoshClientSpec, SshConnectConfig } from '../protocol';
-import { connectSsh, describeSshError } from '../ssh/connect';
+import { connectChain, describeSshError } from '../ssh/connect';
 import type { SshCallbacks } from './ssh';
 import type { Transport } from './types';
 
@@ -16,9 +16,11 @@ function sh(s: string): string {
 }
 
 /** Starts mosh-server over SSH and returns the UDP port and session key it printed. */
-export function bootstrapMoshServer(client: Client, moshServer: string): Promise<{ port: number; key: string }> {
+export function bootstrapMoshServer(client: Client, moshServer: string, env: Record<string, string> = {}): Promise<{ port: number; key: string }> {
   const parts = moshServer.trim().split(/\s+/);
-  const cmd = `${parts.map(sh).join(' ')} new -s -c 256 -l LANG=en_US.UTF-8 -l LC_ALL=en_US.UTF-8`;
+  // -l NAME=VALUE sets variables for the remote shell (mosh has no env requests).
+  const vars = { LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8', ...env };
+  const cmd = `${parts.map(sh).join(' ')} new -s -c 256 ${Object.entries(vars).map(([k, v]) => `-l ${sh(`${k}=${v}`)}`).join(' ')}`;
   return new Promise((resolve, reject) => {
     let out = '';
     const timer = setTimeout(() => reject(Object.assign(new Error('mosh-server did not start'), { code: 'MOSH_TIMEOUT' })), BOOTSTRAP_TIMEOUT_MS);
@@ -77,9 +79,9 @@ export function openMosh(
   void (async () => {
     let client: Client | null = null;
     try {
-      client = await connectSsh(opts.config, { ...cb, status: (s) => cb.status(s), isCancelled: () => closed });
+      client = await connectChain(opts.config, { ...cb, status: (s) => cb.status(s), isCancelled: () => closed });
       const remote = (client as unknown as { _sock?: { remoteAddress?: string } })._sock?.remoteAddress;
-      const { port, key } = await bootstrapMoshServer(client, opts.moshServer);
+      const { port, key } = await bootstrapMoshServer(client, opts.moshServer, opts.config.env);
       client.end();
       client = null;
       if (closed) return;

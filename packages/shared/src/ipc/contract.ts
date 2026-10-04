@@ -18,6 +18,9 @@ import {
   LockSettingsSchema,
   LockStateSchema,
   SyncStatusSchema,
+  CloudCandidateSchema,
+  RunHostStatusSchema,
+  RunOutputSchema,
   GenerateKeyInputSchema,
   IdentityInputSchema,
   IdentityPatchSchema,
@@ -247,6 +250,55 @@ export const contract = {
     totpDisable: method(z.object({ code: z.string().max(6).optional(), recoveryCode: z.string().max(64).optional() }), Void),
     deleteAccount: method(z.object({ password: z.string().min(1).max(1024) }), Void),
   },
+  serial: {
+    ports: method(
+      Empty,
+      z.array(z.object({ path: z.string(), manufacturer: z.string().nullable(), serialNumber: z.string().nullable(), vendorId: z.string().nullable(), productId: z.string().nullable() })),
+    ),
+  },
+  run: {
+    /** Runs a script on several hosts in parallel (non-interactive), streaming per-host output. */
+    start: method(
+      z.object({ hostIds: z.array(IdSchema).min(1).max(500), script: z.string().min(1).max(65_536), title: z.string().max(200) }),
+      z.object({ runId: z.string(), hosts: z.array(z.object({ hostId: IdSchema, label: z.string(), skipped: z.string().optional() })) }),
+    ),
+    cancel: method(z.object({ runId: z.string() }), Void),
+  },
+  suggest: {
+    /** Distinct past commands starting with `prefix`, most relevant first. */
+    history: method(z.object({ prefix: z.string().max(2000), hostId: IdSchema.nullable(), limit: z.number().int().min(1).max(50).default(8) }), z.array(z.string())),
+    /** Asks the configured AI provider (only when enabled; never automatic). */
+    ai: method(
+      z.object({ line: z.string().max(2000), hostId: IdSchema.nullable(), recent: z.array(z.string().max(2000)).max(20).default([]) }),
+      z.object({ suggestions: z.array(z.string()) }),
+    ),
+    aiKeyStatus: method(Empty, z.object({ configured: z.boolean() })),
+    setAiKey: method(z.object({ key: z.string().max(500).nullable() }), Void),
+  },
+  cloud: {
+    awsProfiles: method(Empty, z.array(z.string())),
+    awsList: method(
+      z.object({
+        regions: z.array(z.string().max(40)).min(1).max(40),
+        profile: z.string().max(200).optional(),
+        accessKeyId: z.string().max(200).optional(),
+        secretAccessKey: z.string().max(200).optional(),
+        sessionToken: z.string().max(4096).optional(),
+      }),
+      z.object({ token: z.string(), candidates: z.array(CloudCandidateSchema) }),
+    ),
+    doList: method(z.object({ apiToken: z.string().min(1).max(200) }), z.object({ token: z.string(), candidates: z.array(CloudCandidateSchema) })),
+    import: method(
+      z.object({
+        token: z.string(),
+        externalIds: z.array(z.string()).min(1),
+        groupLabel: z.string().trim().max(200).optional(),
+        username: z.string().max(255).optional(),
+        address: z.enum(['public', 'private', 'dns']),
+      }),
+      z.object({ created: z.number(), updated: z.number() }),
+    ),
+  },
   lock: {
     state: method(Empty, LockStateSchema),
     lockNow: method(Empty, Void),
@@ -276,6 +328,8 @@ export const events = {
   'forward.update': ForwardStatusSchema,
   'sync.state': SyncStatusSchema,
   'lock.changed': LockStateSchema,
+  'run.status': RunHostStatusSchema,
+  'run.output': RunOutputSchema,
 } as const;
 
 export type Contract = typeof contract;

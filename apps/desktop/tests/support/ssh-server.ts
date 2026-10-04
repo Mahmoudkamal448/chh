@@ -16,6 +16,10 @@ export interface TestSshServer {
   port: number;
   fingerprint: string;
   close(): Promise<void>;
+  /** Environment variables received via SSH env requests (last session). */
+  env: Record<string, string>;
+  /** Whether the last session asked for agent forwarding. */
+  agentForwardRequested(): boolean;
 }
 
 export interface TestSshOptions {
@@ -27,6 +31,10 @@ export interface TestSshOptions {
   password?: string;
   /** Allow `exec` of mosh-server (spawned locally) so Mosh can be tested end to end. */
   allowMosh?: boolean;
+  /** Content returned for the OS probe (`cat /etc/os-release; uname -s`). */
+  osRelease?: string;
+  /** Scripted `exec` results for other commands. */
+  exec?: (command: string) => { stdout?: string; stderr?: string; code?: number; delayMs?: number };
 }
 
 function statusFor(err: unknown): number {
@@ -143,6 +151,8 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
 
   const clients = new Set<Connection>();
   let port = 0;
+  const env: Record<string, string> = {};
+  let agentRequested = false;
   const server = new Server({ hostKeys: [key.private] }, (client) => {
     clients.add(client);
     client.on('close', () => clients.delete(client));
@@ -190,8 +200,34 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
       client.on('session', (accept) => {
         const session = accept();
         session.on('pty', (acc) => acc?.());
+        session.on('env', (acc, _rej, info) => {
+          env[info.key] = info.val;
+          acc?.();
+        });
+        session.on('auth-agent', (acc) => {
+          agentRequested = true;
+          acc?.();
+        });
         session.on('window-change', (acc) => acc?.());
         session.on('exec', (acc, rej, info) => {
+          if (info.command.startsWith('cat /etc/os-release')) {
+            const stream = acc();
+            stream.write(opts.osRelease ?? 'Linux\n');
+            stream.exit(0);
+            stream.end();
+            return;
+          }
+          if (opts.exec) {
+            const r = opts.exec(info.command);
+            const stream = acc();
+            setTimeout(() => {
+              if (r.stdout) stream.write(r.stdout);
+              if (r.stderr) stream.stderr.write(r.stderr);
+              stream.exit(r.code ?? 0);
+              stream.end();
+            }, r.delayMs ?? 0);
+            return;
+          }
           // Only mosh-server bootstrap is supported, and only when explicitly enabled.
           if (!opts.allowMosh || !/^'mosh-server' new /.test(info.command)) return rej?.();
           const stream = acc();
@@ -241,15 +277,24 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
     });
   });
 
+  // Track raw sockets so close() can't hang on half-open connections.
+  const rawSockets = new Set<import('node:net').Socket>();
+  (server as unknown as { _srv: import('node:net').Server })._srv.on('connection', (sock) => {
+    rawSockets.add(sock);
+    sock.on('close', () => rawSockets.delete(sock));
+  });
   await new Promise<void>((res) => server.listen(opts.port ?? 0, '127.0.0.1', () => res()));
   port = (server.address() as AddressInfo).port;
   return {
     port,
     fingerprint,
+    env,
+    agentForwardRequested: () => agentRequested,
     close: () =>
       new Promise<void>((res) => {
         // server.close() waits for open connections, so drop them first.
         for (const c of clients) c.end();
+        for (const sock of rawSockets) sock.destroy();
         server.close(() => res());
       }),
   };

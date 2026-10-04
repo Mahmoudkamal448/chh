@@ -5,6 +5,7 @@ import { MessageChannelMain, utilityProcess, type UtilityProcess, type WebConten
 import {
   SESSION_PORT_CHANNEL,
   resolveSettings,
+  type AppSettings,
   type AuthPrompt,
   type EventName,
   type EventPayload,
@@ -25,7 +26,7 @@ import { errInfo, log } from './log';
 interface SessionInfo {
   id: string;
   wc: WebContents;
-  kind: 'ssh' | 'local' | 'sftp' | 'forward';
+  kind: 'ssh' | 'local' | 'sftp' | 'forward' | 'run';
   hostId: string | null;
   label: string;
   /** User ticked "remember password" on a prompt in this session. */
@@ -61,6 +62,9 @@ export class SessionManager {
       keys: KeysRepo;
       identities: IdentitiesRepo;
       forwards: ForwardsRepo;
+      appSettings: () => AppSettings;
+      /** Path of the system OpenSSH client, or null if not installed. */
+      openSsh: () => string | null;
       moshClient: () => MoshClientSpec | null;
       /** Sends an event to every window (forward status is app-wide). */
       broadcast: <E extends EventName>(event: E, payload: EventPayload<E>) => void;
@@ -140,10 +144,36 @@ export class SessionManager {
   }
 
   /**
-   * Builds the connection config for a host: inherited settings, identity (username/password/key),
-   * explicit key, and a username prompt if none is configured. Returns null if the user cancels.
+   * Full connection config for a host: its own hop config plus its jump chain and proxy.
+   * Returns null if the user cancelled a prompt.
    */
   private async resolveConfig(sessionId: string, hostId: string): Promise<SshConnectConfig | null> {
+    const target = await this.hopConfig(sessionId, hostId);
+    if (!target) return null;
+    const fields = this.deps.hosts.getFields(hostId);
+    const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
+    const jumps: SshConnectConfig[] = [];
+    const seen = new Set([hostId]);
+    for (const jumpId of settings.jumpHosts) {
+      if (seen.has(jumpId)) throw new AppError('jump_loop', 'session.error.jumpLoop');
+      seen.add(jumpId);
+      let jump: SshConnectConfig | null;
+      try {
+        jump = await this.hopConfig(sessionId, jumpId);
+      } catch {
+        throw new AppError('jump_missing', 'session.error.jumpMissing');
+      }
+      if (!jump) return null;
+      jumps.push(jump);
+    }
+    return { ...target, jumps, proxy: settings.proxy.type === 'none' ? null : settings.proxy };
+  }
+
+  /**
+   * One hop: inherited settings, identity (username/password/key), explicit key, and a username
+   * prompt if none is configured. Jumps and proxy are filled in by resolveConfig.
+   */
+  private async hopConfig(sessionId: string, hostId: string): Promise<SshConnectConfig | null> {
     const fields = this.deps.hosts.getFields(hostId);
     const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
     const identity = settings.identityId ? this.deps.identities.getSecrets(settings.identityId) : null;
@@ -182,6 +212,13 @@ export class SessionManager {
       tryDefaultKeys: settings.tryDefaultKeys,
       keepAliveSec: settings.keepAliveSec,
       connectTimeoutSec: settings.connectTimeoutSec,
+      label: fields.label,
+      agent: this.deps.appSettings().sshAgent,
+      agentForward: settings.agentForwarding,
+      env: settings.env,
+      envMethod: settings.envMethod,
+      jumps: [],
+      proxy: null,
     };
   }
 
@@ -195,6 +232,24 @@ export class SessionManager {
       if (s) emit(s.wc, 'session.status', { sessionId: id, status: 'error', message });
       this.close(id);
     };
+
+    if (fields.protocol === 'serial') {
+      this.send({ type: 'open-serial', sessionId: id, path: fields.address, settings: settings.serial }, [hostPort]);
+      log.info({ sessionId: id, hostId: opts.hostId }, 'serial session opening');
+      return { sessionId: id };
+    }
+
+    if (fields.protocol === 'ssh' && settings.sshEngine === 'openssh') {
+      const ssh = this.deps.openSsh();
+      if (!ssh) {
+        void Promise.resolve().then(() => fail('session.error.opensshMissing'));
+        return { sessionId: id };
+      }
+      const args = this.opensshArgs(opts.hostId);
+      this.send({ type: 'open-local', sessionId: id, cols: opts.cols, rows: opts.rows, shell: { path: ssh, args }, cwd: homedir() }, [hostPort]);
+      log.info({ sessionId: id, hostId: opts.hostId }, 'openssh session opening');
+      return { sessionId: id };
+    }
 
     if (fields.protocol === 'telnet') {
       // Telnet ignores inherited (SSH-oriented) ports: the host's own port, or 23.
@@ -259,6 +314,102 @@ export class SessionManager {
 
   forwardStatuses(): ForwardStatus[] {
     return [...this.forwardState.values()];
+  }
+
+  /**
+   * Arguments for the system OpenSSH client. It handles its own authentication (agent, keys, FIDO2
+   * security keys, passwords in the terminal) and its own known_hosts.
+   */
+  opensshArgs(hostId: string): string[] {
+    const groups = this.deps.groups.map();
+    const fields = this.deps.hosts.getFields(hostId);
+    const s = resolveSettings(fields.groupId, fields.settings, groups);
+    const identity = s.identityId ? this.deps.identities.getSecrets(s.identityId) : null;
+    const userAt = (user: string, host: string) => (user ? `${user}@${host}` : host);
+    const args = ['-p', String(s.port)];
+    const user = s.username || identity?.username || '';
+    if (user) args.push('-l', user);
+    if (s.jumpHosts.length) {
+      const chain = s.jumpHosts.map((jid) => {
+        const jf = this.deps.hosts.getFields(jid);
+        const js = resolveSettings(jf.groupId, jf.settings, groups);
+        const ju = js.username || (js.identityId ? this.deps.identities.getSecrets(js.identityId)?.username : '') || '';
+        return `${userAt(ju, jf.address)}:${js.port}`;
+      });
+      args.push('-J', chain.join(','));
+    }
+    if (s.agentForwarding) args.push('-A');
+    if (s.identityFile) args.push('-i', s.identityFile);
+    if (s.keepAliveSec) args.push('-o', `ServerAliveInterval=${s.keepAliveSec}`);
+    args.push('-o', `ConnectTimeout=${s.connectTimeoutSec}`);
+    for (const [k, v] of Object.entries(s.env)) args.push('-o', `SetEnv=${k}="${v.replace(/"/g, '')}"`);
+    args.push('--', fields.address);
+    return args;
+  }
+
+  // --- multi-host runs -------------------------------------------------------------------------
+
+  private readonly runs = new Map<string, { wc: WebContents; queue: string[]; active: number; script: string; cancelled: boolean }>();
+  private static readonly RUN_CONCURRENCY = 6;
+
+  /** Starts running `script` on hosts (SSH/Mosh only), at most 6 at a time. */
+  startRun(wc: WebContents, hostIds: string[], script: string): { runId: string; hosts: Array<{ hostId: string; label: string; skipped?: string }> } {
+    const runId = randomUUID();
+    const hosts: Array<{ hostId: string; label: string; skipped?: string }> = [];
+    const queue: string[] = [];
+    for (const hostId of [...new Set(hostIds)]) {
+      const f = this.deps.hosts.getFields(hostId);
+      if (f.protocol === 'telnet' || f.protocol === 'serial') hosts.push({ hostId, label: f.label, skipped: 'run.skipped.protocol' });
+      else {
+        hosts.push({ hostId, label: f.label });
+        queue.push(hostId);
+      }
+    }
+    this.runs.set(runId, { wc, queue, active: 0, script, cancelled: false });
+    for (const hostId of queue) emit(wc, 'run.status', { runId, hostId, status: 'queued' });
+    setImmediate(() => this.pumpRun(runId));
+    return { runId, hosts };
+  }
+
+  private pumpRun(runId: string): void {
+    const run = this.runs.get(runId);
+    if (!run) return;
+    while (!run.cancelled && run.active < SessionManager.RUN_CONCURRENCY && run.queue.length) {
+      const hostId = run.queue.shift()!;
+      run.active++;
+      const sessionId = this.registerNoPort(run.wc, { kind: 'run', hostId, label: this.deps.hosts.getFields(hostId).label });
+      void (async () => {
+        let config: SshConnectConfig | null = null;
+        try {
+          config = await this.resolveConfig(sessionId, hostId);
+        } catch (e) {
+          this.cleanup(sessionId);
+          return this.finishRunHost(runId, hostId, 'error', e instanceof AppError ? e.messageKey : 'session.error.internal');
+        }
+        if (!config || run.cancelled) {
+          this.cleanup(sessionId);
+          return this.finishRunHost(runId, hostId, 'cancelled');
+        }
+        await this.rpc('exec.start', { runId, hostId, sessionId, config, script: run.script }).catch(() => this.finishRunHost(runId, hostId, 'error', 'session.error.internal'));
+      })();
+    }
+    if (!run.active && !run.queue.length) this.runs.delete(runId);
+  }
+
+  private finishRunHost(runId: string, hostId: string, status: 'error' | 'cancelled', error?: string): void {
+    const run = this.runs.get(runId);
+    if (!run) return;
+    emit(run.wc, 'run.status', { runId, hostId, status, error });
+    run.active--;
+    this.pumpRun(runId);
+  }
+
+  cancelRun(runId: string): void {
+    const run = this.runs.get(runId);
+    if (!run) return;
+    run.cancelled = true;
+    for (const hostId of run.queue.splice(0)) emit(run.wc, 'run.status', { runId, hostId, status: 'cancelled' });
+    if (this.child) void this.rpc('exec.cancel', { runId }).catch(() => undefined);
   }
 
   /** Opens an SFTP session; resolves once connected and authenticated. */
@@ -364,6 +515,35 @@ export class SessionManager {
         this.rpcPending.delete(msg.id);
         if (msg.ok) p.resolve(msg.value);
         else p.reject(rpcToAppError(msg.error));
+        return;
+      }
+      case 'os-detected': {
+        const s = this.sessions.get(msg.sessionId);
+        if (s?.hostId) {
+          try {
+            if (this.deps.hosts.getFields(s.hostId).osHint !== msg.os) {
+              this.deps.hosts.setOsHint(s.hostId, msg.os);
+              emit(s.wc, 'data.changed', { kinds: ['hosts'] });
+            }
+          } catch {
+            // host deleted meanwhile
+          }
+        }
+        return;
+      }
+      case 'run-status': {
+        const run = this.runs.get(msg.status.runId);
+        if (!run) return;
+        emit(run.wc, 'run.status', msg.status);
+        if (['done', 'error', 'cancelled'].includes(msg.status.status)) {
+          run.active--;
+          this.pumpRun(msg.status.runId);
+        }
+        return;
+      }
+      case 'run-output': {
+        const run = this.runs.get(msg.output.runId);
+        if (run) emit(run.wc, 'run.output', msg.output);
         return;
       }
       case 'forward': {

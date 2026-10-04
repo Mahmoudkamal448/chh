@@ -26,7 +26,8 @@
     "newLocal": "New local terminal",
     "newLocalHint": "New local terminal (right-click to choose a shell)",
     "files": "Files",
-    "split": "Split view"
+    "split": "Split view",
+    "run": "Run results"
   },
   "sidebar": {
     "label": "Host navigation",
@@ -57,7 +58,8 @@
     "passwordSaved": "Password saved",
     "deleteTitle": "Delete host?",
     "deleteMessage": "“{{label}}” will be deleted. This can't be undone.",
-    "openFiles": "Open files (SFTP)"
+    "openFiles": "Open files (SFTP)",
+    "importExport": "Import / export"
   },
   "groups": {
     "deleteTitle": "Delete group?",
@@ -148,7 +150,13 @@
       "shortcuts": "Keyboard shortcuts",
       "security": "Security",
       "sync": "Sync & account"
-    }
+    },
+    "sshAgent": "SSH agent",
+    "sshAgentHint": "Used for agent authentication and agent forwarding.",
+    "agentAuto": "Automatic (SSH_AUTH_SOCK / OpenSSH agent)",
+    "agentCustom": "Custom socket or pipe…",
+    "agentPath": "Agent socket / pipe path",
+    "autocomplete": "Suggest commands while typing (history and snippets; → accepts, Ctrl+Space lists)"
   },
   "commands": {
     "palette.open": "Open command palette",
@@ -214,7 +222,18 @@
       "moshMissing": "mosh-client isn't installed on this computer. Install Mosh (Windows: inside WSL) and try again.",
       "moshServerMissing": "mosh-server isn't installed on the server (or not on its PATH). Install Mosh there, or set the Mosh server command in the host settings.",
       "moshTimeout": "mosh-server didn't start in time.",
-      "moshFailed": "mosh-server failed: {{detail}}"
+      "moshFailed": "mosh-server failed: {{detail}}",
+      "jump": "Couldn't connect through jump host “{{detail}}”. Check that host's login, and that it can reach the next hop.",
+      "jumpLoop": "The jump host chain contains a loop.",
+      "jumpMissing": "A jump host in the chain no longer exists.",
+      "proxyAuth": "The proxy rejected the username or password.",
+      "proxyRefused": "The proxy refused the connection: {{detail}}",
+      "proxyFailed": "Proxy error: {{detail}}",
+      "opensshMissing": "The system OpenSSH client (ssh) wasn't found. Install OpenSSH, or switch this host to the built-in engine.",
+      "serialNotFound": "Serial port not found. Is the device connected?",
+      "serialPermission": "No permission to open the serial port (Linux: add your user to the 'dialout' group).",
+      "serialBusy": "The serial port is in use by another program.",
+      "serialFailed": "Couldn't open the serial port: {{detail}}"
     },
     "closePane": "Close pane"
   },
@@ -239,7 +258,8 @@
     "continue": "Continue",
     "remember": "Remember password on this device",
     "retry": "That didn't work. Please try again.",
-    "passphraseTitle": "Unlock key {{target}}"
+    "passphraseTitle": "Unlock key {{target}}",
+    "proxyTitle": "Proxy password for {{target}}"
   },
   "nav": {
     "label": "Sections",
@@ -694,5 +714,168 @@
       "http": "Unexpected server response.",
       "weak_password": "Use a longer password."
     }
+  },
+  "advanced": {
+    "title": "Advanced connection",
+    "engine": "SSH engine",
+    "engines": {
+      "builtin": "Built-in",
+      "openssh": "System OpenSSH"
+    },
+    "engineBuiltinHint": "Built-in client with cy-ssh's keys, identities, known hosts, proxies and SFTP.",
+    "engineOpensshHint": "Runs your installed `ssh` in the terminal: supports FIDO2 security keys and post-quantum key exchange; uses OpenSSH's own known_hosts and ~/.ssh/config. Passwords are typed in the terminal.",
+    "identityFile": "Identity file (OpenSSH engine)",
+    "identityFileHint": "e.g. a FIDO2 key handle created with ssh-keygen -t ed25519-sk.",
+    "jumpHosts": "Jump hosts",
+    "jumpHostsHint": "Connect through these hosts in order (nearest first). Each one uses its own login settings.",
+    "useInherited": "Use inherited",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "addJump": "Add jump host",
+    "chooseHost": "Choose a host…",
+    "proxy": "Proxy",
+    "proxyNone": "None",
+    "proxyHost": "Proxy host",
+    "proxyUser": "Proxy username",
+    "proxyUserHint": "Optional; you'll be asked for the password.",
+    "agentForwarding": "Agent forwarding",
+    "agentForwardingHint": "Lets the server use your local SSH agent (e.g. for git on the server). Only enable for servers you trust.",
+    "env": "Environment variables",
+    "envHint": "Set for the session. Group and host variables are combined.",
+    "envName": "Name",
+    "envValue": "Value",
+    "envAdd": "Add variable",
+    "inheritedTag": "inherited",
+    "envMethod": "How to send them",
+    "envMethods": {
+      "request": "SSH env requests (server must AcceptEnv)",
+      "export": "Type `export` after login"
+    }
+  },
+  "serial": {
+    "protocol": "Serial",
+    "port": "Serial port",
+    "portHint": "e.g. /dev/ttyUSB0 (Linux), /dev/cu.usbserial-… (macOS), COM3 (Windows)",
+    "baud": "Baud rate",
+    "dataBits": "Data bits",
+    "parity": "Parity",
+    "parities": {
+      "none": "None",
+      "even": "Even",
+      "odd": "Odd",
+      "mark": "Mark",
+      "space": "Space"
+    },
+    "stopBits": "Stop bits",
+    "flow": "Flow control",
+    "flows": {
+      "none": "None"
+    },
+    "newline": "Enter sends",
+    "localEcho": "Local echo"
+  },
+  "run": {
+    "onHosts": "Run on several hosts…",
+    "pickTitle": "Run “{{label}}” on…",
+    "start": "Run",
+    "selected_one": "{{count}} host selected",
+    "selected_other": "{{count}} hosts selected",
+    "allGroups": "All groups",
+    "allTags": "All tags",
+    "selectShown": "Select all shown ({{count}})",
+    "summary": "{{ok}} succeeded · {{failed}} failed · {{total}} hosts",
+    "onlyFailed": "Only failed",
+    "cancel": "Cancel",
+    "retryFailed": "Run again on failed",
+    "retryTitle": "{{title}} (retry)",
+    "exit": "exit code {{code}}",
+    "noOutput": "(no output)",
+    "truncated": "output truncated at 1 MB",
+    "status": {
+      "queued": "Queued",
+      "connecting": "Connecting…",
+      "running": "Running…",
+      "cancelled": "Cancelled"
+    },
+    "skipped": {
+      "protocol": "Skipped: Telnet and serial hosts can't run commands non-interactively"
+    }
+  },
+  "autocomplete": {
+    "label": "Suggestions",
+    "kind": {
+      "history": "history",
+      "snippet": "snippet",
+      "ai": "AI",
+      "ask-ai": ""
+    },
+    "askAi": "Ask AI for suggestions",
+    "thinking": "Thinking…",
+    "none": "No suggestions"
+  },
+  "ai": {
+    "title": "AI command suggestions (optional)",
+    "hint": "Ask an AI model for command suggestions from the Ctrl+Space list. Off by default and never automatic. Works with any OpenAI-compatible API, including local models (Ollama, llama.cpp).",
+    "enable": "Enable AI suggestions",
+    "endpoint": "API base URL",
+    "endpointHint": "e.g. https://api.example.com/v1 or http://localhost:11434/v1 (local only over http).",
+    "model": "Model",
+    "key": "API key",
+    "keyHint": "Optional for local models. Stored encrypted on this device.",
+    "keySaved": "An API key is saved (encrypted).",
+    "sendHistory": "Include my last 10 commands on that host as context",
+    "privacy": "Only sent when you ask: the current command line and the host's OS. Never passwords, keys, environment variables or terminal output.",
+    "privacyWithHistory": "Only sent when you ask: the current command line, the host's OS and your last 10 commands there. Never passwords, keys, environment variables or terminal output.",
+    "test": "Test",
+    "testOk": "Works. Example: {{example}}"
+  },
+  "suggest": {
+    "error": {
+      "aiOff": "AI suggestions are turned off (Settings → Terminal).",
+      "aiUrl": "Use an https:// endpoint (http only for localhost).",
+      "aiFailed": "The AI provider didn't answer: {{detail}}"
+    }
+  },
+  "cloud": {
+    "menuAws": "Import from AWS EC2…",
+    "menuDo": "Import from DigitalOcean…",
+    "awsTitle": "Import from AWS EC2",
+    "doTitle": "Import from DigitalOcean",
+    "hint": "Instances become hosts. Importing again updates addresses (e.g. after a restart) instead of creating duplicates. Credentials are only used for this request and aren't stored.",
+    "profile": "AWS profile",
+    "profileHint": "From ~/.aws/credentials and ~/.aws/config.",
+    "defaultChain": "Default credential chain (env, SSO, …)",
+    "accessKeyId": "Or access key ID",
+    "keysHint": "Overrides the profile. Use a read-only key (ec2:DescribeInstances).",
+    "secretKey": "Secret access key",
+    "regions": "Regions",
+    "doToken": "API token",
+    "doTokenHint": "A read-only personal access token from the DigitalOcean control panel.",
+    "fetch": "Find instances",
+    "none": "Nothing found.",
+    "willUpdate": "will update",
+    "import_one": "Import {{count}} host",
+    "import_other": "Import {{count}} hosts",
+    "result": "{{created}} hosts added, {{updated}} updated.",
+    "address": "Connect using",
+    "addresses": {
+      "public": "Public IP",
+      "private": "Private IP",
+      "dns": "Public DNS name"
+    },
+    "awsUserHint": "Depends on the image: ec2-user (Amazon Linux), ubuntu, admin (Debian)…",
+    "error": {
+      "auth": "The credentials were rejected.",
+      "forbidden": "Access denied: the credentials need permission to list instances.",
+      "failed": "The provider request failed: {{detail}}",
+      "expired": "The results expired. Fetch again."
+    }
+  },
+  "fido": {
+    "title": "Security keys (FIDO2 / YubiKey)",
+    "hint": "Hardware security keys keep the private key on the device and need a touch to log in. cy-ssh uses your system OpenSSH (8.2+) for them.",
+    "fileName": "Key file name",
+    "openTerminal": "Open terminal with this command",
+    "useIt": "Then add the .pub file's line to the server's ~/.ssh/authorized_keys, and in the host's Advanced connection settings choose “System OpenSSH” and set the identity file."
   }
 }

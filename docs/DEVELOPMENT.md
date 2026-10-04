@@ -121,6 +121,12 @@ Deleting the directory resets the app.
 - **Telnet test server:** `tests/support/telnet-server.ts` negotiates NAWS/TTYPE/ECHO/SGA and echoes lines.
 - **Mosh:** with `allowMosh`, the test SSH server runs `mosh-server` locally on `exec`, so Mosh is tested end to
   end with the real `mosh-client`. Install `mosh` to run that test; it's skipped otherwise.
+- **Proxies and jump hosts:** `tests/support/proxies.ts` has SOCKS5 and HTTP CONNECT test proxies. Jump chains use
+  two test SSH servers. The test server also records env requests and agent-forwarding requests, and can script
+  `exec` results (OS probe, multi-host runs).
+- **Serial:** unit tests use `@serialport/binding-mock`; the E2E test uses a `socat` virtual port pair.
+- **Cloud/AI:** fake HTTP servers stand in for DigitalOcean, the EC2 API (`CY_SSH_AWS_ENDPOINT` /
+  `CY_SSH_DO_ENDPOINT`, honoured only in test mode) and an OpenAI-compatible endpoint.
 - **Key fixtures:** `packages/key-formats/test/fixtures` holds throwaway keys made by `ssh-keygen`, `puttygen`
   (`apt install putty-tools`) and `openssl`. Regenerate them only if you add formats. The tests compare against
   each tool's own output, not against round trips of our code.

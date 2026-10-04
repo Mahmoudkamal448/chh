@@ -88,7 +88,7 @@ export function GroupEditor() {
           </Field>
         </div>
         <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t('groupEditor.inherited')}</h3>
-        <SettingsFields value={settings} inherited={inherited} onChange={setSettings} showIdentity />
+        <SettingsFields value={settings} inherited={inherited} onChange={setSettings} showIdentity selfId={null} />
         {error && (
           <p role="alert" className="text-[12px] text-danger">
             {error}

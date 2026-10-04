@@ -33,6 +33,10 @@ export function HostEditor() {
   const [hasPassword, setHasPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [ports, setPorts] = useState<Array<{ path: string; manufacturer: string | null; serialNumber: string | null }>>([]);
+  useEffect(() => {
+    if (open && form.protocol === 'serial') void window.cy.serial.ports({}).then(setPorts, () => setPorts([]));
+  }, [open, form.protocol]);
 
   useEffect(() => {
     if (!open) return;
@@ -119,13 +123,33 @@ export function HostEditor() {
               <option value="ssh">SSH</option>
               <option value="mosh">Mosh</option>
               <option value="telnet">Telnet</option>
+              <option value="serial">{t('serial.protocol')}</option>
             </Select>
           )}
         </Field>
         <div className="grid grid-cols-2 gap-3">
-          <Field label={t('hostEditor.address')} hint={t('hostEditor.addressHint')}>
+          <Field label={form.protocol === 'serial' ? t('serial.port') : t('hostEditor.address')} hint={form.protocol === 'serial' ? t('serial.portHint') : t('hostEditor.addressHint')}>
             {(id, d) => (
-              <Input id={id} aria-describedby={d} autoFocus value={form.address} onChange={(e) => set({ address: e.target.value })} data-testid="host-address" />
+              <>
+                <Input
+                  id={id}
+                  aria-describedby={d}
+                  autoFocus
+                  list={form.protocol === 'serial' ? 'serial-ports' : undefined}
+                  value={form.address}
+                  onChange={(e) => set({ address: e.target.value })}
+                  data-testid="host-address"
+                />
+                {form.protocol === 'serial' && (
+                  <datalist id="serial-ports">
+                    {ports.map((p) => (
+                      <option key={p.path} value={p.path}>
+                        {[p.manufacturer, p.serialNumber].filter(Boolean).join(' ')}
+                      </option>
+                    ))}
+                  </datalist>
+                )}
+              </>
             )}
           </Field>
           <Field label={t('hostEditor.label')}>
@@ -133,8 +157,9 @@ export function HostEditor() {
           </Field>
         </div>
 
-        <SettingsFields value={form.settings} inherited={inherited} onChange={(settings) => set({ settings })} showIdentity />
+        <SettingsFields value={form.settings} inherited={inherited} onChange={(settings) => set({ settings })} showIdentity protocol={form.protocol} selfId={editingId} />
 
+        {(form.protocol === 'ssh' || form.protocol === 'mosh') && (
         <Field label={t('hostEditor.password')} hint={t('hostEditor.passwordHint')}>
           {(id, d) =>
             hasPassword && form.password === undefined ? (
@@ -165,6 +190,7 @@ export function HostEditor() {
             )
           }
         </Field>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('hostEditor.group')}>

@@ -1,8 +1,8 @@
 # cy-ssh — Architecture
 
-> **Status:** approved. Phases 1–4 are implemented; see the deviation notes in [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft),
+> **Status:** approved. Phases 1–5 are implemented (risk R1 outcome: FIDO2 via the System OpenSSH engine, see PHASE-5.md); see the deviation notes in [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft),
 > [PHASE-2.md](PHASE-2.md#design-notes-and-deviations), [PHASE-3.md](PHASE-3.md#design-notes-and-deviations) and
-> [PHASE-4.md](PHASE-4.md#design-notes-and-deviations).
+> [PHASE-4.md](PHASE-4.md#design-notes-and-deviations) and [PHASE-5.md](PHASE-5.md#design-notes-and-deviations).
 
 > **Product name:** `cy-ssh` (npm scope `@cy-ssh/*`, bundle ID `dev.cyssh.app`). Name, icon and
 > colors live in `packages/shared/src/brand.ts` + `apps/desktop/build/`. All branding/UI is original.

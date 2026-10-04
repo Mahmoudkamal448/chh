@@ -10,6 +10,7 @@ import { SftpFs } from '../../src/session-host/files/sftp-fs';
 import { TransferManager } from '../../src/session-host/files/transfers';
 import type { SshConnectConfig } from '../../src/session-host/protocol';
 import { connectSsh, type ConnectCallbacks } from '../../src/session-host/ssh/connect';
+import { sshConfig } from '../support/config';
 import { startSshServer, type TestSshServer } from '../support/ssh-server';
 
 const key = generateKey({ algorithm: 'ed25519' }, 'test');
@@ -27,18 +28,7 @@ const callbacks = (answers: string[][] = []): ConnectCallbacks => ({
   isCancelled: () => false,
 });
 
-const config = (over: Partial<SshConnectConfig> = {}): SshConnectConfig => ({
-  host: '127.0.0.1',
-  port: server.port,
-  username: 'tester',
-  password: null,
-  privateKey: null,
-  useAgent: false,
-  tryDefaultKeys: false,
-  keepAliveSec: 0,
-  connectTimeoutSec: 10,
-  ...over,
-});
+const config = (over: Partial<SshConnectConfig> = {}): SshConnectConfig => sshConfig(server.port, over);
 
 beforeAll(async () => {
   remoteRoot = mkdtempSync(join(tmpdir(), 'cy-remote-'));

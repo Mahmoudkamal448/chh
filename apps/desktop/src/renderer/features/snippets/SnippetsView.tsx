@@ -1,4 +1,4 @@
-import { Code2, Pencil, Play, Plus, Trash2 } from 'lucide-react';
+import { Code2, Pencil, Play, Plus, Server, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { snippetVariables, type Snippet } from '@cy-ssh/shared';
@@ -10,6 +10,9 @@ import { useLibrary } from '../../stores/library-store';
 import { activePaneId } from '../../app/commands';
 import { paneIds } from '../../stores/layout';
 import { useTabs } from '../../stores/tabs-store';
+import { fillSnippet } from '@cy-ssh/shared';
+import { HostMultiPicker } from '../run/HostMultiPicker';
+import { startRun } from '../../stores/runs-store';
 import { needsVariables, runSnippet } from './run-snippet';
 import { VariablesDialog } from './VariablesDialog';
 
@@ -100,6 +103,13 @@ export function SnippetsView() {
   const [deleting, setDeleting] = useState<Snippet | null>(null);
   const [asking, setAsking] = useState<Snippet | null>(null);
   const [query, setQuery] = useState('');
+  /** Multi-host run: pick hosts first, then (if needed) variables. */
+  const [multi, setMulti] = useState<{ snippet: Snippet; hostIds?: string[] } | null>(null);
+  const [multiVars, setMultiVars] = useState<Snippet | null>(null);
+  const launch = async (s: Snippet, hostIds: string[], values: Record<string, string> = {}) => {
+    const runId = await startRun(hostIds, fillSnippet(s.script, values), s.label);
+    useTabs.getState().openRun(runId, s.label);
+  };
 
   useEffect(() => {
     void refresh();
@@ -157,6 +167,9 @@ export function SnippetsView() {
               >
                 <Play size={14} />
               </IconButton>
+              <IconButton label={t('run.onHosts')} onClick={() => setMulti({ snippet: s })} data-testid="snippet-run-multi">
+                <Server size={14} />
+              </IconButton>
               <IconButton label={t('common.edit')} onClick={() => setEditing(s)}>
                 <Pencil size={14} />
               </IconButton>
@@ -168,6 +181,32 @@ export function SnippetsView() {
         </ul>
       )}
       <SnippetEditor editing={editing} onClose={() => setEditing(null)} />
+      <HostMultiPicker
+        open={!!multi && !multi.hostIds}
+        title={t('run.pickTitle', { label: multi?.snippet.label ?? '' })}
+        confirmLabel={t('run.start')}
+        onCancel={() => setMulti(null)}
+        onConfirm={(hostIds) => {
+          const s = multi!.snippet;
+          if (needsVariables(s).length) {
+            setMulti({ snippet: s, hostIds });
+            setMultiVars(s);
+          } else {
+            setMulti(null);
+            void launch(s, hostIds);
+          }
+        }}
+      />
+      <VariablesDialog
+        snippet={multiVars}
+        onCancel={() => (setMultiVars(null), setMulti(null))}
+        onRun={(values) => {
+          const m = multi!;
+          setMultiVars(null);
+          setMulti(null);
+          void launch(m.snippet, m.hostIds!, values);
+        }}
+      />
       <VariablesDialog
         snippet={asking}
         onCancel={() => setAsking(null)}

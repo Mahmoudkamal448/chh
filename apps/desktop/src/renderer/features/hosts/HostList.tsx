@@ -1,6 +1,7 @@
 import * as CM from '@radix-ui/react-context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { KeyRound, Server, Star } from 'lucide-react';
+import { KeyRound, Star } from 'lucide-react';
+import { OsBadge } from '../../components/OsBadge';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Host } from '@cy-ssh/shared';
@@ -122,9 +123,7 @@ export function HostList({
                   )}
                   style={{ top: row.start, height: ROW_HEIGHT }}
                 >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-surface-2 text-muted">
-                    <Server size={16} aria-hidden />
-                  </div>
+                  <OsBadge os={h.osHint} protocol={h.protocol} />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-medium">{h.label}</span>

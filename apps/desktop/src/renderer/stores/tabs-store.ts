@@ -30,7 +30,14 @@ export interface FilesTab {
   title: string;
 }
 
-export type Tab = TerminalTab | FilesTab;
+export interface RunTab {
+  id: string;
+  kind: 'run';
+  runId: string;
+  title: string;
+}
+
+export type Tab = TerminalTab | FilesTab | RunTab;
 
 interface TabsState {
   tabs: Tab[];
@@ -39,6 +46,8 @@ interface TabsState {
   openHost(hostId: string, title: string): Promise<void>;
   openLocal(shellId?: string): Promise<void>;
   openSftp(hostId: string, title: string): void;
+  /** Shows the results of a multi-host run. */
+  openRun(runId: string, title: string): void;
   /** Splits the focused pane of the active tab, opening the same host/shell in the new pane. */
   splitFocused(dir: SplitDir): Promise<void>;
   /** Closes the focused pane if the tab is split, otherwise the tab. */
@@ -87,6 +96,10 @@ export const useTabs = create<TabsState>((set, get) => {
     },
     async openLocal(shellId) {
       addTab(await openSession({ kind: 'local', shellId }, ''));
+    },
+    openRun(runId, title) {
+      const tab: RunTab = { id: uid(), kind: 'run', runId, title };
+      set({ tabs: [...get().tabs, tab], activeId: tab.id });
     },
     openSftp(hostId, title) {
       const tab: FilesTab = { id: uid(), kind: 'sftp', hostId, title };
@@ -189,7 +202,7 @@ export const useTabs = create<TabsState>((set, get) => {
 
 /** Title and status shown on a tab: those of its focused pane. */
 export function tabInfo(tab: Tab, panes: Record<string, TermPane>): { title: string; status: SessionStatus | null; split: boolean } {
-  if (tab.kind === 'sftp') return { title: tab.title, status: null, split: false };
+  if (tab.kind === 'sftp' || tab.kind === 'run') return { title: tab.title, status: null, split: false };
   const p = panes[tab.focusedPaneId];
   return { title: p?.title ?? '', status: p?.status ?? null, split: paneIds(tab.root).length > 1 };
 }

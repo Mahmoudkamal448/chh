@@ -2,16 +2,17 @@ import { z } from 'zod';
 import { IdSchema, SealedSchema, SecretInputSchema } from './common';
 import { HostSettingsOverridesSchema } from './settings';
 
-export const ProtocolSchema = z.enum(['ssh', 'telnet', 'mosh']);
+export const ProtocolSchema = z.enum(['ssh', 'telnet', 'mosh', 'serial']);
 export type Protocol = z.infer<typeof ProtocolSchema>;
 
 const label = z.string().trim().min(1).max(200);
+/** Hostname/IP, or a serial device path (/dev/ttyUSB0, COM3). */
 const address = z
   .string()
   .trim()
   .min(1)
   .max(255)
-  .regex(/^[^\s@/]+$/, 'invalid address');
+  .regex(/^[^\s@]+$/, 'invalid address');
 const tags = z.array(z.string().trim().min(1).max(50)).max(50);
 
 /** Shape persisted in the item store (main process only). */
@@ -26,6 +27,8 @@ export const HostFieldsSchema = z.object({
   osHint: z.string().max(32).nullable(),
   settings: HostSettingsOverridesSchema,
   password: SealedSchema.nullable(),
+  /** Set for hosts imported from a cloud provider ("aws:i-0abc…", "do:12345"), used to update on re-import. */
+  externalId: z.string().max(200).nullable().optional(),
 });
 export type HostFields = z.infer<typeof HostFieldsSchema>;
 
@@ -47,6 +50,7 @@ export const HostInputSchema = z.object({
   notes: z.string().max(10_000).default(''),
   settings: HostSettingsOverridesSchema.default({}),
   password: SecretInputSchema,
+  externalId: z.string().max(200).nullable().optional(),
 });
 export type HostInput = z.input<typeof HostInputSchema>;
 

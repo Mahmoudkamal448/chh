@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { ForwardStatus } from '@cy-ssh/shared';
 import { ForwardManager, type ForwardRule } from '../../src/session-host/forwards/manager';
 import type { SshConnectConfig } from '../../src/session-host/protocol';
+import { sshConfig } from '../support/config';
 import { startSshServer, type TestSshServer } from '../support/ssh-server';
 
 let ssh: TestSshServer;
@@ -10,17 +11,7 @@ let echo: Server;
 let echoPort: number;
 
 const cb = { verifyHostKey: async () => true, requestAuth: async () => null, authSucceeded: () => undefined };
-const config = (): SshConnectConfig => ({
-  host: '127.0.0.1',
-  port: ssh.port,
-  username: 'tester',
-  password: 'secret',
-  privateKey: null,
-  useAgent: false,
-  tryDefaultKeys: false,
-  keepAliveSec: 0,
-  connectTimeoutSec: 10,
-});
+const config = (): SshConnectConfig => sshConfig(ssh.port, { password: 'secret' });
 
 async function freePort(): Promise<number> {
   const s = createServer();

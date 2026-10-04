@@ -13,3 +13,4 @@ export * from './snippet';
 export * from './history';
 export * from './ssh-import';
 export * from './sync';
+export * from './run';

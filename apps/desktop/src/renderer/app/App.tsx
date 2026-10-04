@@ -6,6 +6,7 @@ import { HomeView } from '../features/home/HomeView';
 import { Prompts } from '../features/prompts/Prompts';
 import { SettingsDialog } from '../features/settings/SettingsDialog';
 import { TabBar } from '../features/tabs/TabBar';
+import { RunView } from '../features/run/RunView';
 import { SftpView } from '../features/sftp/SftpView';
 import { TerminalTabView } from '../features/terminal/TerminalTabView';
 import { useLibrary } from '../stores/library-store';
@@ -63,7 +64,13 @@ export function App() {
         </div>
         {tabs.map((tab) => (
           <div key={tab.id} role="tabpanel" className={cn('absolute inset-0', activeId !== tab.id && 'hidden')}>
-            {tab.kind === 'sftp' ? <SftpView hostId={tab.hostId} hostLabel={tab.title} /> : <TerminalTabView tab={tab} visible={activeId === tab.id} />}
+            {tab.kind === 'sftp' ? (
+              <SftpView hostId={tab.hostId} hostLabel={tab.title} />
+            ) : tab.kind === 'run' ? (
+              <RunView runId={tab.runId} />
+            ) : (
+              <TerminalTabView tab={tab} visible={activeId === tab.id} />
+            )}
           </div>
         ))}
       </div>

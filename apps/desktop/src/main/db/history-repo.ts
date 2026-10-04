@@ -40,6 +40,24 @@ export class HistoryRepo {
     return rows.map((r) => ({ id: r.id, hostId: r.host_id, source: r.source, command: r.command, at: r.at }));
   }
 
+  /**
+   * Distinct commands that start with `prefix` (and are longer), for autocomplete. Commands used on the
+   * same host rank first, then by how often and how recently they were used.
+   */
+  suggest(prefix: string, hostId: string | null, limit: number): string[] {
+    if (!prefix.trim()) return [];
+    const like = `${prefix.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+    const rows = this.db
+      .prepare(
+        `SELECT command, count(*) AS uses, max(id) AS last, max(CASE WHEN host_id IS ? THEN 1 ELSE 0 END) AS here
+         FROM history WHERE command LIKE ? ESCAPE '\\' AND command <> ?
+         GROUP BY command ORDER BY here DESC, uses DESC, last DESC LIMIT ?`,
+      )
+      .all(hostId, like, prefix, limit) as Array<{ command: string }>;
+    // LIKE is case-insensitive; completions must extend exactly what was typed.
+    return rows.map((r) => r.command).filter((c) => c.startsWith(prefix));
+  }
+
   remove(ids: number[]): void {
     const stmt = this.db.prepare('DELETE FROM history WHERE id = ?');
     this.db.transaction(() => ids.forEach((id) => stmt.run(id)))();

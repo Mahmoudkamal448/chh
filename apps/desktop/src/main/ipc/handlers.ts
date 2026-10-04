@@ -12,6 +12,10 @@ import { defaultSshConfigPath, type SshConfigIO } from '../ssh-config-io';
 import { CryptoError } from '@cy-ssh/vault-crypto';
 import type { LockManager } from '../lock';
 import type { SyncEngine } from '../sync/engine';
+import type { AiProvider } from '../ai';
+import { awsProfiles, listAws, listDigitalOcean } from '../cloud/providers';
+import type { CloudImporter } from '../cloud/import';
+import { SerialPort } from 'serialport';
 import { SyncHttpError } from '../sync/http';
 import type { GroupsRepo } from '../db/groups-repo';
 import type { HostsRepo } from '../db/hosts-repo';
@@ -38,6 +42,20 @@ export interface HandlerDeps {
   history: HistoryRepo;
   sshConfig: SshConfigIO;
   sync: SyncEngine;
+  ai: AiProvider;
+  cloud: CloudImporter;
+}
+
+/** Cloud provider errors → user-facing keys (credentials, permissions, network). */
+function cloudError(e: unknown): never {
+  if (e instanceof AppError) throw e;
+  const err = e as Error & { name?: string; status?: number; $metadata?: { httpStatusCode?: number } };
+  const status = err.status ?? err.$metadata?.httpStatusCode;
+  if (status === 401 || /credential|InvalidClientTokenId|AuthFailure|UnrecognizedClient|Could not load credentials/i.test(`${err.name} ${err.message}`)) {
+    throw new AppError('cloud_auth', 'cloud.error.auth');
+  }
+  if (status === 403 || /UnauthorizedOperation|AccessDenied/i.test(`${err.name}`)) throw new AppError('cloud_forbidden', 'cloud.error.forbidden');
+  throw new AppError('cloud_failed', 'cloud.error.failed', { detail: err.message?.slice(0, 300) ?? '' });
 }
 
 /** Maps sync-engine errors (server codes, network) to user-facing IPC errors. */
@@ -320,6 +338,42 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
       totpEnable: ({ code }) => syncCall(() => d.sync.totpEnable(code)),
       totpDisable: (input) => syncCall(() => d.sync.totpDisable(input)),
       deleteAccount: ({ password }) => syncCall(() => d.sync.deleteAccount(password)),
+    },
+    serial: {
+      ports: async () =>
+        (await SerialPort.list()).map((p) => ({
+          path: p.path,
+          manufacturer: p.manufacturer ?? null,
+          serialNumber: p.serialNumber ?? null,
+          vendorId: p.vendorId ?? null,
+          productId: p.productId ?? null,
+        })),
+    },
+    run: {
+      start: ({ hostIds, script }, e) => d.sessions.startRun(e.sender, hostIds, script),
+      cancel: ({ runId }) => d.sessions.cancelRun(runId),
+    },
+    suggest: {
+      history: ({ prefix, hostId, limit }) => d.history.suggest(prefix, hostId, limit),
+      ai: async ({ line, hostId, recent }) => {
+        let os: string | null = null;
+        if (hostId) {
+          try {
+            os = d.hosts.getFields(hostId).osHint;
+          } catch {
+            // host gone
+          }
+        }
+        return { suggestions: await d.ai.suggest({ line, os, recent }) };
+      },
+      aiKeyStatus: () => ({ configured: d.ai.hasKey() }),
+      setAiKey: ({ key }) => d.ai.setKey(key),
+    },
+    cloud: {
+      awsProfiles: () => awsProfiles(),
+      awsList: async (input) => d.cloud.stage(await listAws(input).catch(cloudError)),
+      doList: async ({ apiToken }) => d.cloud.stage(await listDigitalOcean(apiToken).catch(cloudError)),
+      import: (input) => d.cloud.import(input),
     },
     lock: {
       state: () => extras.lock.state(),

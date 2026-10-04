@@ -1,6 +1,6 @@
 # Security
 
-This document describes how cy-ssh protects data **as of Phase 4**, and what later phases add. The full
+This document describes how cy-ssh protects data **as of Phase 5**, and what later phases add. The full
 cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](ARCHITECTURE.md#5-encryption-design).
 
 ## What we protect
@@ -79,6 +79,25 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
   redacted before it reaches the file.
 - Terminal input and output are never logged.
 - Error logging records only name, code and message.
+
+## Phase 5 features
+
+- **Jump hosts:** every hop is authenticated and host-key-checked independently, with its own prompts. Credentials for
+  one hop are never sent to another.
+- **Proxy passwords** are asked for at connect time and never stored. SOCKS4 has no authentication; prefer SOCKS5
+  or HTTP CONNECT over a trusted network path.
+- **Agent forwarding** is off by default and labelled as risky: a compromised server can use your agent while
+  you're connected (it can't extract the keys). Enable it only for servers you trust.
+- **System OpenSSH engine:** that host is handled entirely by your `ssh` binary, with its own known_hosts and
+  config. cy-ssh doesn't see its passwords.
+- **Multi-host runs** use the same authentication and host-key checks as interactive sessions. Output stays in
+  memory (not in history).
+- **AI suggestions** are off by default and only run on request. The request contains the current command line,
+  the host's OS, and (only if enabled) your last 10 commands on that host. Never passwords, keys, env vars or
+  terminal output. HTTPS is required except for localhost. The API key is sealed with the vault key.
+- **Cloud credentials** (AWS keys, DigitalOcean tokens) are used for one request and not stored. Use read-only
+  credentials (`ec2:DescribeInstances`, a read-scoped DO token).
+- **OS detection** runs one read-only command (`cat /etc/os-release; uname -s`) on a separate channel after login.
 
 ## Sync and the server
 

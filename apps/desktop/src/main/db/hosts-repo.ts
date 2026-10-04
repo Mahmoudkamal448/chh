@@ -81,6 +81,7 @@ export class HostsRepo {
       osHint: null,
       settings: data.settings,
       password: data.password ? this.vault.seal(data.password, { itemId: id, field: PASSWORD_FIELD }) : null,
+      externalId: data.externalId ?? null,
     });
     return toHost(this.store.insert('host', fields, id));
   }
@@ -137,6 +138,25 @@ export class HostsRepo {
 
   setPassword(id: string, password: string | null): void {
     this.update(id, { password });
+  }
+
+  /** Hosts imported from a cloud provider, by external id ("aws:i-…"). */
+  byExternalId(): Map<string, string> {
+    const out = new Map<string, string>();
+    for (const item of this.store.query<HostFields>('host', `json_extract(fields, '$.externalId') IS NOT NULL`)) {
+      out.set(item.fields.externalId!, item.id);
+    }
+    return out;
+  }
+
+  /** Updates fields that cloud imports manage (address/label/tags/os). */
+  updateFromCloud(id: string, patch: { label: string; address: string; tags: string[]; osHint: string | null }): void {
+    this.store.update<HostFields>(id, 'host', { ...patch, tags: dedupe(patch.tags) });
+  }
+
+  /** Records the detected operating system (shown as an icon in the host list). */
+  setOsHint(id: string, os: string): void {
+    this.store.update<HostFields>(id, 'host', { osHint: os.slice(0, 32) });
   }
 
   getFields(id: string): HostFields {

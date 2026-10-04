@@ -1,5 +1,5 @@
 import * as DM from '@radix-ui/react-context-menu';
-import { Circle, Cloud, CloudOff, Columns2, FolderOpen, Home, Lock, Plus, RefreshCw, Terminal as TermIcon, X } from 'lucide-react';
+import { Circle, Cloud, CloudOff, Columns2, FolderOpen, PlayCircle, Home, Lock, Plus, RefreshCw, Terminal as TermIcon, X } from 'lucide-react';
 import { useApp } from '../../stores/app-store';
 import { useSecurity } from '../../stores/lock-store';
 import { useEffect, useState } from 'react';
@@ -57,7 +57,9 @@ export function TabBar() {
             onClick={() => activate(tab.id)}
             onAuxClick={(e) => e.button === 1 && close(tab.id)}
           >
-            {tab.kind === 'sftp' ? (
+            {tab.kind === 'run' ? (
+              <PlayCircle size={13} className="shrink-0 text-muted" aria-label={t('tabs.run')} />
+            ) : tab.kind === 'sftp' ? (
               <FolderOpen size={13} className="shrink-0 text-muted" aria-label={t('tabs.files')} />
             ) : (
               <Circle size={8} className={cn('shrink-0 fill-current', statusColor[info.status ?? 'closed'])} aria-label={t(`session.status.${info.status ?? 'closed'}`)} />

@@ -3,7 +3,7 @@ import type { Duplex } from 'node:stream';
 import type { Client } from 'ssh2';
 import type { ForwardStatus } from '@cy-ssh/shared';
 import type { SshConnectConfig } from '../protocol';
-import { connectSsh, describeSshError, type ConnectCallbacks } from '../ssh/connect';
+import { connectChain, describeSshError, type ConnectCallbacks } from '../ssh/connect';
 
 export interface ForwardRule {
   kind: 'local' | 'remote' | 'dynamic';
@@ -162,7 +162,7 @@ export class ForwardManager {
     const emit = () => this.emit({ ...r.status });
     emit();
     try {
-      const client = await connectSsh(config, { ...cb, status: () => undefined, isCancelled: () => r.stopped });
+      const client = await connectChain(config, { ...cb, status: () => undefined, isCancelled: () => r.stopped });
       r.client = client;
       if (r.stopped) {
         client.end();

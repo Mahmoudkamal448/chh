@@ -10,12 +10,14 @@ import { useTranslation } from 'react-i18next';
 import { DEFAULT_HOST_SETTINGS, resolveSettings, type GroupLike, type HostSettings, type TerminalStream } from '@cy-ssh/shared';
 import { Button, IconButton, Input } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { splitStatusMessage } from '../../lib/errors';
+import { errorMessage, splitStatusMessage } from '../../lib/errors';
 import { COMMAND_IDS, effectiveKeymap, matches } from '../../lib/keymap';
 import { useApp } from '../../stores/app-store';
 import { useHosts } from '../../stores/hosts-store';
 import { useTabs, type TermPane } from '../../stores/tabs-store';
 import { schemeById } from '../../themes/terminal-themes';
+import { useLibrary } from '../../stores/library-store';
+import { Ghost, SuggestionList, cursorPosition, type SuggestionItem } from './Autocomplete';
 import { HistoryCapture } from './history-capture';
 import { registerTerminal, unregisterTerminal } from './registry';
 
@@ -68,6 +70,16 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
   const [exitCode, setExitCode] = useState<number | null | undefined>(undefined);
   const [findOpen, setFindOpen] = useState(false);
   const [findText, setFindText] = useState('');
+  // Autocomplete: ghost text (→ accepts) and a Ctrl+Space list. Refs mirror state for key handlers.
+  const captureRef = useRef<HistoryCapture | null>(null);
+  const [ghost, setGhost] = useState<{ text: string; left: number; top: number } | null>(null);
+  const ghostRef = useRef(ghost);
+  ghostRef.current = ghost;
+  const [list, setList] = useState<{ input: string; items: SuggestionItem[]; index: number; left: number; top: number; loading: boolean } | null>(null);
+  const listRef = useRef(list);
+  listRef.current = list;
+  const ghostTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [fontInfo, setFontInfo] = useState({ font: DEFAULT_HOST_SETTINGS.fontFamily, size: DEFAULT_HOST_SETTINGS.fontSize });
   const setStatus = useTabs((s) => s.setStatus);
   const reconnect = useTabs((s) => s.reconnect);
   const closePane = useTabs((s) => s.closePane);
@@ -92,6 +104,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       if (disposed || !containerRef.current) return;
       term = new Terminal({ ...termOptions(s), allowProposedApi: true, macOptionIsMeta: true, rightClickSelectsWord: true });
       setBg(schemeById(s.terminalTheme).theme.background);
+      setFontInfo({ font: s.fontFamily, size: s.fontSize });
       const fitAddon = new FitAddon();
       const search = new SearchAddon();
       term.loadAddon(fitAddon);
@@ -123,6 +136,33 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
         }
         if (!mac && matches(e, km['terminal.paste'])) {
           void navigator.clipboard.readText().then((text) => text && tm.paste(text));
+          return false;
+        }
+        // Autocomplete keys.
+        const l = listRef.current;
+        if (l) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            setList({ ...l, index: (l.index + (e.key === 'ArrowDown' ? 1 : -1) + Math.max(1, l.items.length)) % Math.max(1, l.items.length) });
+            return false;
+          }
+          if (e.key === 'Enter' || e.key === 'Tab') {
+            void pickSuggestion(l.index);
+            return false;
+          }
+          if (e.key === 'Escape') {
+            setList(null);
+            return false;
+          }
+          setList(null);
+        }
+        if (e.key === ' ' && e.ctrlKey && !e.shiftKey && !e.altKey && !e.metaKey && useApp.getState().settings.autocomplete.enabled) {
+          void openList();
+          return false;
+        }
+        const g = ghostRef.current;
+        if (g && e.key === 'ArrowRight' && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+          streamRef.current?.write(g.text);
+          setGhost(null);
           return false;
         }
         return !isAppShortcut(e);
@@ -174,11 +214,18 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
     streamRef.current = stream;
     const src = paneRef.current.source;
     const capture = new HistoryCapture(term, (command) => {
-      void window.cy.history.add({ hostId: src.kind === 'host' ? src.hostId : null, source: paneRef.current.title, command });
+      if (useApp.getState().settings.historyEnabled) {
+        void window.cy.history.add({ hostId: src.kind === 'host' ? src.hostId : null, source: paneRef.current.title, command });
+      }
     });
+    captureRef.current = capture;
     const d1 = term.onData((d) => {
-      if (useApp.getState().settings.historyEnabled) capture.input(d);
+      capture.input(d);
       stream.write(d);
+      setGhost(null);
+      // Look for a completion once the echo has landed.
+      if (ghostTimer.current) clearTimeout(ghostTimer.current);
+      if (useApp.getState().settings.autocomplete.enabled && !/[\r\n\x03\x04]/.test(d)) ghostTimer.current = setTimeout(updateGhost, 150);
     });
     const d2 = term.onBinary((d) => stream.write(d));
     const d3 = term.onResize(({ cols, rows }) => stream.resize(cols, rows));
@@ -218,6 +265,68 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
     return () => window.removeEventListener('cy:terminal-find', onFind);
   }, [visible, focused]);
 
+  const hostIdOf = () => (paneRef.current.source.kind === 'host' ? paneRef.current.source.hostId : null);
+
+  async function updateGhost() {
+    const term = termRef.current;
+    const input = captureRef.current?.typed();
+    if (!term || !containerRef.current || !input || input.trim().length < 2) return;
+    const [best] = await window.cy.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 1 });
+    if (!best || captureRef.current?.typed() !== input) return; // user kept typing
+    const pos = cursorPosition(term, containerRef.current);
+    if (pos) setGhost({ text: best.slice(input.length), left: pos.left, top: pos.top });
+  }
+
+  async function openList() {
+    const term = termRef.current;
+    if (!term || !containerRef.current) return;
+    setGhost(null);
+    const input = captureRef.current?.typed() ?? '';
+    const pos = cursorPosition(term, containerRef.current);
+    if (!pos) return;
+    const history = input ? await window.cy.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 8 }) : [];
+    const q = input.toLowerCase();
+    const snippets = useLibrary
+      .getState()
+      .snippets.filter((s) => !q || s.label.toLowerCase().includes(q) || s.script.toLowerCase().startsWith(q))
+      .slice(0, 5);
+    const items: SuggestionItem[] = [
+      ...history.map((text) => ({ kind: 'history' as const, text })),
+      ...snippets.map((s) => ({ kind: 'snippet' as const, text: s.script, label: s.label })),
+    ];
+    if (useApp.getState().settings.ai.enabled && input.trim()) items.push({ kind: 'ask-ai', text: '' });
+    setList({ input, items, index: 0, left: pos.left, top: pos.top + pos.cellH + 2, loading: false });
+  }
+
+  async function pickSuggestion(i: number) {
+    const l = listRef.current;
+    const item = l?.items[i];
+    if (!l || !item) return setList(null);
+    if (item.kind === 'ask-ai') {
+      setList({ ...l, loading: true, items: l.items.filter((x) => x.kind !== 'ask-ai') });
+      try {
+        const recent = useApp.getState().settings.ai.sendHistory
+          ? (await window.cy.history.search({ hostId: hostIdOf() ?? undefined, limit: 10 })).map((h) => h.command).reverse()
+          : [];
+        const { suggestions } = await window.cy.suggest.ai({ line: l.input, hostId: hostIdOf(), recent });
+        const cur = listRef.current;
+        if (cur) setList({ ...cur, loading: false, index: cur.items.length, items: [...cur.items, ...suggestions.map((text) => ({ kind: 'ai' as const, text }))] });
+      } catch (err) {
+        const cur = listRef.current;
+        const { key, detail } = errorMessage(err);
+        if (cur) setList({ ...cur, loading: false, items: [...cur.items, { kind: 'ai', text: `# ${t(key, { defaultValue: t('errors.internal'), detail })}` }] });
+      }
+      return;
+    }
+    setList(null);
+    const stream = streamRef.current;
+    if (!stream || item.text.startsWith('# ')) return;
+    // Completions extend what's typed; anything else replaces the line (Ctrl+U clears it in most shells).
+    if (item.text.startsWith(l.input)) stream.write(item.text.slice(l.input.length));
+    else stream.write(`\x15${item.text.replace(/\r?\n/g, '\r')}`);
+    termRef.current?.focus();
+  }
+
   const findNext = (back = false) => {
     if (!findText) return;
     if (back) searchRef.current?.findPrevious(findText);
@@ -243,6 +352,8 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       data-focused={focused || undefined}
     >
       <div ref={containerRef} className="h-full w-full" />
+      {ghost && <Ghost text={ghost.text} left={ghost.left} top={ghost.top} font={fontInfo.font} size={fontInfo.size} />}
+      {list && <SuggestionList items={list.items} index={list.index} left={list.left} top={list.top} loading={list.loading} onPick={(i) => void pickSuggestion(i)} />}
 
       {findOpen && (
         <div className="absolute right-3 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface p-1 shadow-lg">

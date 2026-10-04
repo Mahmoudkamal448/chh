@@ -6,8 +6,8 @@ Electron + TypeScript codebase.
 Every feature is free for everyone: there are no plans, trials, device limits or license checks. Sync is optional
 and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offline without an account.
 
-> **Status: Phase 4 of 6 complete.** Everything from earlier phases plus end-to-end encrypted multi-device sync
-> through a self-hostable server, two-factor authentication, and an app lock with optional master password.
+> **Status: Phase 5 of 6 complete.** Everything from earlier phases plus jump hosts, proxies, agent forwarding, serial
+> ports, FIDO2 security keys, environment variables, multi-host snippets, autocomplete, and AWS/DigitalOcean import.
 > See the [roadmap](#roadmap) for what comes next.
 
 ## Features
@@ -26,6 +26,13 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 - **SFTP file browser:** dual pane (this computer or any host on either side), drag and drop between panes and
   from your desktop, recursive transfers with progress, cancel and conflict handling, plus rename, delete, new
   folder and a permissions editor.
+- **Jump hosts and proxies:** multi-hop chains (each hop with its own login), SOCKS4/5 and HTTP CONNECT proxies,
+  **agent forwarding**, Pageant support, and per-host/group **environment variables**.
+- **Serial ports** (baud, parity, stop bits, flow control), and **FIDO2 security keys** via the System OpenSSH engine.
+- **Run snippets on many hosts** in parallel with per-host output and exit codes.
+- **Autocomplete** from history and snippets (ghost text, Ctrl+Space), plus optional AI suggestions from any
+  OpenAI-compatible endpoint (off by default, local models supported).
+- **Cloud import** from AWS EC2 and DigitalOcean (re-import updates changed IPs); automatic **OS detection** with icons.
 - **Split view:** split any terminal tab right/down, resize by dragging, move focus between panes.
 - **Mosh and Telnet** hosts alongside SSH (Mosh on Windows runs through WSL).
 - **Port forwarding:** local, remote and dynamic (SOCKS) rules with start/stop, auto-start and live stats.
@@ -110,7 +117,7 @@ docs/                  Architecture, development, security and phase notes
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today
 - [Self-hosting](docs/SELF_HOSTING.md): run your own sync server
-- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md), [Phase 4](docs/PHASE-4.md) (what was built, files, how to test, platform differences)
+- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md), [Phase 4](docs/PHASE-4.md), [Phase 5](docs/PHASE-5.md) (what was built, files, how to test, platform differences)
 
 ## Roadmap
 
@@ -120,8 +127,8 @@ docs/                  Architecture, development, security and phase notes
 | 2 | Keys, identities, known-hosts manager, SFTP dual-pane browser | ✅ Done |
 | 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | ✅ Done |
 | 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | ✅ Done |
-| 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | Next |
-| 6 | Shared team vault + audit log, signed installers, auto-update | |
+| 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | ✅ Done |
+| 6 | Shared team vault + audit log, signed installers, auto-update | Next |
 
 ## License
 

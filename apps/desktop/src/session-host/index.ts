@@ -13,9 +13,11 @@ import { SftpFs } from './files/sftp-fs';
 import { TransferManager } from './files/transfers';
 import { FlowControl, chunkSize } from './flow';
 import type { HostToMain, MainToHost, RpcError, RpcMethod, SshConnectConfig } from './protocol';
-import { connectSsh, describeSshError, type AuthRequest, type HostKeyInfo } from './ssh/connect';
+import { connectChain, describeSshError, type AuthRequest, type HostKeyInfo } from './ssh/connect';
 import { openLocalPty } from './transports/local-pty';
+import { ExecRunner } from './exec/runner';
 import { openMosh } from './transports/mosh';
+import { openSerial } from './transports/serial';
 import { openTelnet } from './transports/telnet';
 import { openSsh } from './transports/ssh';
 import type { Transport, TransportEvents } from './transports/types';
@@ -52,6 +54,10 @@ const transfers = new TransferManager(
 );
 
 const forwards = new ForwardManager((status) => toMain({ type: 'forward', status }));
+const runner = new ExecRunner(
+  (status) => toMain({ type: 'run-status', status }),
+  (output) => toMain({ type: 'run-output', output }),
+);
 
 function toRenderer(s: TerminalSession, msg: PortToRenderer): void {
   if (!s.closed) s.port.postMessage(msg);
@@ -197,7 +203,7 @@ async function handleRpc(method: RpcMethod, p: Record<string, unknown>): Promise
     case 'sftp.open': {
       const sessionId = str(p.sessionId, 'sessionId');
       connecting.add(sessionId);
-      const client = await connectSsh(p.config as SshConnectConfig, {
+      const client = await connectChain(p.config as SshConnectConfig, {
         ...promptCallbacks(sessionId),
         status: () => undefined,
         isCancelled: () => !connecting.has(sessionId),
@@ -264,6 +270,20 @@ async function handleRpc(method: RpcMethod, p: Record<string, unknown>): Promise
       }
       return undefined;
     }
+    case 'exec.start': {
+      const sessionId = str(p.sessionId, 'sessionId');
+      // Runs in the background; progress is reported through run-status / run-output messages.
+      void runner
+        .run(str(p.runId, 'runId'), str(p.hostId, 'hostId'), p.config as SshConnectConfig, str(p.script, 'script'), promptCallbacks(sessionId))
+        .finally(() => {
+          failPrompts(sessionId);
+          toMain({ type: 'closed', sessionId });
+        });
+      return undefined;
+    }
+    case 'exec.cancel':
+      runner.cancel(str(p.runId, 'runId'));
+      return undefined;
     case 'forward.stop':
       forwards.stop(str(p.forwardId, 'forwardId'));
       return undefined;
@@ -316,6 +336,13 @@ parentPort.on('message', (e) => {
       attachTransport(s, openTelnet({ host: msg.host, port: msg.port, cols: msg.cols, rows: msg.rows, connectTimeoutSec: msg.connectTimeoutSec }, baseEvents(s)));
       break;
     }
+    case 'open-serial': {
+      const port = e.ports[0];
+      if (!port) return;
+      const s = newTerminal(msg.sessionId, port);
+      attachTransport(s, openSerial({ path: msg.path, settings: msg.settings }, baseEvents(s)));
+      break;
+    }
     case 'open-mosh': {
       const port = e.ports[0];
       if (!port) return;
@@ -333,7 +360,13 @@ parentPort.on('message', (e) => {
       const port = e.ports[0];
       if (!port) return;
       const s = newTerminal(msg.sessionId, port);
-      attachTransport(s, openSsh({ cols: msg.cols, rows: msg.rows, config: msg.config }, { ...baseEvents(s), ...promptCallbacks(s.id) }));
+      attachTransport(
+        s,
+        openSsh(
+          { cols: msg.cols, rows: msg.rows, config: msg.config },
+          { ...baseEvents(s), ...promptCallbacks(s.id), osDetected: (os) => toMain({ type: 'os-detected', sessionId: s.id, os }) },
+        ),
+      );
       break;
     }
     case 'close': {

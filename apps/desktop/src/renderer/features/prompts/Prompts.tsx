@@ -93,6 +93,8 @@ function AuthDialog({ p }: { p: AuthPrompt }) {
       ? t('auth.usernameTitle', { host: p.hostLabel })
       : p.kind === 'passphrase'
         ? t('auth.passphraseTitle', { target: p.title })
+        : p.kind === 'proxy'
+          ? t('auth.proxyTitle', { target: p.title })
         : t('auth.title', { target: p.title });
 
   return (

@@ -1,9 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import type { HostSettings, HostSettingsOverrides } from '@cy-ssh/shared';
+import type { HostSettings, HostSettingsOverrides, Protocol } from '@cy-ssh/shared';
 import { Field, Input, Select } from '../../components/ui';
 import { keyKind } from '../../lib/format';
 import { useVault } from '../../stores/vault-store';
 import { TERMINAL_SCHEMES, schemeById } from '../../themes/terminal-themes';
+import { AdvancedFields, SerialFields } from './AdvancedFields';
 
 /**
  * Editors for inheritable settings. Empty = inherit; the inherited value is shown as placeholder.
@@ -14,12 +15,18 @@ export function SettingsFields({
   inherited,
   onChange,
   showIdentity,
+  protocol,
+  selfId,
 }: {
   value: HostSettingsOverrides;
   inherited: HostSettings;
   onChange(v: HostSettingsOverrides): void;
   showIdentity: boolean;
+  /** Host protocol (undefined in the group editor): hides fields that don't apply. */
+  protocol?: Protocol;
+  selfId?: string | null;
 }) {
+  const sshLike = !protocol || protocol === 'ssh' || protocol === 'mosh';
   const { t } = useTranslation();
   const keys = useVault((s) => s.keys);
   const identities = useVault((s) => s.identities);
@@ -42,20 +49,36 @@ export function SettingsFields({
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      {showIdentity && (
-        <>
-          <Field label={t('hostEditor.username')}>
-            {(id) => (
-              <Input id={id} value={value.username ?? ''} placeholder={inherited.username || t('hostEditor.askOnConnect')} onChange={(e) => set('username', e.target.value || undefined)} />
-            )}
-          </Field>
-          <Field label={t('hostEditor.port')}>
-            {(id) => (
-              <Input id={id} type="number" min={1} max={65535} value={value.port ?? ''} placeholder={String(inherited.port)} onChange={(e) => set('port', num(e.target.value))} />
-            )}
-          </Field>
-        </>
+      {protocol === 'serial' && (
+        <div className="col-span-2">
+          <SerialFields value={value} inherited={inherited} set={set} />
+        </div>
       )}
+      {showIdentity && sshLike && (
+        <Field label={t('hostEditor.username')}>
+          {(id) => (
+            <Input id={id} value={value.username ?? ''} placeholder={inherited.username || t('hostEditor.askOnConnect')} onChange={(e) => set('username', e.target.value || undefined)} />
+          )}
+        </Field>
+      )}
+      {showIdentity && protocol !== 'serial' && (
+        <Field label={t('hostEditor.port')}>
+          {(id) => (
+            <Input
+              id={id}
+              type="number"
+              min={1}
+              max={65535}
+              value={value.port ?? ''}
+              // Telnet ignores inherited (SSH) ports and defaults to 23.
+              placeholder={protocol === 'telnet' ? '23' : String(inherited.port)}
+              onChange={(e) => set('port', num(e.target.value))}
+            />
+          )}
+        </Field>
+      )}
+      {sshLike && (
+      <>
       <Field label={t('hostEditor.identity')} hint={t('hostEditor.identityHint')}>
         {(id, d) => (
           <Select id={id} aria-describedby={d} value={refValue(value.identityId)} onChange={(e) => set('identityId', refParse(e.target.value))} data-testid="host-identity">
@@ -83,6 +106,8 @@ export function SettingsFields({
           </Select>
         )}
       </Field>
+      </>
+      )}
       <Field label={t('hostEditor.terminalTheme')}>
         {(id) => (
           <Select id={id} value={value.terminalTheme ?? ''} onChange={(e) => set('terminalTheme', e.target.value || undefined)}>
@@ -107,6 +132,8 @@ export function SettingsFields({
           )}
         </Field>
       </div>
+      {sshLike && (
+      <>
       <Field label={t('hostEditor.useAgent')}>
         {(id) => (
           <Select id={id} value={boolValue(value.useAgent)} onChange={(e) => set('useAgent', bool(e.target.value))}>
@@ -139,6 +166,8 @@ export function SettingsFields({
           <Input id={id} aria-describedby={d} value={value.moshServer ?? ''} placeholder={inherited.moshServer} onChange={(e) => set('moshServer', e.target.value || undefined)} />
         )}
       </Field>
+      </>
+      )}
       <Field label={t('hostEditor.keepAlive')}>
         {(id) => (
           <Input id={id} type="number" min={0} max={3600} value={value.keepAliveSec ?? ''} placeholder={String(inherited.keepAliveSec)} onChange={(e) => set('keepAliveSec', num(e.target.value))} />
@@ -149,6 +178,9 @@ export function SettingsFields({
           <Input id={id} type="number" min={1} max={300} value={value.connectTimeoutSec ?? ''} placeholder={String(inherited.connectTimeoutSec)} onChange={(e) => set('connectTimeoutSec', num(e.target.value))} />
         )}
       </Field>
+      <div className="col-span-2">
+        <AdvancedFields value={value} inherited={inherited} set={set} protocol={protocol} selfId={selfId} />
+      </div>
     </div>
   );
 }

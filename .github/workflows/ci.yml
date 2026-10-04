@@ -31,9 +31,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Mosh (Linux, for the Mosh E2E test)
+      - name: Install Mosh and socat (Linux, for the Mosh and serial E2E tests)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y mosh
+        run: sudo apt-get update && sudo apt-get install -y mosh socat
 
       - name: Typecheck
         run: pnpm typecheck

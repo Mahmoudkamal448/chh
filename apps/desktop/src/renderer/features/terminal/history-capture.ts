@@ -37,6 +37,20 @@ export class HistoryCapture {
     }
   }
 
+  /**
+   * What's been typed on the current line so far (as displayed), or null when unknown — e.g. in a
+   * full-screen app, or when the cursor isn't at the end of the input.
+   */
+  typed(): string | null {
+    const buf = this.term.buffer.active;
+    if (!this.start || buf.type === 'alternate') return null;
+    const line = buf.baseY + buf.cursorY;
+    if (line !== this.start.line) return null;
+    const text = buf.getLine(line)?.translateToString(true) ?? '';
+    if (text.length > buf.cursorX) return null; // cursor is mid-line
+    return text.slice(this.start.x, buf.cursorX);
+  }
+
   private read(start: { line: number; x: number }): void {
     const buf = this.term.buffer.active;
     if (buf.type === 'alternate') return;

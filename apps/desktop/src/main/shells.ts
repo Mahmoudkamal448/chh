@@ -84,3 +84,12 @@ export function detectMoshClient(): MoshClient | null {
   const found = which('mosh-client');
   return found ? { path: found, args: [], env: {} } : null;
 }
+
+/** The system OpenSSH client (for the "System OpenSSH" engine: FIDO2 keys, post-quantum KEX). */
+export function detectOpenSsh(): string | null {
+  if (process.platform === 'win32') {
+    const builtin = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'OpenSSH', 'ssh.exe');
+    if (existsSync(builtin)) return builtin;
+  }
+  return which('ssh');
+}

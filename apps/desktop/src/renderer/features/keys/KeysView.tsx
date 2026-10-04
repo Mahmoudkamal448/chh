@@ -5,13 +5,50 @@ import { useTranslation } from 'react-i18next';
 import type { Key } from '@cy-ssh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PromptDialog } from '../../components/PromptDialog';
-import { Button, IconButton } from '../../components/ui';
+import { Button, IconButton, Input } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDate, keyKind } from '../../lib/format';
 import { useVault } from '../../stores/vault-store';
+import { useTabs } from '../../stores/tabs-store';
+import { activePaneId } from '../../app/commands';
+import { writeToPane } from '../terminal/registry';
 import { ExportKeyDialog } from './ExportKeyDialog';
 import { GenerateKeyDialog } from './GenerateKeyDialog';
 import { ImportKeyDialog } from './ImportKeyDialog';
+
+/** FIDO2 security keys live on the hardware; OpenSSH generates a key handle file for them. */
+function SecurityKeyCard() {
+  const { t } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('id_ed25519_sk');
+  const command = `ssh-keygen -t ed25519-sk -O resident -f ~/.ssh/${name.replace(/[^\w.-]/g, '') || 'id_ed25519_sk'}`;
+  return (
+    <details className="border-b border-border px-4 py-2 text-[12px]" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)} data-testid="security-key-card">
+      <summary className="cursor-pointer font-medium">{t('fido.title')}</summary>
+      <div className="mt-2 flex flex-col gap-2 text-muted">
+        <p>{t('fido.hint')}</p>
+        <div className="flex items-center gap-2">
+          <Input className="w-56 font-mono" aria-label={t('fido.fileName')} value={name} onChange={(e) => setName(e.target.value)} />
+          <code className="selectable flex-1 truncate rounded bg-surface-2 px-2 py-1 font-mono text-fg">{command}</code>
+          <Button
+            onClick={async () => {
+              await useTabs.getState().openLocal();
+              // Type the command; the user presses Enter, touches the key and enters the PIN.
+              setTimeout(() => {
+                const pane = activePaneId();
+                if (pane) writeToPane(pane, command);
+              }, 600);
+            }}
+            data-testid="fido-generate"
+          >
+            {t('fido.openTerminal')}
+          </Button>
+        </div>
+        <p>{t('fido.useIt')}</p>
+      </div>
+    </details>
+  );
+}
 
 const menuItem = 'flex h-8 cursor-default items-center gap-2 rounded px-2 text-[13px] outline-none data-[highlighted]:bg-surface-2';
 
@@ -73,6 +110,7 @@ export function KeysView() {
         </div>
       </div>
 
+      <SecurityKeyCard />
       {keys.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
           <KeyRound size={28} />

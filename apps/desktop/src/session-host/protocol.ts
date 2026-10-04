@@ -3,7 +3,7 @@
  * Terminal bytes never travel on this channel — they use a per-session MessagePort that goes
  * straight to the renderer.
  */
-import type { ForwardStatus, HostKeyDecision, Transfer } from '@cy-ssh/shared';
+import type { ForwardStatus, HostKeyDecision, ProxyConfig, RunHostStatus, RunOutput, SerialSettings, Transfer } from '@cy-ssh/shared';
 
 export interface SshConnectConfig {
   host: string;
@@ -17,6 +17,17 @@ export interface SshConnectConfig {
   tryDefaultKeys: boolean;
   keepAliveSec: number;
   connectTimeoutSec: number;
+  /** Shown in prompts so the user knows which hop is asking. */
+  label: string;
+  /** Agent: "" = system default, "pageant", or a socket/pipe path. */
+  agent: string;
+  agentForward: boolean;
+  /** Jump hosts, nearest first (each a complete config of its own; their own jumps are ignored). */
+  jumps: SshConnectConfig[];
+  /** Proxy for the first hop. */
+  proxy: ProxyConfig | null;
+  env: Record<string, string>;
+  envMethod: 'request' | 'export';
 }
 
 /** How to run mosh-client locally (direct, or through WSL on Windows). */
@@ -27,6 +38,8 @@ export interface MoshClientSpec {
 }
 
 export type RpcMethod =
+  | 'exec.start'
+  | 'exec.cancel'
   | 'forward.start'
   | 'forward.stop'
   | 'sftp.open'
@@ -58,6 +71,7 @@ export type MainToHost =
       moshServer: string;
       client: MoshClientSpec;
     }
+  | { type: 'open-serial'; sessionId: string; path: string; settings: SerialSettings }
   | { type: 'open-local'; sessionId: string; cols: number; rows: number; shell: { path: string; args: string[] }; cwd: string }
   | { type: 'close'; sessionId: string }
   | { type: 'hostkey-result'; promptId: string; decision: HostKeyDecision }
@@ -80,7 +94,7 @@ export type HostToMain =
       type: 'auth-prompt';
       sessionId: string;
       promptId: string;
-      kind: 'password' | 'keyboard-interactive' | 'username' | 'passphrase';
+      kind: 'password' | 'keyboard-interactive' | 'username' | 'passphrase' | 'proxy';
       title: string;
       instructions: string;
       prompts: Array<{ prompt: string; echo: boolean }>;
@@ -93,4 +107,8 @@ export type HostToMain =
   | { type: 'rpc-result'; id: number; ok: true; value: unknown }
   | { type: 'rpc-result'; id: number; ok: false; error: RpcError }
   | { type: 'transfer'; transfer: Transfer }
-  | { type: 'forward'; status: ForwardStatus };
+  | { type: 'forward'; status: ForwardStatus }
+  /** OS detected after an SSH shell started (e.g. "ubuntu", "debian", "macos"). */
+  | { type: 'os-detected'; sessionId: string; os: string }
+  | { type: 'run-status'; status: RunHostStatus }
+  | { type: 'run-output'; output: RunOutput };

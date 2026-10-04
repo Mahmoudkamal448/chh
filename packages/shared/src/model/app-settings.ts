@@ -22,6 +22,20 @@ export const AppSettingsSchema = z.object({
   }).partial(),
   /** Record typed commands in the searchable history. */
   historyEnabled: z.boolean(),
+  /** SSH agent: "" = automatic (SSH_AUTH_SOCK / Windows OpenSSH agent), "pageant", or a socket/pipe path. */
+  sshAgent: z.string().max(1024),
+  autocomplete: z.object({
+    /** Suggest from history and snippets while typing (ghost text; → accepts, Ctrl+Space lists). */
+    enabled: z.boolean(),
+  }),
+  /** Optional AI command suggestions via an OpenAI-compatible endpoint (off by default). */
+  ai: z.object({
+    enabled: z.boolean(),
+    endpoint: z.string().max(500),
+    model: z.string().max(200),
+    /** Include the last few commands of this session as context. */
+    sendHistory: z.boolean(),
+  }),
 });
 export type AppSettings = z.infer<typeof AppSettingsSchema>;
 
@@ -32,4 +46,7 @@ export const DEFAULT_APP_SETTINGS: AppSettings = {
   language: 'en',
   terminalDefaults: {},
   historyEnabled: true,
+  sshAgent: '',
+  autocomplete: { enabled: true },
+  ai: { enabled: false, endpoint: '', model: '', sendHistory: false },
 };

@@ -4,6 +4,7 @@ import { DEFAULT_HOST_SETTINGS, type LocalShell, type UiTheme } from '@cy-ssh/sh
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Kbd, Select } from '../../components/ui';
 import { ThemePicker } from './ThemePicker';
+import { AiSettings } from './AiSettings';
 import { COMMAND_IDS, defaultKeymap, displayAccelerator, effectiveKeymap, eventToAccelerator, type CommandId } from '../../lib/keymap';
 import { cn } from '../../lib/cn';
 import { useApp, type SettingsSection } from '../../stores/app-store';
@@ -73,6 +74,25 @@ export function SettingsDialog() {
               </Select>
             )}
           </Field>
+          <Field label={t('settings.sshAgent')} hint={t('settings.sshAgentHint')}>
+            {(id, d) => (
+              <Select
+                id={id}
+                aria-describedby={d}
+                value={settings.sshAgent === '' || settings.sshAgent === 'pageant' ? settings.sshAgent : 'custom'}
+                onChange={(e) => void update({ sshAgent: e.target.value === 'custom' ? '/path/to/agent.sock' : e.target.value })}
+              >
+                <option value="">{t('settings.agentAuto')}</option>
+                {info?.platform === 'win32' && <option value="pageant">Pageant</option>}
+                <option value="custom">{t('settings.agentCustom')}</option>
+              </Select>
+            )}
+          </Field>
+          {settings.sshAgent !== '' && settings.sshAgent !== 'pageant' && (
+            <Field label={t('settings.agentPath')}>
+              {(id) => <Input id={id} className="font-mono" defaultValue={settings.sshAgent} onBlur={(e) => void update({ sshAgent: e.target.value.trim() })} />}
+            </Field>
+          )}
           <Field label={t('settings.defaultShell')}>
             {(id) => (
               <Select id={id} value={settings.defaultShell ?? ''} onChange={(e) => void update({ defaultShell: e.target.value || null })}>
@@ -152,8 +172,14 @@ export function SettingsDialog() {
             onChange={(v) => void update({ terminalDefaults: { ...settings.terminalDefaults, cursorBlink: v } })}
           />
           <Checkbox label={t('settings.historyEnabled')} checked={settings.historyEnabled} onChange={(v) => void update({ historyEnabled: v })} />
+          <Checkbox
+            label={t('settings.autocomplete')}
+            checked={settings.autocomplete.enabled}
+            onChange={(v) => void update({ autocomplete: { enabled: v } })}
+          />
         </section>
 
+              <AiSettings />
             </>
           )}
           {section === 'shortcuts' && (

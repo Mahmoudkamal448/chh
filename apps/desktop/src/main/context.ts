@@ -15,8 +15,10 @@ import { SettingsRepo } from './db/settings-repo';
 import { SnippetsRepo } from './db/snippets-repo';
 import { emit } from './ipc/handle';
 import { SessionManager, sessionHostScript } from './sessions';
-import { detectMoshClient, detectShells, type MoshClient } from './shells';
+import { detectMoshClient, detectOpenSsh, detectShells, type MoshClient } from './shells';
 import { SshConfigIO } from './ssh-config-io';
+import { AiProvider } from './ai';
+import { CloudImporter } from './cloud/import';
 import { SyncEngine } from './sync/engine';
 import { LocalVault } from './vault/local-vault';
 import type { EventName, EventPayload } from '@cy-ssh/shared';
@@ -62,6 +64,8 @@ export function openContext(userData: string, key: Buffer, mainDir: string) {
   // mosh-client detection can be slow on Windows (WSL), so cache it briefly.
   let mosh: { at: number; client: MoshClient | null } | null = null;
   const sessions = new SessionManager({
+    appSettings: () => settings.getApp(),
+    openSsh: detectOpenSsh,
     keys,
     identities,
     forwards,
@@ -85,7 +89,12 @@ export function openContext(userData: string, key: Buffer, mainDir: string) {
     onRemoteChange: (types) => broadcast('data.changed', { kinds: [...new Set([...types].map((t) => KIND_FOR[t]))] }),
   });
 
+  const ai = new AiProvider(settings, vault);
+  const cloud = new CloudImporter(hosts, groups);
+
   return {
+    ai,
+    cloud,
     db,
     vault,
     settings,

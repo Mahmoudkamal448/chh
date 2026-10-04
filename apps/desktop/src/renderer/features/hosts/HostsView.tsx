@@ -7,6 +7,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, Input } from '../../components/ui';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
 import { useTabs } from '../../stores/tabs-store';
+import { CloudImportDialog } from '../cloud/CloudImportDialog';
 import { SshImportDialog } from '../ssh-config/SshImportDialog';
 import { HostList } from './HostList';
 import { Sidebar } from './Sidebar';
@@ -28,6 +29,7 @@ export function HostsView() {
   const [deleting, setDeleting] = useState<Host | null>(null);
   const [importing, setImporting] = useState<'default' | 'pick' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [cloud, setCloud] = useState<'aws' | 'do' | null>(null);
   const [query, setQuery] = useState(filter.query);
   const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -82,7 +84,7 @@ export function HostsView() {
           <DM.Root>
             <DM.Trigger asChild>
               <Button data-testid="ssh-config-menu">
-                {t('sshConfig.menu')} <ChevronDown size={12} />
+                {t('hosts.importExport')} <ChevronDown size={12} />
               </Button>
             </DM.Trigger>
             <DM.Portal>
@@ -92,6 +94,12 @@ export function HostsView() {
                 </DM.Item>
                 <DM.Item className={menuItem} onSelect={() => setImporting('pick')}>
                   {t('sshConfig.importFile')}
+                </DM.Item>
+                <DM.Item className={menuItem} onSelect={() => setCloud('aws')} data-testid="import-aws">
+                  {t('cloud.menuAws')}
+                </DM.Item>
+                <DM.Item className={menuItem} onSelect={() => setCloud('do')} data-testid="import-do">
+                  {t('cloud.menuDo')}
                 </DM.Item>
                 <DM.Separator className="my-1 h-px bg-border" />
                 <DM.Item
@@ -162,6 +170,7 @@ export function HostsView() {
         )}
       </main>
 
+      <CloudImportDialog provider={cloud} onClose={() => setCloud(null)} />
       <SshImportDialog open={!!importing} pickFile={importing === 'pick'} onClose={() => setImporting(null)} />
       <ConfirmDialog
         open={!!deleting}
