@@ -138,9 +138,13 @@ function serveSftp(sftp: SFTPWrapper, root: string): void {
 
 export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSshServer> {
   const password = opts.password ?? 'secret';
-  const key = utils.generateKeyPairSync('ed25519');
-  const parsed = utils.parseKey(key.public);
-  if (parsed instanceof Error) throw parsed;
+  // ssh2 drops a leading zero byte from about 1 in 256 ed25519 keys it generates, and then can't parse them.
+  let key: ReturnType<typeof utils.generateKeyPairSync>;
+  let parsed: ReturnType<typeof utils.parseKey>;
+  do {
+    key = utils.generateKeyPairSync('ed25519');
+    parsed = utils.parseKey(key.public);
+  } while (parsed instanceof Error || utils.parseKey(key.private) instanceof Error);
   const pubBlob = (Array.isArray(parsed) ? parsed[0]! : parsed).getPublicSSH();
   const fingerprint = `SHA256:${createHash('sha256').update(pubBlob).digest('base64').replace(/=+$/, '')}`;
   const authorized = (opts.authorizedKeys ?? []).map((line) => {
