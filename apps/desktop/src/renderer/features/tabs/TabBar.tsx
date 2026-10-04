@@ -1,11 +1,11 @@
 import * as DM from '@radix-ui/react-context-menu';
-import { Circle, FolderOpen, Home, Plus, Terminal as TermIcon, X } from 'lucide-react';
+import { Circle, Columns2, FolderOpen, Home, Plus, Terminal as TermIcon, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LocalShell } from '@cy-ssh/shared';
 import { IconButton } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { HOSTS_TAB, useTabs } from '../../stores/tabs-store';
+import { HOSTS_TAB, tabInfo, useTabs } from '../../stores/tabs-store';
 
 const statusColor: Record<string, string> = {
   connecting: 'text-[#d29b00]',
@@ -18,6 +18,7 @@ const statusColor: Record<string, string> = {
 export function TabBar() {
   const { t } = useTranslation();
   const tabs = useTabs((s) => s.tabs);
+  const panes = useTabs((s) => s.panes);
   const activeId = useTabs((s) => s.activeId);
   const activate = useTabs((s) => s.activate);
   const close = useTabs((s) => s.close);
@@ -40,7 +41,9 @@ export function TabBar() {
         <Home size={14} />
         {t('tabs.hosts')}
       </button>
-      {tabs.map((tab) => (
+      {tabs.map((tab) => {
+        const info = tabInfo(tab, panes);
+        return (
         <div key={tab.id} className={tabClass(tab.id === activeId)} data-testid="session-tab">
           <button
             role="tab"
@@ -52,15 +55,17 @@ export function TabBar() {
             {tab.kind === 'sftp' ? (
               <FolderOpen size={13} className="shrink-0 text-muted" aria-label={t('tabs.files')} />
             ) : (
-              <Circle size={8} className={cn('shrink-0 fill-current', statusColor[tab.status])} aria-label={t(`session.status.${tab.status}`)} />
+              <Circle size={8} className={cn('shrink-0 fill-current', statusColor[info.status ?? 'closed'])} aria-label={t(`session.status.${info.status ?? 'closed'}`)} />
             )}
-            <span className="truncate">{tab.title}</span>
+            <span className="truncate">{info.title}</span>
+            {info.split && <Columns2 size={12} className="shrink-0 text-muted" aria-label={t('tabs.split')} />}
           </button>
           <IconButton label={t('tabs.close')} className="h-5 w-5 opacity-60 hover:opacity-100" onClick={() => close(tab.id)}>
             <X size={12} />
           </IconButton>
         </div>
-      ))}
+        );
+      })}
       <DM.Root>
         <DM.Trigger asChild>
           <button

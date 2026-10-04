@@ -1,7 +1,7 @@
 # cy-ssh — Architecture
 
-> **Status:** approved. Phases 1–2 are implemented; see [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft)
-> and [PHASE-2.md](PHASE-2.md#design-notes-and-deviations) for the deviations made during implementation.
+> **Status:** approved. Phases 1–3 are implemented; see the deviation notes in [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft),
+> [PHASE-2.md](PHASE-2.md#design-notes-and-deviations) and [PHASE-3.md](PHASE-3.md#design-notes-and-deviations).
 
 > **Product name:** `cy-ssh` (npm scope `@cy-ssh/*`, bundle ID `dev.cyssh.app`). Name, icon and
 > colors live in `packages/shared/src/brand.ts` + `apps/desktop/build/`. All branding/UI is original.

@@ -7,7 +7,8 @@ import { Prompts } from '../features/prompts/Prompts';
 import { SettingsDialog } from '../features/settings/SettingsDialog';
 import { TabBar } from '../features/tabs/TabBar';
 import { SftpView } from '../features/sftp/SftpView';
-import { TerminalView } from '../features/terminal/TerminalView';
+import { TerminalTabView } from '../features/terminal/TerminalTabView';
+import { useLibrary } from '../stores/library-store';
 import { useVault } from '../stores/vault-store';
 import { cn } from '../lib/cn';
 import { useApp } from '../stores/app-store';
@@ -28,6 +29,8 @@ export function App() {
   useEffect(() => {
     void refreshAll();
     void useVault.getState().refresh();
+    void useLibrary.getState().refreshSnippets();
+    void useLibrary.getState().refreshForwards();
     const offs = [
       window.cy.on('hostkey.prompt', (data) => usePrompts.getState().push({ type: 'hostkey', data })),
       window.cy.on('auth.prompt', (data) => usePrompts.getState().push({ type: 'auth', data })),
@@ -53,7 +56,7 @@ export function App() {
         </div>
         {tabs.map((tab) => (
           <div key={tab.id} role="tabpanel" className={cn('absolute inset-0', activeId !== tab.id && 'hidden')}>
-            {tab.kind === 'sftp' ? <SftpView hostId={tab.hostId!} hostLabel={tab.title} /> : <TerminalView tab={tab} active={activeId === tab.id} />}
+            {tab.kind === 'sftp' ? <SftpView hostId={tab.hostId} hostLabel={tab.title} /> : <TerminalTabView tab={tab} visible={activeId === tab.id} />}
           </div>
         ))}
       </div>

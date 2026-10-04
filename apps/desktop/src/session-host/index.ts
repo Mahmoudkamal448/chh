@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import type { MessagePortMain } from 'electron';
 import type { HostKeyDecision, PortToHost, PortToRenderer } from '@cy-ssh/shared';
 import { FsError, toFsError, type FsProvider } from './files/provider';
+import { ForwardManager, type ForwardRule } from './forwards/manager';
 import { LocalFs } from './files/local-fs';
 import { SftpFs } from './files/sftp-fs';
 import { TransferManager } from './files/transfers';
@@ -14,6 +15,8 @@ import { FlowControl, chunkSize } from './flow';
 import type { HostToMain, MainToHost, RpcError, RpcMethod, SshConnectConfig } from './protocol';
 import { connectSsh, describeSshError, type AuthRequest, type HostKeyInfo } from './ssh/connect';
 import { openLocalPty } from './transports/local-pty';
+import { openMosh } from './transports/mosh';
+import { openTelnet } from './transports/telnet';
 import { openSsh } from './transports/ssh';
 import type { Transport, TransportEvents } from './transports/types';
 
@@ -47,6 +50,8 @@ const transfers = new TransferManager(
   },
   (transfer) => toMain({ type: 'transfer', transfer }),
 );
+
+const forwards = new ForwardManager((status) => toMain({ type: 'forward', status }));
 
 function toRenderer(s: TerminalSession, msg: PortToRenderer): void {
   if (!s.closed) s.port.postMessage(msg);
@@ -244,10 +249,39 @@ async function handleRpc(method: RpcMethod, p: Record<string, unknown>): Promise
     case 'transfer.cancel':
       transfers.cancel(str(p.id, 'id'));
       return undefined;
+    case 'forward.start': {
+      const sessionId = str(p.sessionId, 'sessionId');
+      const forwardId = str(p.forwardId, 'forwardId');
+      try {
+        await forwards.start(forwardId, p.rule as ForwardRule, p.config as SshConnectConfig, promptCallbacks(sessionId));
+      } catch {
+        // The manager already mapped the failure to an i18n message on the rule's status.
+        const msg = forwards.statuses().find((x) => x.id === forwardId)?.message ?? 'forwards.error.generic::';
+        const [key, detail] = msg.split('::');
+        throw new RpcFailure(key!, detail);
+      } finally {
+        failPrompts(sessionId);
+      }
+      return undefined;
+    }
+    case 'forward.stop':
+      forwards.stop(str(p.forwardId, 'forwardId'));
+      return undefined;
+  }
+}
+
+/** An error that already carries its i18n key. */
+class RpcFailure extends Error {
+  constructor(
+    readonly key: string,
+    readonly detail?: string,
+  ) {
+    super(key);
   }
 }
 
 function rpcError(err: unknown): RpcError {
+  if (err instanceof RpcFailure) return { key: err.key, detail: err.detail };
   if (err instanceof FsError) return { key: `files.error.${err.code}`, detail: err.message };
   const e = err as Error & { level?: string; code?: string };
   if (e?.level || typeof e?.code === 'string' && /^E[A-Z]+$/.test(e.code) && !('path' in e)) {
@@ -273,6 +307,26 @@ parentPort.on('message', (e) => {
         baseEvents(s).status('error', `session.error.spawn::${(err as Error).message}`);
         closeTerminal(s);
       }
+      break;
+    }
+    case 'open-telnet': {
+      const port = e.ports[0];
+      if (!port) return;
+      const s = newTerminal(msg.sessionId, port);
+      attachTransport(s, openTelnet({ host: msg.host, port: msg.port, cols: msg.cols, rows: msg.rows, connectTimeoutSec: msg.connectTimeoutSec }, baseEvents(s)));
+      break;
+    }
+    case 'open-mosh': {
+      const port = e.ports[0];
+      if (!port) return;
+      const s = newTerminal(msg.sessionId, port);
+      attachTransport(
+        s,
+        openMosh(
+          { cols: msg.cols, rows: msg.rows, config: msg.config, moshServer: msg.moshServer, client: msg.client },
+          { ...baseEvents(s), ...promptCallbacks(s.id) },
+        ),
+      );
       break;
     }
     case 'open-ssh': {
@@ -308,6 +362,7 @@ parentPort.on('message', (e) => {
     case 'shutdown': {
       for (const s of [...terminals.values()]) closeTerminal(s, false);
       for (const id of [...filesystems.keys()]) if (id !== 'local') closeSftp(id, false);
+      forwards.stopAll();
       process.exit(0);
     }
   }

@@ -21,6 +21,10 @@ export const HostSettingsSchema = z.object({
   cursorStyle: z.enum(['block', 'bar', 'underline']),
   cursorBlink: z.boolean(),
   scrollback: z.number().int().min(0).max(200_000),
+  /** Remote command used to start Mosh (e.g. a full path if it's not on PATH). */
+  moshServer: z.string().max(1024),
+  /** Record commands typed on this host in the command history. */
+  recordHistory: z.boolean(),
 });
 export type HostSettings = z.infer<typeof HostSettingsSchema>;
 
@@ -45,7 +49,12 @@ export const DEFAULT_HOST_SETTINGS: HostSettings = {
   cursorStyle: 'block',
   cursorBlink: true,
   scrollback: 10_000,
+  moshServer: 'mosh-server',
+  recordHistory: true,
 };
+
+/** Settings that make sense as app-wide terminal defaults (Settings → Terminal). */
+export const TERMINAL_DEFAULT_KEYS = ['terminalTheme', 'fontFamily', 'fontSize', 'cursorStyle', 'cursorBlink', 'scrollback'] as const;
 
 /** Remove keys whose value is undefined so spreads don't clobber inherited values. */
 function defined<T extends object>(o: T | undefined): Partial<T> {

@@ -3,7 +3,7 @@ import { DEFAULT_APP_SETTINGS, type AppSettings } from '@cy-ssh/shared';
 
 type Info = Awaited<ReturnType<typeof window.cy.app.info>>;
 
-export type HomeSection = 'hosts' | 'keys' | 'identities' | 'knownHosts';
+export type HomeSection = 'hosts' | 'keys' | 'identities' | 'knownHosts' | 'snippets' | 'history' | 'forwards';
 
 interface AppState {
   info: Info | null;

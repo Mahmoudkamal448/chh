@@ -1,4 +1,5 @@
-import { FolderPlus, Plus, Search } from 'lucide-react';
+import * as DM from '@radix-ui/react-dropdown-menu';
+import { ChevronDown, FolderPlus, Plus, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Host } from '@cy-ssh/shared';
@@ -6,10 +7,13 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, Input } from '../../components/ui';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
 import { useTabs } from '../../stores/tabs-store';
+import { SshImportDialog } from '../ssh-config/SshImportDialog';
 import { HostList } from './HostList';
 import { Sidebar } from './Sidebar';
 
 export const HOST_SEARCH_ID = 'host-search';
+
+const menuItem = 'flex h-8 cursor-default items-center rounded px-2 text-[13px] outline-none data-[highlighted]:bg-surface-2';
 
 export function HostsView() {
   const { t } = useTranslation();
@@ -19,9 +23,11 @@ export function HostsView() {
   const filter = useHosts((s) => s.filter);
   const setFilter = useHosts((s) => s.setFilter);
   const openEditor = useHosts((s) => s.openEditor);
-  const openSsh = useTabs((s) => s.openSsh);
+  const openHost = useTabs((s) => s.openHost);
   const openSftp = useTabs((s) => s.openSftp);
   const [deleting, setDeleting] = useState<Host | null>(null);
+  const [importing, setImporting] = useState<'default' | 'pick' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [query, setQuery] = useState(filter.query);
   const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -73,6 +79,44 @@ export function HostsView() {
               data-testid="host-search"
             />
           </div>
+          <DM.Root>
+            <DM.Trigger asChild>
+              <Button data-testid="ssh-config-menu">
+                {t('sshConfig.menu')} <ChevronDown size={12} />
+              </Button>
+            </DM.Trigger>
+            <DM.Portal>
+              <DM.Content align="end" className="z-50 min-w-[230px] rounded-md border border-border bg-surface p-1 shadow-xl">
+                <DM.Item className={menuItem} onSelect={() => setImporting('default')} data-testid="ssh-import-default">
+                  {t('sshConfig.importDefault')}
+                </DM.Item>
+                <DM.Item className={menuItem} onSelect={() => setImporting('pick')}>
+                  {t('sshConfig.importFile')}
+                </DM.Item>
+                <DM.Separator className="my-1 h-px bg-border" />
+                <DM.Item
+                  className={menuItem}
+                  onSelect={async () => {
+                    const ids = hosts.map((h) => h.id);
+                    const { saved } = await window.cy.sshConfig.exportFile({ hostIds: ids });
+                    if (saved) setNotice(t('sshConfig.exported', { count: ids.length }));
+                  }}
+                >
+                  {t('sshConfig.exportFile')}
+                </DM.Item>
+                <DM.Item
+                  className={menuItem}
+                  onSelect={async () => {
+                    await navigator.clipboard.writeText(await window.cy.sshConfig.exportText({ hostIds: hosts.map((h) => h.id) }));
+                    setNotice(t('sshConfig.copied', { count: hosts.length }));
+                  }}
+                  data-testid="ssh-export-copy"
+                >
+                  {t('sshConfig.exportCopy')}
+                </DM.Item>
+              </DM.Content>
+            </DM.Portal>
+          </DM.Root>
           <Button onClick={() => openEditor({ kind: 'group', id: null, parentId: currentGroup })}>
             <FolderPlus size={14} /> {t('sidebar.newGroup')}
           </Button>
@@ -81,6 +125,14 @@ export function HostsView() {
           </Button>
         </div>
 
+        {notice && (
+          <p role="status" className="flex items-center border-b border-border bg-surface-2 px-4 py-1.5 text-[12px]">
+            {notice}
+            <button type="button" className="ml-auto underline" onClick={() => setNotice(null)}>
+              {t('common.dismiss')}
+            </button>
+          </p>
+        )}
         {hosts.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted">
             <p>{filter.query || filter.groupId !== undefined || filter.tag || filter.favoritesOnly ? t('hosts.noMatches') : t('hosts.empty')}</p>
@@ -94,7 +146,7 @@ export function HostsView() {
           <HostList
             hosts={hosts}
             groupLabel={(id) => (id ? (groupLabels.get(id) ?? null) : null)}
-            onConnect={(h) => void openSsh(h.id, h.label)}
+            onConnect={(h) => void openHost(h.id, h.label)}
             onOpenFiles={(h) => openSftp(h.id, h.label)}
             onEdit={(h) => openEditor({ kind: 'host', id: h.id })}
             onDuplicate={async (h) => {
@@ -110,6 +162,7 @@ export function HostsView() {
         )}
       </main>
 
+      <SshImportDialog open={!!importing} pickFile={importing === 'pick'} onClose={() => setImporting(null)} />
       <ConfirmDialog
         open={!!deleting}
         title={t('hosts.deleteTitle')}

@@ -12,7 +12,7 @@ describe('IPC contract', () => {
   it('validates inputs strictly', () => {
     expect(contract.hosts.create.input.safeParse({ label: 'x', address: 'x' }).success).toBe(true);
     expect(contract.hosts.create.input.safeParse({ label: 'x' }).success).toBe(false);
-    expect(contract.sessions.openSsh.input.safeParse({ hostId: 'a', cols: 0, rows: 10 }).success).toBe(false);
+    expect(contract.sessions.openHost.input.safeParse({ hostId: 'a', cols: 0, rows: 10 }).success).toBe(false);
     expect(contract.app.openExternal.input.safeParse({ url: 'https://example.com' }).success).toBe(true);
     expect(contract.app.openExternal.input.safeParse({ url: 'file:///etc/passwd' }).success).toBe(false);
     expect(contract.app.openExternal.input.safeParse({ url: 'javascript:alert(1)' }).success).toBe(false);

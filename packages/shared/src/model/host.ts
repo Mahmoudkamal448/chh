@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { IdSchema, SealedSchema, SecretInputSchema } from './common';
 import { HostSettingsOverridesSchema } from './settings';
 
-export const ProtocolSchema = z.enum(['ssh']);
+export const ProtocolSchema = z.enum(['ssh', 'telnet', 'mosh']);
 export type Protocol = z.infer<typeof ProtocolSchema>;
 
 const label = z.string().trim().min(1).max(200);

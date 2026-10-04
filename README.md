@@ -6,8 +6,9 @@ Electron + TypeScript codebase.
 Every feature is free for everyone: there are no plans, trials, device limits or license checks. Sync (coming in
 Phase 4) is optional and self-hostable, and the app works fully offline without an account.
 
-> **Status: Phase 2 of 6 complete.** Host manager, SSH and local terminals, tabs, keys, identities, known hosts
-> and a dual-pane SFTP browser work today. See the [roadmap](#roadmap) for what comes next.
+> **Status: Phase 3 of 6 complete.** SSH, Mosh, Telnet and local terminals with tabs and split panes; host,
+> key and identity management; SFTP; port forwarding; snippets; history; ssh_config import/export.
+> See the [roadmap](#roadmap) for what comes next.
 
 ## Features
 
@@ -25,9 +26,16 @@ Phase 4) is optional and self-hostable, and the app works fully offline without 
 - **SFTP file browser:** dual pane (this computer or any host on either side), drag and drop between panes and
   from your desktop, recursive transfers with progress, cancel and conflict handling, plus rename, delete, new
   folder and a permissions editor.
+- **Split view:** split any terminal tab right/down, resize by dragging, move focus between panes.
+- **Mosh and Telnet** hosts alongside SSH (Mosh on Windows runs through WSL).
+- **Port forwarding:** local, remote and dynamic (SOCKS) rules with start/stop, auto-start and live stats.
+- **Snippets** with `{{placeholders}}`, run from a side panel, the palette or the Snippets screen.
+- **Command history** across all sessions, searchable, with no shell setup needed; it can be turned off per host.
+- **ssh_config import/export**, including Include, wildcards, keys and forwards.
 - **Local terminals:** bash, zsh, fish (macOS/Linux); PowerShell 7, Windows PowerShell, cmd, WSL and Git Bash (Windows).
 - **Tabs:** with connection status, reconnect, and a find-in-terminal bar.
-- **Per-host terminal appearance:** 12 built-in color schemes, plus font family, font size, cursor and scrollback.
+- **Terminal appearance:** 12 built-in color schemes with a visual picker, app-wide defaults with per-group/host
+  overrides, applied live.
 - **Keyboard-first:** a command palette and rebindable shortcuts.
 - **Light and dark UI** (or match the system theme), with all strings in i18n files.
 - **Encrypted at rest:** the whole local database is encrypted, its key is protected by the OS keychain, and
@@ -68,6 +76,9 @@ Other commands:
 | Search hosts / find in terminal | ⌘F | Ctrl+Shift+F |
 | Copy / paste in terminal | ⌘C / ⌘V | Ctrl+Shift+C / Ctrl+Shift+V |
 | Settings | ⌘, | Ctrl+, |
+| Split right / down | ⌘D / ⌘⇧D | Ctrl+Shift+D / Ctrl+Shift+E |
+| Next / previous pane | ⌘] / ⌘[ | Ctrl+Shift+] / Ctrl+Shift+[ |
+| Snippets & history panel | ⌘⇧S | Ctrl+Shift+S |
 
 Shortcuts that would clash with shell keys (Ctrl+W, Ctrl+T, Ctrl+C…) use Ctrl+Shift on Windows and Linux, so the
 terminal still gets the plain key. You can rebind everything in **Settings → Keyboard shortcuts**.
@@ -82,6 +93,7 @@ packages/shared/       Models, zod schemas, typed IPC contract, i18n strings
 packages/sync-core/    Hybrid logical clocks, version vectors, field-level merge
 packages/vault-crypto/ libsodium wrappers: XChaCha20-Poly1305, KDF, key wrapping
 packages/key-formats/  OpenSSH / PEM / PKCS#8 / PuTTY key parsing and writing, known_hosts
+packages/ssh-config/   ssh_config(5) parsing, OpenSSH-accurate resolution, writing
 docs/                  Architecture, development, security and phase notes
 ```
 
@@ -90,7 +102,7 @@ docs/                  Architecture, development, security and phase notes
 - [Architecture](docs/ARCHITECTURE.md): process model, IPC, data model, encryption and sync design
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today
-- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md) (what was built, files, how to test, platform differences)
+- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md) (what was built, files, how to test, platform differences)
 
 ## Roadmap
 
@@ -98,8 +110,8 @@ docs/                  Architecture, development, security and phase notes
 |---|---|---|
 | 1 | App shell, host manager, SSH + local terminal, tabs | ✅ Done |
 | 2 | Keys, identities, known-hosts manager, SFTP dual-pane browser | ✅ Done |
-| 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | Next |
-| 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | |
+| 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | ✅ Done |
+| 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | Next |
 | 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | |
 | 6 | Shared team vault + audit log, signed installers, auto-update | |
 

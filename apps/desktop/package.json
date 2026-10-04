@@ -3,7 +3,7 @@
   "productName": "cy-ssh",
   "version": "0.1.0",
   "private": true,
-  "description": "cy-ssh â a free, cross-platform SSH client and terminal manager",
+  "description": "cy-ssh \u00c3\u00a2\u00c2\u0080\u00c2\u0094 a free, cross-platform SSH client and terminal manager",
   "author": "cy-ssh contributors",
   "license": "MIT",
   "main": "./out/main/index.js",
@@ -20,6 +20,7 @@
   "dependencies": {
     "@cy-ssh/key-formats": "workspace:*",
     "@cy-ssh/shared": "workspace:*",
+    "@cy-ssh/ssh-config": "workspace:*",
     "@cy-ssh/sync-core": "workspace:*",
     "@cy-ssh/vault-crypto": "workspace:*",
     "better-sqlite3-multiple-ciphers": "^13.0.3",

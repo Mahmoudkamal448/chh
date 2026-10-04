@@ -1,14 +1,20 @@
-import { KeyRound, Server, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowLeftRight, Code2, History, KeyRound, Server, ShieldCheck, UserRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/cn';
 import { useApp, type HomeSection } from '../../stores/app-store';
+import { ForwardsView } from '../forwards/ForwardsView';
+import { HistoryView } from '../history/HistoryView';
 import { HostsView } from '../hosts/HostsView';
+import { SnippetsView } from '../snippets/SnippetsView';
 import { IdentitiesView } from '../identities/IdentitiesView';
 import { KeysView } from '../keys/KeysView';
 import { KnownHostsView } from '../known-hosts/KnownHostsView';
 
 const SECTIONS: Array<{ id: HomeSection; icon: typeof Server }> = [
   { id: 'hosts', icon: Server },
+  { id: 'snippets', icon: Code2 },
+  { id: 'history', icon: History },
+  { id: 'forwards', icon: ArrowLeftRight },
   { id: 'keys', icon: KeyRound },
   { id: 'identities', icon: UserRound },
   { id: 'knownHosts', icon: ShieldCheck },
@@ -45,6 +51,9 @@ export function HomeView() {
         {section === 'keys' && <KeysView />}
         {section === 'identities' && <IdentitiesView />}
         {section === 'knownHosts' && <KnownHostsView />}
+        {section === 'snippets' && <SnippetsView />}
+        {section === 'history' && <HistoryView />}
+        {section === 'forwards' && <ForwardsView />}
       </div>
     </div>
   );

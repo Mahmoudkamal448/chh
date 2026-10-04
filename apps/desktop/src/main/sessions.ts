@@ -6,6 +6,9 @@ import {
   SESSION_PORT_CHANNEL,
   resolveSettings,
   type AuthPrompt,
+  type EventName,
+  type EventPayload,
+  type ForwardStatus,
   type HostKeyDecision,
   type LocalShell,
 } from '@cy-ssh/shared';
@@ -14,14 +17,15 @@ import type { HostsRepo } from './db/hosts-repo';
 import type { IdentitiesRepo } from './db/identities-repo';
 import type { KeysRepo } from './db/keys-repo';
 import type { KnownHostsRepo } from './db/known-hosts-repo';
-import type { HostToMain, MainToHost, RpcError, RpcMethod, SshConnectConfig } from '../session-host/protocol';
+import type { HostToMain, MainToHost, MoshClientSpec, RpcError, RpcMethod, SshConnectConfig } from '../session-host/protocol';
+import type { ForwardsRepo } from './db/forwards-repo';
 import { AppError, emit } from './ipc/handle';
 import { errInfo, log } from './log';
 
 interface SessionInfo {
   id: string;
   wc: WebContents;
-  kind: 'ssh' | 'local' | 'sftp';
+  kind: 'ssh' | 'local' | 'sftp' | 'forward';
   hostId: string | null;
   label: string;
   /** User ticked "remember password" on a prompt in this session. */
@@ -46,6 +50,7 @@ export class SessionManager {
   private readonly rpcPending = new Map<number, { resolve(v: unknown): void; reject(e: AppError): void }>();
   private readonly transferOwners = new Map<string, WebContents>();
   private lastTransferWc: WebContents | null = null;
+  private readonly forwardState = new Map<string, ForwardStatus>();
 
   constructor(
     private readonly deps: {
@@ -55,6 +60,10 @@ export class SessionManager {
       knownHosts: KnownHostsRepo;
       keys: KeysRepo;
       identities: IdentitiesRepo;
+      forwards: ForwardsRepo;
+      moshClient: () => MoshClientSpec | null;
+      /** Sends an event to every window (forward status is app-wide). */
+      broadcast: <E extends EventName>(event: E, payload: EventPayload<E>) => void;
       shells: () => LocalShell[];
       defaultShellId: () => string | null;
     },
@@ -73,6 +82,11 @@ export class SessionManager {
       for (const [id, p] of [...this.rpcPending]) {
         this.rpcPending.delete(id);
         p.reject(new AppError('host_crashed', 'session.error.hostCrashed'));
+      }
+      for (const st of [...this.forwardState.values()]) {
+        const failed: ForwardStatus = { ...st, state: 'error', connections: 0, message: 'session.error.hostCrashed' };
+        this.forwardState.set(st.id, failed);
+        this.deps.broadcast('forward.update', failed);
       }
       for (const s of [...this.sessions.values()]) {
         emit(s.wc, 'session.status', { sessionId: s.id, status: 'error', message: 'session.error.hostCrashed' });
@@ -171,27 +185,80 @@ export class SessionManager {
     };
   }
 
-  async openSsh(wc: WebContents, opts: { hostId: string; cols: number; rows: number }): Promise<{ sessionId: string }> {
+  /** Opens a terminal to a host using its protocol: SSH, Telnet or Mosh. */
+  async openHost(wc: WebContents, opts: { hostId: string; cols: number; rows: number }): Promise<{ sessionId: string }> {
     const fields = this.deps.hosts.getFields(opts.hostId);
+    const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
     const { id, hostPort } = this.register(wc, { kind: 'ssh', hostId: opts.hostId, label: fields.label });
+    const fail = (message: string) => {
+      const s = this.sessions.get(id);
+      if (s) emit(s.wc, 'session.status', { sessionId: id, status: 'error', message });
+      this.close(id);
+    };
 
-    // Run the rest asynchronously so the renderer gets the session id (and can show prompts) right away.
+    if (fields.protocol === 'telnet') {
+      // Telnet ignores inherited (SSH-oriented) ports: the host's own port, or 23.
+      const port = fields.settings.port ?? 23;
+      this.send(
+        { type: 'open-telnet', sessionId: id, cols: opts.cols, rows: opts.rows, host: fields.address, port, connectTimeoutSec: settings.connectTimeoutSec },
+        [hostPort],
+      );
+      log.info({ sessionId: id, hostId: opts.hostId }, 'telnet session opening');
+      return { sessionId: id };
+    }
+
+    // SSH and Mosh: resolve credentials asynchronously so the renderer gets the session id (and can
+    // show prompts) right away.
     void (async () => {
+      let client = null;
+      if (fields.protocol === 'mosh') {
+        client = this.deps.moshClient();
+        if (!client) return fail('session.error.moshMissing');
+      }
       const config = await this.resolveConfig(id, opts.hostId);
       if (!config) {
         this.close(id);
         return;
       }
-      this.send({ type: 'open-ssh', sessionId: id, label: fields.label, cols: opts.cols, rows: opts.rows, config }, [hostPort]);
-      log.info({ sessionId: id, hostId: opts.hostId }, 'ssh session opening');
+      if (client) {
+        this.send(
+          { type: 'open-mosh', sessionId: id, cols: opts.cols, rows: opts.rows, config, moshServer: settings.moshServer || 'mosh-server', client },
+          [hostPort],
+        );
+      } else {
+        this.send({ type: 'open-ssh', sessionId: id, label: fields.label, cols: opts.cols, rows: opts.rows, config }, [hostPort]);
+      }
+      log.info({ sessionId: id, hostId: opts.hostId, protocol: fields.protocol }, 'session opening');
     })().catch((err) => {
-      log.error({ err: errInfo(err) }, 'openSsh failed');
-      const s = this.sessions.get(id);
-      if (s) emit(s.wc, 'session.status', { sessionId: id, status: 'error', message: 'session.error.internal' });
-      this.close(id);
+      log.error({ err: errInfo(err) }, 'openHost failed');
+      fail('session.error.internal');
     });
 
     return { sessionId: id };
+  }
+
+  /** Starts a port-forwarding rule; resolves once it's listening (prompts may appear first). */
+  async startForward(wc: WebContents, forwardId: string): Promise<void> {
+    const f = this.deps.forwards.get(forwardId);
+    const sessionId = this.registerNoPort(wc, { kind: 'forward', hostId: f.hostId, label: f.label });
+    try {
+      const config = await this.resolveConfig(sessionId, f.hostId);
+      if (!config) throw new AppError('cancelled', 'forwards.error.cancelled');
+      const rule = { kind: f.kind, bindHost: f.bindHost, bindPort: f.bindPort, destHost: f.destHost, destPort: f.destPort };
+      await this.rpc('forward.start', { forwardId, sessionId, rule, config });
+      log.info({ forwardId, kind: f.kind, bindPort: f.bindPort }, 'forward started');
+    } finally {
+      this.cleanup(sessionId);
+    }
+  }
+
+  async stopForward(forwardId: string): Promise<void> {
+    if (!this.child) return;
+    await this.rpc('forward.stop', { forwardId });
+  }
+
+  forwardStatuses(): ForwardStatus[] {
+    return [...this.forwardState.values()];
   }
 
   /** Opens an SFTP session; resolves once connected and authenticated. */
@@ -297,6 +364,12 @@ export class SessionManager {
         this.rpcPending.delete(msg.id);
         if (msg.ok) p.resolve(msg.value);
         else p.reject(rpcToAppError(msg.error));
+        return;
+      }
+      case 'forward': {
+        if (msg.status.state === 'stopped') this.forwardState.delete(msg.status.id);
+        else this.forwardState.set(msg.status.id, msg.status);
+        this.deps.broadcast('forward.update', msg.status);
         return;
       }
       case 'transfer': {

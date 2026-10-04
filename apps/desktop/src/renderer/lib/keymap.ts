@@ -15,7 +15,12 @@ export type CommandId =
   | 'terminal.find'
   | 'terminal.copy'
   | 'terminal.paste'
-  | 'settings.open';
+  | 'settings.open'
+  | 'pane.splitRight'
+  | 'pane.splitDown'
+  | 'pane.focusNext'
+  | 'pane.focusPrev'
+  | 'panel.toggle';
 
 const isMac = () => window.cy.platform === 'darwin';
 
@@ -34,6 +39,11 @@ export function defaultKeymap(): Record<CommandId, string> {
     'terminal.copy': mac ? 'Mod+C' : 'Ctrl+Shift+C',
     'terminal.paste': mac ? 'Mod+V' : 'Ctrl+Shift+V',
     'settings.open': mac ? 'Mod+,' : 'Ctrl+,',
+    'pane.splitRight': mac ? 'Mod+D' : 'Ctrl+Shift+D',
+    'pane.splitDown': mac ? 'Mod+Shift+D' : 'Ctrl+Shift+E',
+    'pane.focusNext': mac ? 'Mod+]' : 'Ctrl+Shift+]',
+    'pane.focusPrev': mac ? 'Mod+[' : 'Ctrl+Shift+[',
+    'panel.toggle': mac ? 'Mod+Shift+S' : 'Ctrl+Shift+S',
   };
 }
 
@@ -50,6 +60,11 @@ export const COMMAND_IDS = Object.keys({
   'terminal.copy': 1,
   'terminal.paste': 1,
   'settings.open': 1,
+  'pane.splitRight': 1,
+  'pane.splitDown': 1,
+  'pane.focusNext': 1,
+  'pane.focusPrev': 1,
+  'panel.toggle': 1,
 } satisfies Record<CommandId, 1>) as CommandId[];
 
 export function effectiveKeymap(overrides: Record<string, string>): Record<CommandId, string> {
@@ -57,6 +72,21 @@ export function effectiveKeymap(overrides: Record<string, string>): Record<Comma
   for (const id of COMMAND_IDS) if (overrides[id]) km[id] = overrides[id]!;
   return km;
 }
+
+/** Unshifted characters for punctuation keys (so Shift+] stays "]" rather than "}"). */
+const PUNCTUATION: Record<string, string> = {
+  BracketLeft: '[',
+  BracketRight: ']',
+  Comma: ',',
+  Period: '.',
+  Slash: '/',
+  Backslash: '\\',
+  Minus: '-',
+  Equal: '=',
+  Semicolon: ';',
+  Quote: "'",
+  Backquote: '`',
+};
 
 function normalizeKey(key: string): string {
   if (key.length === 1) return key.toUpperCase();
@@ -77,6 +107,7 @@ export function eventToAccelerator(e: KeyboardEvent): string | null {
   let key = e.key;
   if (/^Key[A-Z]$/.test(e.code)) key = e.code.slice(3);
   else if (/^Digit\d$/.test(e.code)) key = e.code.slice(5);
+  else if (PUNCTUATION[e.code]) key = PUNCTUATION[e.code]!;
   parts.push(normalizeKey(key));
   return parts.join('+');
 }

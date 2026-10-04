@@ -3,7 +3,9 @@
  * subsystem backed by a directory on disk. Used by unit and E2E tests — no Docker or sshd needed.
  */
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
 import * as fs from 'node:fs';
+import { connect, createServer, type Server as NetServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { Server, utils, type Connection, type SFTPWrapper } from 'ssh2';
@@ -23,6 +25,8 @@ export interface TestSshOptions {
   /** OpenSSH public key lines allowed for user "tester". */
   authorizedKeys?: string[];
   password?: string;
+  /** Allow `exec` of mosh-server (spawned locally) so Mosh can be tested end to end. */
+  allowMosh?: boolean;
 }
 
 function statusFor(err: unknown): number {
@@ -138,6 +142,7 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
   });
 
   const clients = new Set<Connection>();
+  let port = 0;
   const server = new Server({ hostKeys: [key.private] }, (client) => {
     clients.add(client);
     client.on('close', () => clients.delete(client));
@@ -151,11 +156,56 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
       }
       ctx.reject(['password', 'publickey']);
     });
+    const listeners: NetServer[] = [];
+    client.on('close', () => listeners.forEach((l) => l.close()));
     client.on('ready', () => {
+      // ssh -L / -D: connect to the requested target and splice.
+      client.on('tcpip', (accept, reject, info) => {
+        const sock = connect(info.destPort, info.destIP);
+        sock.once('connect', () => {
+          const ch = accept();
+          sock.pipe(ch).pipe(sock);
+          ch.on('close', () => sock.destroy());
+          sock.on('close', () => ch.destroy());
+        });
+        sock.once('error', () => reject());
+      });
+      // ssh -R: listen here and send connections back over the SSH connection.
+      client.on('request', (accept, reject, name, info) => {
+        if (name !== 'tcpip-forward' || !accept) return reject?.();
+        const fwd = info as { bindAddr: string; bindPort: number };
+        const srv = createServer((sock) => {
+          client.forwardOut(fwd.bindAddr, fwd.bindPort, sock.remoteAddress ?? '127.0.0.1', sock.remotePort ?? 0, (err, ch) => {
+            if (err) return sock.destroy();
+            sock.pipe(ch).pipe(sock);
+            ch.on('close', () => sock.destroy());
+          });
+        });
+        srv.on('error', () => reject?.());
+        srv.listen(fwd.bindPort, fwd.bindAddr, () => {
+          listeners.push(srv);
+          accept((srv.address() as AddressInfo).port);
+        });
+      });
       client.on('session', (accept) => {
         const session = accept();
         session.on('pty', (acc) => acc?.());
         session.on('window-change', (acc) => acc?.());
+        session.on('exec', (acc, rej, info) => {
+          // Only mosh-server bootstrap is supported, and only when explicitly enabled.
+          if (!opts.allowMosh || !/^'mosh-server' new /.test(info.command)) return rej?.();
+          const stream = acc();
+          const child = spawn('sh', ['-c', info.command], {
+            env: { ...process.env, SSH_CONNECTION: `127.0.0.1 50000 127.0.0.1 ${port}` },
+            stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          child.stdout.on('data', (d) => stream.write(d));
+          child.stderr.on('data', (d) => stream.stderr.write(d));
+          child.on('exit', (code) => {
+            stream.exit(code ?? 0);
+            stream.end();
+          });
+        });
         session.on('sftp', (acc) => {
           if (!opts.sftpRoot) return;
           serveSftp(acc(), opts.sftpRoot);
@@ -192,7 +242,7 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
   });
 
   await new Promise<void>((res) => server.listen(opts.port ?? 0, '127.0.0.1', () => res()));
-  const port = (server.address() as AddressInfo).port;
+  port = (server.address() as AddressInfo).port;
   return {
     port,
     fingerprint,

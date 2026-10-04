@@ -3,7 +3,7 @@
  * Terminal bytes never travel on this channel — they use a per-session MessagePort that goes
  * straight to the renderer.
  */
-import type { HostKeyDecision, Transfer } from '@cy-ssh/shared';
+import type { ForwardStatus, HostKeyDecision, Transfer } from '@cy-ssh/shared';
 
 export interface SshConnectConfig {
   host: string;
@@ -19,7 +19,16 @@ export interface SshConnectConfig {
   connectTimeoutSec: number;
 }
 
+/** How to run mosh-client locally (direct, or through WSL on Windows). */
+export interface MoshClientSpec {
+  path: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
 export type RpcMethod =
+  | 'forward.start'
+  | 'forward.stop'
   | 'sftp.open'
   | 'fs.home'
   | 'fs.list'
@@ -39,6 +48,16 @@ export interface RpcError {
 
 export type MainToHost =
   | { type: 'open-ssh'; sessionId: string; label: string; cols: number; rows: number; config: SshConnectConfig }
+  | { type: 'open-telnet'; sessionId: string; cols: number; rows: number; host: string; port: number; connectTimeoutSec: number }
+  | {
+      type: 'open-mosh';
+      sessionId: string;
+      cols: number;
+      rows: number;
+      config: SshConnectConfig;
+      moshServer: string;
+      client: MoshClientSpec;
+    }
   | { type: 'open-local'; sessionId: string; cols: number; rows: number; shell: { path: string; args: string[] }; cwd: string }
   | { type: 'close'; sessionId: string }
   | { type: 'hostkey-result'; promptId: string; decision: HostKeyDecision }
@@ -73,4 +92,5 @@ export type HostToMain =
   | { type: 'closed'; sessionId: string }
   | { type: 'rpc-result'; id: number; ok: true; value: unknown }
   | { type: 'rpc-result'; id: number; ok: false; error: RpcError }
-  | { type: 'transfer'; transfer: Transfer };
+  | { type: 'transfer'; transfer: Transfer }
+  | { type: 'forward'; status: ForwardStatus };

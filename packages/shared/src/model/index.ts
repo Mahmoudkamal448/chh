@@ -8,3 +8,7 @@ export * from './session';
 export * from './key';
 export * from './identity';
 export * from './files';
+export * from './forward';
+export * from './snippet';
+export * from './history';
+export * from './ssh-import';

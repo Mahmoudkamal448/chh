@@ -6,9 +6,10 @@ import * as RD from '@radix-ui/react-dialog';
 import { Kbd } from '../../components/ui';
 import { displayAccelerator, effectiveKeymap, type CommandId } from '../../lib/keymap';
 import { useApp } from '../../stores/app-store';
-import { runCommand } from '../../app/commands';
+import { activePaneId, runCommand } from '../../app/commands';
+import { useLibrary } from '../../stores/library-store';
 
-const PALETTE_COMMANDS: CommandId[] = ['tab.newLocal', 'host.new', 'tab.close', 'tab.next', 'tab.prev', 'tab.hosts', 'settings.open'];
+const PALETTE_COMMANDS: CommandId[] = ['tab.newLocal', 'host.new', 'pane.splitRight', 'pane.splitDown', 'panel.toggle', 'tab.close', 'tab.next', 'tab.prev', 'tab.hosts', 'settings.open'];
 
 export function CommandPalette() {
   const { t } = useTranslation();
@@ -17,6 +18,8 @@ export function CommandPalette() {
   const keymap = effectiveKeymap(useApp((s) => s.settings.keymap));
   const [search, setSearch] = useState('');
   const [hosts, setHosts] = useState<Host[]>([]);
+  const snippets = useLibrary((s) => s.snippets);
+  const canRun = open && !!activePaneId(true);
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +71,18 @@ export function CommandPalette() {
                       <span className="truncate">{t('palette.filesOn', { label: h.label })}</span>
                     </Command.Item>
                   ))}
+                </Command.Group>
+              )}
+              {canRun && snippets.some((s) => !search || s.label.toLowerCase().includes(search.toLowerCase())) && (
+                <Command.Group heading={t('palette.snippets')} className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:text-muted">
+                  {snippets
+                    .filter((s) => !search || s.label.toLowerCase().includes(search.toLowerCase()))
+                    .slice(0, 8)
+                    .map((s) => (
+                      <Command.Item key={s.id} value={`snippet:${s.id}`} className={item} onSelect={() => run(() => runCommand({ type: 'snippet', snippet: s }))} data-testid="palette-snippet">
+                        <span className="truncate">{t('palette.runSnippet', { label: s.label })}</span>
+                      </Command.Item>
+                    ))}
                 </Command.Group>
               )}
               <Command.Group heading={t('palette.commands')} className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:text-muted">

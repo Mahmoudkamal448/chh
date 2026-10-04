@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LocalShell, UiTheme } from '@cy-ssh/shared';
+import { DEFAULT_HOST_SETTINGS, type LocalShell, type UiTheme } from '@cy-ssh/shared';
 import { Dialog } from '../../components/Dialog';
-import { Button, Field, Kbd, Select } from '../../components/ui';
+import { Button, Checkbox, Field, Input, Kbd, Select } from '../../components/ui';
+import { ThemePicker } from './ThemePicker';
 import { COMMAND_IDS, defaultKeymap, displayAccelerator, effectiveKeymap, eventToAccelerator, type CommandId } from '../../lib/keymap';
 import { useApp } from '../../stores/app-store';
 
@@ -59,6 +60,63 @@ export function SettingsDialog() {
               </Select>
             )}
           </Field>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t('settings.terminal')}</h3>
+          <p className="text-[12px] text-muted">{t('settings.terminalHint')}</p>
+          <ThemePicker
+            value={settings.terminalDefaults.terminalTheme ?? DEFAULT_HOST_SETTINGS.terminalTheme}
+            onChange={(id) => void update({ terminalDefaults: { ...settings.terminalDefaults, terminalTheme: id } })}
+          />
+          <div className="grid grid-cols-[1fr_100px_140px] gap-3">
+            <Field label={t('hostEditor.fontFamily')}>
+              {(id) => (
+                <Input
+                  id={id}
+                  defaultValue={settings.terminalDefaults.fontFamily ?? ''}
+                  placeholder={DEFAULT_HOST_SETTINGS.fontFamily}
+                  onBlur={(e) => void update({ terminalDefaults: { ...settings.terminalDefaults, fontFamily: e.target.value.trim() || undefined } })}
+                />
+              )}
+            </Field>
+            <Field label={t('hostEditor.fontSize')}>
+              {(id) => (
+                <Input
+                  id={id}
+                  type="number"
+                  min={6}
+                  max={48}
+                  value={settings.terminalDefaults.fontSize ?? ''}
+                  placeholder={String(DEFAULT_HOST_SETTINGS.fontSize)}
+                  onChange={(e) => {
+                    const n = Number(e.target.value);
+                    if (!e.target.value || (n >= 6 && n <= 48)) void update({ terminalDefaults: { ...settings.terminalDefaults, fontSize: e.target.value ? n : undefined } });
+                  }}
+                  data-testid="default-font-size"
+                />
+              )}
+            </Field>
+            <Field label={t('settings.cursor')}>
+              {(id) => (
+                <Select
+                  id={id}
+                  value={settings.terminalDefaults.cursorStyle ?? DEFAULT_HOST_SETTINGS.cursorStyle}
+                  onChange={(e) => void update({ terminalDefaults: { ...settings.terminalDefaults, cursorStyle: e.target.value as 'block' } })}
+                >
+                  <option value="block">{t('settings.cursorBlock')}</option>
+                  <option value="bar">{t('settings.cursorBar')}</option>
+                  <option value="underline">{t('settings.cursorUnderline')}</option>
+                </Select>
+              )}
+            </Field>
+          </div>
+          <Checkbox
+            label={t('settings.cursorBlink')}
+            checked={settings.terminalDefaults.cursorBlink ?? DEFAULT_HOST_SETTINGS.cursorBlink}
+            onChange={(v) => void update({ terminalDefaults: { ...settings.terminalDefaults, cursorBlink: v } })}
+          />
+          <Checkbox label={t('settings.historyEnabled')} checked={settings.historyEnabled} onChange={(v) => void update({ historyEnabled: v })} />
         </section>
 
         <section>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { inheritedSettings, type GroupLike, type HostSettingsOverrides } from '@cy-ssh/shared';
+import { inheritedSettings, type GroupLike, type HostSettingsOverrides, type Protocol } from '@cy-ssh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
@@ -8,6 +8,7 @@ import { refreshAll, useHosts } from '../../stores/hosts-store';
 import { GroupOptions, SettingsFields } from './SettingsFields';
 
 interface FormState {
+  protocol: Protocol;
   label: string;
   address: string;
   groupId: string;
@@ -19,7 +20,7 @@ interface FormState {
   password: string | null | undefined;
 }
 
-const EMPTY: FormState = { label: '', address: '', groupId: '', tags: '', notes: '', favorite: false, settings: {}, password: undefined };
+const EMPTY: FormState = { protocol: 'ssh', label: '', address: '', groupId: '', tags: '', notes: '', favorite: false, settings: {}, password: undefined };
 
 export function HostEditor() {
   const { t } = useTranslation();
@@ -43,6 +44,7 @@ export function HostEditor() {
     }
     void window.cy.hosts.get({ id: editingId }).then((h) => {
       setForm({
+        protocol: h.protocol,
         label: h.label,
         address: h.address,
         groupId: h.groupId ?? '',
@@ -71,6 +73,7 @@ export function HostEditor() {
     setSaving(true);
     setError(null);
     const payload = {
+      protocol: form.protocol,
       label: form.label.trim() || form.address.trim(),
       address: form.address.trim(),
       groupId: form.groupId || null,
@@ -110,6 +113,15 @@ export function HostEditor() {
       }
     >
       <form onSubmit={save} className="flex flex-col gap-4">
+        <Field label={t('hostEditor.protocol')} hint={form.protocol !== 'ssh' ? t(`hostEditor.protocolHint.${form.protocol}`) : undefined}>
+          {(id, d) => (
+            <Select id={id} aria-describedby={d} value={form.protocol} onChange={(e) => set({ protocol: e.target.value as Protocol })} data-testid="host-protocol">
+              <option value="ssh">SSH</option>
+              <option value="mosh">Mosh</option>
+              <option value="telnet">Telnet</option>
+            </Select>
+          )}
+        </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('hostEditor.address')} hint={t('hostEditor.addressHint')}>
             {(id, d) => (

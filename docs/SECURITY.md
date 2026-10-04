@@ -1,6 +1,6 @@
 # Security
 
-This document describes how cy-ssh protects data **as of Phase 2**, and what later phases add. The full
+This document describes how cy-ssh protects data **as of Phase 3**, and what later phases add. The full
 cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](ARCHITECTURE.md#5-encryption-design).
 
 ## What we protect
@@ -54,6 +54,22 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
 - File operations run in the session host, against the local disk or an SFTP session that belongs to the
   requesting window. Main rejects calls that name another window's session.
 - A cancelled transfer deletes the partially written destination file.
+
+## Phase 3 features
+
+- **Telnet is unencrypted.** The host editor says so when Telnet is selected, and saved passwords are never
+  sent automatically over Telnet.
+- **Mosh:** authentication and host-key verification happen over SSH exactly as for SSH hosts. The session key
+  (`MOSH_KEY`) is passed only through the mosh-client process environment and is never logged.
+- **Port forwarding** binds to `127.0.0.1` by default. Any other listen address shows a warning, because other
+  machines could then use the tunnel. The SOCKS proxy accepts only CONNECT and has no authentication, so keep
+  it on loopback.
+- **Command history** lives only in the encrypted local database and never leaves the device. It can be
+  disabled globally or per host/group (e.g. for production servers), and non-echoed input such as passwords
+  isn't captured (see PHASE-3.md).
+- **ssh_config import** reads your config and the files it Includes (max 256 files, 1 MB each). Paths never
+  round-trip through the renderer; a preview token refers to data held in the main process. Export goes
+  through a save dialog and never overwrites `~/.ssh/config` without the OS confirming.
 
 ## Logging
 

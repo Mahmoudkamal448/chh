@@ -45,4 +45,19 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX items_dirty ON items (vault_id) WHERE dirty = 1;
     `,
   },
+  {
+    version: 2,
+    sql: `
+      -- Command history: device-local, never synced.
+      CREATE TABLE history (
+        id      INTEGER PRIMARY KEY,
+        host_id TEXT,
+        source  TEXT NOT NULL,
+        command TEXT NOT NULL,
+        at      INTEGER NOT NULL
+      );
+      CREATE INDEX history_at ON history (at DESC);
+      CREATE INDEX history_host ON history (host_id, at DESC);
+    `,
+  },
 ];

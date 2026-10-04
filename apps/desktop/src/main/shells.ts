@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import type { LocalShell } from '@cy-ssh/shared';
@@ -54,4 +55,32 @@ export function detectShells(): LocalShell[] {
     out.push({ id: name, label: name, path: p, args: process.platform === 'darwin' ? ['-l'] : [] });
   }
   return out;
+}
+
+export interface MoshClient {
+  path: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+/**
+ * Locates mosh-client: on PATH (macOS/Linux, incl. Homebrew), or inside WSL on Windows, where no
+ * maintained native build exists.
+ */
+export function detectMoshClient(): MoshClient | null {
+  if (process.platform === 'win32') {
+    const wsl = join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'wsl.exe');
+    if (!existsSync(wsl)) return null;
+    try {
+      execFileSync(wsl, ['-e', 'sh', '-c', 'command -v mosh-client'], { stdio: 'ignore', timeout: 5000 });
+    } catch {
+      return null;
+    }
+    // WSLENV forwards MOSH_KEY into the Linux side.
+    return { path: wsl, args: ['-e', 'mosh-client'], env: { WSLENV: 'MOSH_KEY/u' } };
+  }
+  const extra = process.platform === 'darwin' ? ['/opt/homebrew/bin', '/usr/local/bin'] : [];
+  for (const dir of extra) if (existsSync(join(dir, 'mosh-client'))) return { path: join(dir, 'mosh-client'), args: [], env: {} };
+  const found = which('mosh-client');
+  return found ? { path: found, args: [], env: {} } : null;
 }

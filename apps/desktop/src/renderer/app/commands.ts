@@ -1,16 +1,46 @@
-import type { Host } from '@cy-ssh/shared';
+import type { Host, Snippet } from '@cy-ssh/shared';
+import { needsVariables, runSnippet } from '../features/snippets/run-snippet';
 import { COMMAND_IDS, effectiveKeymap, matches, type CommandId } from '../lib/keymap';
 import { useApp } from '../stores/app-store';
 import { useHosts } from '../stores/hosts-store';
 import { HOSTS_TAB, useTabs } from '../stores/tabs-store';
 import { HOST_SEARCH_ID } from '../features/hosts/HostsView';
 
-export type Action = { type: 'command'; id: CommandId } | { type: 'connect'; host: Host } | { type: 'files'; host: Host };
+export type Action =
+  | { type: 'command'; id: CommandId }
+  | { type: 'connect'; host: Host }
+  | { type: 'files'; host: Host }
+  | { type: 'snippet'; snippet: Snippet };
+
+/**
+ * The focused pane of the active terminal tab. With `fallback`, uses the most recently opened
+ * terminal tab when the active tab isn't a terminal (e.g. running a snippet from the home screen).
+ */
+export function activePaneId(fallback = false): string | null {
+  const { tabs, activeId } = useTabs.getState();
+  const active = tabs.find((t) => t.id === activeId);
+  if (active?.kind === 'terminal') return active.focusedPaneId;
+  if (!fallback) return null;
+  const last = [...tabs].reverse().find((t) => t.kind === 'terminal');
+  return last?.kind === 'terminal' ? last.focusedPaneId : null;
+}
 
 export function runCommand(a: Action): void {
   const tabs = useTabs.getState();
   if (a.type === 'connect') {
-    void tabs.openSsh(a.host.id, a.host.label);
+    void tabs.openHost(a.host.id, a.host.label);
+    return;
+  }
+  if (a.type === 'snippet') {
+    const pane = activePaneId(true);
+    if (!pane) return;
+    // Snippets with {{variables}} are run from the Snippets screen or side panel, which ask for values.
+    if (needsVariables(a.snippet).length) {
+      tabs.activate(HOSTS_TAB);
+      useApp.getState().setSection('snippets');
+      return;
+    }
+    runSnippet(pane, a.snippet);
     return;
   }
   if (a.type === 'files') {
@@ -25,7 +55,22 @@ export function runCommand(a: Action): void {
       void tabs.openLocal();
       break;
     case 'tab.close':
-      if (tabs.activeId !== HOSTS_TAB) tabs.close(tabs.activeId);
+      if (tabs.activeId !== HOSTS_TAB) tabs.closeFocused();
+      break;
+    case 'pane.splitRight':
+      void tabs.splitFocused('row');
+      break;
+    case 'pane.splitDown':
+      void tabs.splitFocused('column');
+      break;
+    case 'pane.focusNext':
+      tabs.focusNeighbor(1);
+      break;
+    case 'pane.focusPrev':
+      tabs.focusNeighbor(-1);
+      break;
+    case 'panel.toggle':
+      window.dispatchEvent(new Event('cy:toggle-panel'));
       break;
     case 'tab.next':
       tabs.cycle(1);

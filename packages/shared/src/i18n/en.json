@@ -23,7 +23,8 @@
     "close": "Close tab",
     "newLocal": "New local terminal",
     "newLocalHint": "New local terminal (right-click to choose a shell)",
-    "files": "Files"
+    "files": "Files",
+    "split": "Split view"
   },
   "sidebar": {
     "label": "Host navigation",
@@ -90,7 +91,15 @@
     "errorRequired": "Enter an address.",
     "identity": "Identity",
     "identityHint": "Reusable username + password/key",
-    "key": "Key"
+    "key": "Key",
+    "protocol": "Protocol",
+    "protocolHint": {
+      "telnet": "Telnet is unencrypted: anyone on the network can read the session, including passwords. Use it only for legacy devices on trusted networks. Default port 23.",
+      "mosh": "Logs in over SSH, then switches to Mosh (UDP 60000–61000) for roaming and lag-tolerant typing. Needs mosh-server on the host."
+    },
+    "recordHistory": "Record command history",
+    "moshServer": "Mosh server command",
+    "moshServerHint": "Used only for Mosh hosts."
   },
   "groupEditor": {
     "newTitle": "New group",
@@ -120,7 +129,16 @@
     "keystoreOs": "Local data is encrypted with a key protected by your system keychain.",
     "keystoreWeak": "No system keychain is available: local data is encrypted, but the key is only obfuscated on disk.",
     "none": "None",
-    "missing": "(deleted)"
+    "missing": "(deleted)",
+    "terminal": "Terminal",
+    "terminalHint": "Defaults for every terminal. Groups and hosts can override them.",
+    "terminalTheme": "Terminal theme",
+    "cursor": "Cursor",
+    "cursorBlock": "Block",
+    "cursorBar": "Bar",
+    "cursorUnderline": "Underline",
+    "cursorBlink": "Blinking cursor",
+    "historyEnabled": "Record typed commands in History (stored encrypted on this device)"
   },
   "commands": {
     "palette.open": "Open command palette",
@@ -134,7 +152,12 @@
     "terminal.find": "Find in terminal",
     "terminal.copy": "Copy (terminal)",
     "terminal.paste": "Paste (terminal)",
-    "settings.open": "Open settings"
+    "settings.open": "Open settings",
+    "pane.splitRight": "Split right",
+    "pane.splitDown": "Split down",
+    "pane.focusNext": "Next pane",
+    "pane.focusPrev": "Previous pane",
+    "panel.toggle": "Toggle snippets & history panel"
   },
   "palette": {
     "title": "Command palette",
@@ -143,7 +166,9 @@
     "hosts": "Hosts",
     "commands": "Commands",
     "connectTo": "Connect to {{label}}",
-    "filesOn": "Browse files on {{label}}"
+    "filesOn": "Browse files on {{label}}",
+    "snippets": "Snippets",
+    "runSnippet": "Run snippet: {{label}}"
   },
   "terminal": {
     "find": "Find",
@@ -174,8 +199,13 @@
       "hostCrashed": "The session process stopped unexpectedly.",
       "internal": "Could not start the session.",
       "spawn": "Could not start the shell: {{detail}}",
-      "generic": "Connection error: {{detail}}"
-    }
+      "generic": "Connection error: {{detail}}",
+      "moshMissing": "mosh-client isn't installed on this computer. Install Mosh (Windows: inside WSL) and try again.",
+      "moshServerMissing": "mosh-server isn't installed on the server (or not on its PATH). Install Mosh there, or set the Mosh server command in the host settings.",
+      "moshTimeout": "mosh-server didn't start in time.",
+      "moshFailed": "mosh-server failed: {{detail}}"
+    },
+    "closePane": "Close pane"
   },
   "hostKey": {
     "newTitle": "Verify host identity",
@@ -205,7 +235,10 @@
     "hosts": "Hosts",
     "keys": "Keys",
     "identities": "Identities",
-    "knownHosts": "Known hosts"
+    "knownHosts": "Known hosts",
+    "snippets": "Snippets",
+    "history": "History",
+    "forwards": "Port forwarding"
   },
   "keys": {
     "title": "Keys",
@@ -376,6 +409,144 @@
       "generic": "File operation failed: {{detail}}",
       "cancelled": "Cancelled.",
       "sessionClosed": "The connection was closed."
+    }
+  },
+  "panel": {
+    "label": "Snippets and history",
+    "snippets": "Snippets",
+    "history": "History",
+    "search": "Search…",
+    "noSnippets": "No snippets yet. Create them in the Snippets section.",
+    "noHistory": "No commands recorded yet.",
+    "insertHint": "Click to insert into the terminal, double-click to run"
+  },
+  "snippets": {
+    "title": "Snippets",
+    "count_one": "{{count}} snippet",
+    "count_other": "{{count}} snippets",
+    "empty": "Save commands and scripts you use often, then run them in any terminal. Use {{name}} placeholders for values you'll be asked for.",
+    "new": "New snippet",
+    "newTitle": "New snippet",
+    "editTitle": "Edit snippet",
+    "label": "Name",
+    "script": "Command or script",
+    "scriptHint": "Multiple lines run one after another, as if typed.",
+    "variablesFound": "You'll be asked for: {{names}}",
+    "description": "Description",
+    "errorRequired": "Enter a name and a command.",
+    "run": "Run",
+    "runIn": "Run in the active terminal",
+    "noTerminal": "Open a terminal first",
+    "variablesTitle": "Run “{{label}}”",
+    "deleteTitle": "Delete snippet?",
+    "deleteMessage": "“{{label}}” will be deleted."
+  },
+  "history": {
+    "title": "History",
+    "search": "Search commands…",
+    "clear": "Clear history",
+    "copy": "Copy",
+    "saveAsSnippet": "Save as snippet",
+    "empty": "Commands you type in terminals appear here, newest first.",
+    "noMatches": "No matching commands.",
+    "disabled": "History recording is turned off in Settings.",
+    "clearTitle": "Clear all history?",
+    "clearMessage": "Every recorded command on this device will be deleted."
+  },
+  "forwards": {
+    "title": "Port forwarding",
+    "count_one": "{{count}} rule",
+    "count_other": "{{count}} rules",
+    "empty": "Tunnel ports through SSH: reach a database behind a server (local), expose a local service on the server (remote), or browse through the server with a SOCKS proxy (dynamic).",
+    "new": "New rule",
+    "newTitle": "New forwarding rule",
+    "editTitle": "Edit forwarding rule",
+    "label": "Name",
+    "host": "Through host",
+    "type": "Type",
+    "kind": {
+      "local": "Local",
+      "remote": "Remote",
+      "dynamic": "Dynamic (SOCKS)"
+    },
+    "kindHint": {
+      "local": "Listen on this computer; connections go to a destination reachable from the server (ssh -L).",
+      "remote": "Listen on the server; connections come back to a destination reachable from this computer (ssh -R).",
+      "dynamic": "A SOCKS4/5 proxy on this computer; apps choose any destination via the server (ssh -D)."
+    },
+    "localBind": "Listen address (this computer)",
+    "remoteBind": "Listen address (server)",
+    "port": "Port",
+    "destRemote": "Destination host (as seen from the server)",
+    "destLocal": "Destination host (as seen from this computer)",
+    "exposedWarning": "This listens on a non-loopback address, so other machines on the network can use the tunnel.",
+    "autoStart": "Start automatically when cy-ssh opens",
+    "auto": "auto-start",
+    "start": "Start",
+    "stop": "Stop",
+    "via": "via {{host}}",
+    "stats_one": "{{count}} connection · ↓ {{in}} · ↑ {{out}}",
+    "stats_other": "{{count}} connections · ↓ {{in}} · ↑ {{out}}",
+    "state": {
+      "running": "Running",
+      "starting": "Starting",
+      "stopped": "Stopped",
+      "error": "Error"
+    },
+    "deleteTitle": "Delete rule?",
+    "deleteMessage": "“{{label}}” will be stopped and deleted.",
+    "error": {
+      "addrInUse": "That port is already in use on this computer.",
+      "addrDenied": "Not allowed to listen on that port (ports below 1024 may need admin rights).",
+      "addrNotAvail": "That listen address doesn't exist on this computer.",
+      "remoteRefused": "The server refused to listen on that address/port (check AllowTcpForwarding / GatewayPorts).",
+      "disconnected": "The SSH connection for this tunnel was lost.",
+      "cancelled": "Cancelled.",
+      "generic": "Forwarding failed: {{detail}}"
+    }
+  },
+  "sshConfig": {
+    "menu": "SSH config",
+    "importDefault": "Import from ~/.ssh/config…",
+    "importFile": "Import from file…",
+    "exportFile": "Export to file…",
+    "exportCopy": "Copy as ssh_config",
+    "exported_one": "Exported {{count}} host.",
+    "exported_other": "Exported {{count}} hosts.",
+    "copied_one": "Copied {{count}} host as ssh_config.",
+    "copied_other": "Copied {{count}} hosts as ssh_config.",
+    "importTitle": "Import from SSH config",
+    "importCount_one": "Import {{count}} host",
+    "importCount_other": "Import {{count}} hosts",
+    "noHosts": "No concrete Host entries were found (wildcard-only blocks are applied as defaults).",
+    "selectAll": "Select all",
+    "alias": "Host",
+    "target": "Connects to",
+    "extras": "Also",
+    "exists": "already added",
+    "keysN_one": "{{count}} key",
+    "keysN_other": "{{count}} keys",
+    "forwardsN_one": "{{count}} forward",
+    "forwardsN_other": "{{count}} forwards",
+    "group": "Put imported hosts in group",
+    "groupHint": "Leave empty to import without a group.",
+    "importKeys": "Import IdentityFile keys into Keys (unencrypted keys only; encrypted ones are listed)",
+    "importForwards_one": "Create {{count}} port-forwarding rule",
+    "importForwards_other": "Create {{count}} port-forwarding rules",
+    "proxyJumpNote": "ProxyJump is recorded in each host's notes; jump hosts become configurable in a later version.",
+    "warnings_one": "{{count}} warning",
+    "warnings_other": "{{count}} warnings",
+    "result": "Imported {{hosts}} hosts, {{keys}} keys and {{forwards}} forwarding rules.",
+    "skippedKeys": "Some keys were not imported:",
+    "keyReason": {
+      "missing": "file not found",
+      "encrypted": "passphrase-protected (import it from Keys)",
+      "unsupported": "unsupported format"
+    },
+    "error": {
+      "notFound": "No SSH config file was found.",
+      "unreadable": "The SSH config couldn't be read.",
+      "expired": "The preview expired. Please start the import again."
     }
   }
 }

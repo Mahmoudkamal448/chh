@@ -1,22 +1,26 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { app, dialog, Menu, nativeTheme, type BrowserWindow } from 'electron';
+import { app, BrowserWindow, dialog, Menu, nativeTheme } from 'electron';
 import { BRAND } from '@cy-ssh/shared';
 import { openDatabase, type Db } from './db/database';
 import { GroupsRepo } from './db/groups-repo';
 import { HostsRepo } from './db/hosts-repo';
+import { ForwardsRepo } from './db/forwards-repo';
+import { HistoryRepo } from './db/history-repo';
 import { IdentitiesRepo } from './db/identities-repo';
 import { KeysRepo } from './db/keys-repo';
 import { ItemStore } from './db/item-store';
 import { KnownHostsRepo } from './db/known-hosts-repo';
 import { SettingsRepo } from './db/settings-repo';
+import { SnippetsRepo } from './db/snippets-repo';
 import { ALLOW_WEAK_KEYSTORE, USER_DATA_OVERRIDE } from './env';
-import { registerHandlers } from './ipc/handle';
+import { emit, registerHandlers } from './ipc/handle';
 import { createHandlers } from './ipc/handlers';
 import { errInfo, initLogger, log } from './log';
 import { keystoreKind, loadOrCreateLocalKey, memzero } from './secrets/local-key';
 import { SessionManager, sessionHostScript } from './sessions';
-import { detectShells } from './shells';
+import { detectMoshClient, detectShells, type MoshClient } from './shells';
+import { SshConfigIO } from './ssh-config-io';
 import { LocalVault } from './vault/local-vault';
 import { createMainWindow, isTrustedSender } from './window';
 
@@ -94,9 +98,23 @@ if (!app.requestSingleInstanceLock()) {
     const knownHosts = new KnownHostsRepo(store);
     const keys = new KeysRepo(store, vault);
     const identities = new IdentitiesRepo(store, vault);
+    const forwards = new ForwardsRepo(store);
+    const snippets = new SnippetsRepo(store);
+    const history = new HistoryRepo(db);
+    const sshConfig = new SshConfigIO({ hosts, groups, keys, identities, forwards });
+    // mosh-client detection can be slow on Windows (WSL), so cache it briefly.
+    let mosh: { at: number; client: MoshClient | null } | null = null;
     sessions = new SessionManager({
       keys,
       identities,
+      forwards,
+      moshClient: () => {
+        if (!mosh || Date.now() - mosh.at > 60_000) mosh = { at: Date.now(), client: detectMoshClient() };
+        return mosh.client;
+      },
+      broadcast: (event, payload) => {
+        for (const w of BrowserWindow.getAllWindows()) emit(w.webContents, event, payload);
+      },
       hostScript: sessionHostScript(__dirname),
       hosts,
       groups,
@@ -105,10 +123,21 @@ if (!app.requestSingleInstanceLock()) {
       defaultShellId: () => settings.getApp().defaultShell,
     });
 
-    registerHandlers(createHandlers({ hosts, groups, settings, sessions, keys, identities, knownHosts, keystore }), isTrustedSender);
+    registerHandlers(
+      createHandlers({ hosts, groups, settings, sessions, keys, identities, knownHosts, forwards, snippets, history, sshConfig, keystore }),
+      isTrustedSender,
+    );
     buildMenu();
     mainWindow = createMainWindow(join(__dirname, '../preload/index.js'), join(__dirname, '../renderer'));
     mainWindow.on('closed', () => (mainWindow = null));
+
+    // Auto-start forwarding rules once the UI is up (it may need to show prompts).
+    const wc = mainWindow.webContents;
+    wc.once('did-finish-load', () => {
+      for (const f of forwards.list().filter((x) => x.autoStart)) {
+        sessions?.startForward(wc, f.id).catch((err) => log.warn({ forwardId: f.id, err: errInfo(err) }, 'auto-start failed'));
+      }
+    });
   }
 
   function buildMenu(): void {

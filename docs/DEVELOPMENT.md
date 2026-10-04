@@ -106,6 +106,9 @@ Deleting the directory resets the app.
 - **Test SSH server:** `apps/desktop/tests/support/ssh-server.ts` is an in-process `ssh2` server with password and
   public-key auth, a fake shell, and a real SFTP subsystem backed by a temp directory. Unit and E2E tests share
   it, so no Docker or sshd is needed.
+- **Telnet test server:** `tests/support/telnet-server.ts` negotiates NAWS/TTYPE/ECHO/SGA and echoes lines.
+- **Mosh:** with `allowMosh`, the test SSH server runs `mosh-server` locally on `exec`, so Mosh is tested end to
+  end with the real `mosh-client`. Install `mosh` to run that test; it's skipped otherwise.
 - **Key fixtures:** `packages/key-formats/test/fixtures` holds throwaway keys made by `ssh-keygen`, `puttygen`
   (`apt install putty-tools`) and `openssl`. Regenerate them only if you add formats. The tests compare against
   each tool's own output, not against round trips of our code.
@@ -119,6 +122,8 @@ Deleting the directory resets the app.
   - Theme switching
   - Phase 2: key generation + key login, encrypted PuTTY import, identities, known-hosts removal, and the SFTP
     browser (F5 upload, drag-and-drop download, conflict prompt, mkdir, chmod, delete)
+  - Phase 3: split panes, snippets with variables + side panel, history capture, Telnet, Mosh, port
+    forwarding through a real tunnel, ssh_config import and export
 
 ## Platform notes and troubleshooting
 

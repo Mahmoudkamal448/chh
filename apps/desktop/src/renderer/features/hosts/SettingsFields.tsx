@@ -125,6 +125,20 @@ export function SettingsFields({
           </Select>
         )}
       </Field>
+      <Field label={t('hostEditor.recordHistory')}>
+        {(id) => (
+          <Select id={id} value={boolValue(value.recordHistory)} onChange={(e) => set('recordHistory', bool(e.target.value))}>
+            <option value="">{inheritLabel(onOff(inherited.recordHistory))}</option>
+            <option value="on">{t('common.on')}</option>
+            <option value="off">{t('common.off')}</option>
+          </Select>
+        )}
+      </Field>
+      <Field label={t('hostEditor.moshServer')} hint={t('hostEditor.moshServerHint')}>
+        {(id, d) => (
+          <Input id={id} aria-describedby={d} value={value.moshServer ?? ''} placeholder={inherited.moshServer} onChange={(e) => set('moshServer', e.target.value || undefined)} />
+        )}
+      </Field>
       <Field label={t('hostEditor.keepAlive')}>
         {(id) => (
           <Input id={id} type="number" min={0} max={3600} value={value.keepAliveSec ?? ''} placeholder={String(inherited.keepAliveSec)} onChange={(e) => set('keepAliveSec', num(e.target.value))} />

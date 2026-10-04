@@ -174,6 +174,9 @@ importers:
       '@cy-ssh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@cy-ssh/ssh-config':
+        specifier: workspace:*
+        version: link:../../packages/ssh-config
       '@cy-ssh/sync-core':
         specifier: workspace:*
         version: link:../../packages/sync-core
@@ -333,6 +336,18 @@ importers:
       vitest:
         specifier: ^5.0.3
         version: 5.0.3(@types/node@24.19.1)(vite@7.3.6(@types/node@24.19.1)(jiti@2.7.0)(lightningcss@1.32.0))
+
+  packages/ssh-config:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.20.5
+        version: 22.20.5
+      typescript:
+        specifier: ~5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/node@22.20.5)(vite@7.3.6(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.32.0))
 
   packages/sync-core:
     devDependencies:

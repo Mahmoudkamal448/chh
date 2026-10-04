@@ -5,6 +5,16 @@ import {
   ConflictPolicySchema,
   EndpointSchema,
   FileEntrySchema,
+  ForwardInputSchema,
+  ForwardPatchSchema,
+  ForwardSchema,
+  ForwardStatusSchema,
+  HistoryEntrySchema,
+  SnippetInputSchema,
+  SnippetPatchSchema,
+  SnippetSchema,
+  SshImportPreviewSchema,
+  SshImportResultSchema,
   GenerateKeyInputSchema,
   IdentityInputSchema,
   IdentityPatchSchema,
@@ -75,7 +85,8 @@ export const contract = {
   },
   sessions: {
     /** The session's MessagePort is delivered separately via the `session.port` channel. */
-    openSsh: method(z.object({ hostId: IdSchema, ...Dims }), z.object({ sessionId: IdSchema })),
+    /** Opens a terminal session to a host using its protocol (SSH, Telnet or Mosh). */
+    openHost: method(z.object({ hostId: IdSchema, ...Dims }), z.object({ sessionId: IdSchema })),
     openLocal: method(
       z.object({ shellId: z.string().max(64).optional(), ...Dims }),
       z.object({ sessionId: IdSchema, title: z.string() }),
@@ -151,6 +162,48 @@ export const contract = {
     ),
     cancelTransfer: method(z.object({ id: z.string() }), Void),
   },
+  forwards: {
+    list: method(Empty, z.array(ForwardSchema)),
+    create: method(ForwardInputSchema, ForwardSchema),
+    update: method(z.object({ id: IdSchema, patch: ForwardPatchSchema }), ForwardSchema),
+    remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
+    start: method(ById, Void),
+    stop: method(ById, Void),
+    statuses: method(Empty, z.array(ForwardStatusSchema)),
+  },
+  snippets: {
+    list: method(Empty, z.array(SnippetSchema)),
+    create: method(SnippetInputSchema, SnippetSchema),
+    update: method(z.object({ id: IdSchema, patch: SnippetPatchSchema }), SnippetSchema),
+    remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
+  },
+  history: {
+    add: method(z.object({ hostId: IdSchema.nullable(), source: z.string().max(200), command: z.string().min(1).max(8192) }), Void),
+    search: method(
+      z.object({ query: z.string().max(500).optional(), hostId: IdSchema.optional(), limit: z.number().int().min(1).max(5000).default(500) }),
+      z.array(HistoryEntrySchema),
+    ),
+    remove: method(z.object({ ids: z.array(z.number().int()).min(1) }), Void),
+    clear: method(Empty, Void),
+  },
+  sshConfig: {
+    /** Reads ~/.ssh/config (or a picked file) and returns importable hosts without importing. */
+    preview: method(z.object({ pickFile: z.boolean().default(false) }), SshImportPreviewSchema.nullable()),
+    import: method(
+      z.object({
+        token: z.string(),
+        aliases: z.array(z.string()).min(1),
+        groupLabel: z.string().trim().max(200).optional(),
+        importKeys: z.boolean(),
+        importForwards: z.boolean(),
+      }),
+      SshImportResultSchema,
+    ),
+    /** ssh_config text for the given hosts (all hosts when omitted). */
+    exportText: method(z.object({ hostIds: z.array(IdSchema).optional() }), z.string()),
+    /** Save dialog + write. Never overwrites without the OS dialog's confirmation. */
+    exportFile: method(z.object({ hostIds: z.array(IdSchema).optional() }), z.object({ saved: z.boolean() })),
+  },
   dev: {
     /** Only available when the app runs with CY_SSH_TEST=1. */
     seedHosts: method(z.object({ count: z.number().int().min(1).max(20_000) }), z.object({ created: z.number() })),
@@ -164,8 +217,9 @@ export const events = {
   'auth.prompt': AuthPromptSchema,
   /** Prompt was answered/cancelled elsewhere (e.g. session closed) — dismiss the dialog. */
   'prompt.dismiss': z.object({ promptId: IdSchema }),
-  'data.changed': z.object({ kinds: z.array(z.enum(['hosts', 'groups', 'settings', 'keys', 'identities', 'knownHosts'])) }),
+  'data.changed': z.object({ kinds: z.array(z.enum(['hosts', 'groups', 'settings', 'keys', 'identities', 'knownHosts', 'forwards', 'snippets', 'history'])) }),
   'transfer.update': TransferSchema,
+  'forward.update': ForwardStatusSchema,
 } as const;
 
 export type Contract = typeof contract;

@@ -4,6 +4,11 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, nativeTheme, shell, type WebContents } from 'electron';
 import { KeyFormatError, isEncrypted } from '@cy-ssh/key-formats';
+import { resolveSettings } from '@cy-ssh/shared';
+import type { ForwardsRepo } from '../db/forwards-repo';
+import type { HistoryRepo } from '../db/history-repo';
+import type { SnippetsRepo } from '../db/snippets-repo';
+import { defaultSshConfigPath, type SshConfigIO } from '../ssh-config-io';
 import type { GroupsRepo } from '../db/groups-repo';
 import type { HostsRepo } from '../db/hosts-repo';
 import type { IdentitiesRepo } from '../db/identities-repo';
@@ -24,6 +29,10 @@ export interface HandlerDeps {
   keys: KeysRepo;
   identities: IdentitiesRepo;
   knownHosts: KnownHostsRepo;
+  forwards: ForwardsRepo;
+  snippets: SnippetsRepo;
+  history: HistoryRepo;
+  sshConfig: SshConfigIO;
   keystore: KeystoreKind;
 }
 
@@ -81,7 +90,13 @@ export function createHandlers(d: HandlerDeps): Handlers {
       create: (input) => d.hosts.create(input),
       update: ({ id, patch }) => d.hosts.update(id, patch),
       duplicate: ({ id }) => d.hosts.duplicate(id),
-      remove: ({ ids }) => d.hosts.remove(ids),
+      remove: async ({ ids }) => {
+        // Forward rules belong to their host: stop and delete them too.
+        const fwd = d.forwards.idsForHosts(ids);
+        for (const id of fwd) await d.sessions.stopForward(id);
+        if (fwd.length) d.forwards.remove(fwd);
+        d.hosts.remove(ids);
+      },
       tags: () => d.hosts.tags(),
     },
     groups: {
@@ -160,7 +175,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
       },
     },
     sessions: {
-      openSsh: (input, e) => d.sessions.openSsh(e.sender, input),
+      openHost: (input, e) => d.sessions.openHost(e.sender, input),
       openLocal: (input, e) => d.sessions.openLocal(e.sender, input),
       close: ({ sessionId }) => d.sessions.close(sessionId),
       localShells: () => detectShells(),
@@ -192,6 +207,77 @@ export function createHandlers(d: HandlerDeps): Handlers {
       },
       cancelTransfer: async (p) => {
         await d.sessions.rpc('transfer.cancel', p);
+      },
+    },
+    forwards: {
+      list: () => d.forwards.list(),
+      create: (input) => d.forwards.create(input),
+      update: async ({ id, patch }, e) => {
+        const running = d.sessions.forwardStatuses().some((s) => s.id === id && (s.state === 'running' || s.state === 'starting'));
+        const updated = d.forwards.update(id, patch);
+        if (running) {
+          // Apply the change by restarting the tunnel.
+          await d.sessions.stopForward(id);
+          await d.sessions.startForward(e.sender, id).catch(() => undefined);
+        }
+        return updated;
+      },
+      remove: async ({ ids }) => {
+        for (const id of ids) await d.sessions.stopForward(id);
+        d.forwards.remove(ids);
+      },
+      start: ({ id }, e) => d.sessions.startForward(e.sender, id),
+      stop: ({ id }) => d.sessions.stopForward(id),
+      statuses: () => d.sessions.forwardStatuses(),
+    },
+    snippets: {
+      list: () => d.snippets.list(),
+      create: (input) => d.snippets.create(input),
+      update: ({ id, patch }) => d.snippets.update(id, patch),
+      remove: ({ ids }) => d.snippets.remove(ids),
+    },
+    history: {
+      add: ({ hostId, source, command }, e) => {
+        if (!d.settings.getApp().historyEnabled) return;
+        if (hostId) {
+          try {
+            const f = d.hosts.getFields(hostId);
+            if (!resolveSettings(f.groupId, f.settings, d.groups.map()).recordHistory) return;
+          } catch {
+            return; // host deleted meanwhile
+          }
+        }
+        if (d.history.add(hostId, source, command)) emit(e.sender, 'data.changed', { kinds: ['history'] });
+      },
+      search: ({ query, hostId, limit }) => d.history.search(query, hostId, limit),
+      remove: ({ ids }) => d.history.remove(ids),
+      clear: () => d.history.clear(),
+    },
+    sshConfig: {
+      preview: async ({ pickFile }, e) => {
+        let path = defaultSshConfigPath();
+        if (pickFile) {
+          const res = await dialog.showOpenDialog(windowOf(e.sender)!, {
+            title: 'Import SSH config',
+            defaultPath: path,
+            properties: ['openFile', 'showHiddenFiles'],
+          });
+          if (res.canceled || !res.filePaths[0]) return null;
+          path = res.filePaths[0];
+        }
+        return d.sshConfig.preview(path);
+      },
+      import: (input) => d.sshConfig.import(input),
+      exportText: ({ hostIds }) => d.sshConfig.exportText(hostIds),
+      exportFile: async ({ hostIds }, e) => {
+        const res = await dialog.showSaveDialog(windowOf(e.sender)!, {
+          title: 'Export SSH config',
+          defaultPath: join(homedir(), '.ssh', 'config.cy-ssh'),
+          showsTagField: false,
+        });
+        if (res.canceled || !res.filePath) return { saved: false };
+        await writeFile(res.filePath, d.sshConfig.exportText(hostIds), { mode: 0o600 });
+        return { saved: true };
       },
     },
     dev: {
