@@ -2,6 +2,7 @@ import type { Host, Snippet } from '@cy-ssh/shared';
 import { needsVariables, runSnippet } from '../features/snippets/run-snippet';
 import { COMMAND_IDS, effectiveKeymap, matches, type CommandId } from '../lib/keymap';
 import { useApp } from '../stores/app-store';
+import { useSecurity } from '../stores/lock-store';
 import { useHosts } from '../stores/hosts-store';
 import { HOSTS_TAB, useTabs } from '../stores/tabs-store';
 import { HOST_SEARCH_ID } from '../features/hosts/HostsView';
@@ -69,6 +70,9 @@ export function runCommand(a: Action): void {
     case 'pane.focusPrev':
       tabs.focusNeighbor(-1);
       break;
+    case 'app.lock':
+      void window.cy.lock.lockNow({});
+      break;
     case 'panel.toggle':
       window.dispatchEvent(new Event('cy:toggle-panel'));
       break;
@@ -106,6 +110,8 @@ export function runCommand(a: Action): void {
 
 /** Global keydown handler (capture phase). */
 export function handleGlobalKey(e: KeyboardEvent): void {
+  // Nothing but the lock screen reacts to keys while locked.
+  if (useSecurity.getState().lock?.locked !== 'no') return;
   if (useApp.getState().settingsOpen && (e.target as HTMLElement)?.dataset?.recording === 'true') return;
   const km = effectiveKeymap(useApp.getState().settings.keymap);
   const onHostsTab = useTabs.getState().activeId === HOSTS_TAB;

@@ -68,6 +68,18 @@ Store it through `ItemStore` (`src/main/db/item-store.ts`). Every write stamps p
 vector, so Phase 4 sync picks it up with no schema change. Add generated columns plus indexes in a **new**
 migration if you need to query by a field.
 
+## Sync server
+
+```bash
+STORE=memory SERVER_SECRET=$(openssl rand -base64 32) pnpm --filter @cy-ssh/server dev   # http://127.0.0.1:8080
+pnpm --filter @cy-ssh/server test                                                       # memory store
+TEST_DATABASE_URL=postgres://… pnpm --filter @cy-ssh/server test                         # + real Postgres
+docker build -f apps/server/Dockerfile -t cy-ssh-server .
+```
+
+To try sync between two app instances on one machine, start the second with a separate profile:
+`CY_SSH_USER_DATA=/tmp/cy2 pnpm dev`.
+
 ## Environment variables
 
 | Variable | Effect |

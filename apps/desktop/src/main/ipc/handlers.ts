@@ -9,6 +9,10 @@ import type { ForwardsRepo } from '../db/forwards-repo';
 import type { HistoryRepo } from '../db/history-repo';
 import type { SnippetsRepo } from '../db/snippets-repo';
 import { defaultSshConfigPath, type SshConfigIO } from '../ssh-config-io';
+import { CryptoError } from '@cy-ssh/vault-crypto';
+import type { LockManager } from '../lock';
+import type { SyncEngine } from '../sync/engine';
+import { SyncHttpError } from '../sync/http';
 import type { GroupsRepo } from '../db/groups-repo';
 import type { HostsRepo } from '../db/hosts-repo';
 import type { IdentitiesRepo } from '../db/identities-repo';
@@ -33,7 +37,18 @@ export interface HandlerDeps {
   snippets: SnippetsRepo;
   history: HistoryRepo;
   sshConfig: SshConfigIO;
-  keystore: KeystoreKind;
+  sync: SyncEngine;
+}
+
+/** Maps sync-engine errors (server codes, network) to user-facing IPC errors. */
+async function syncCall<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof SyncHttpError) throw new AppError(`sync_${e.code}`, `sync.error.${e.code}`, e.message && e.message !== e.code ? { detail: e.message.slice(0, 300) } : undefined);
+    if (e instanceof CryptoError) throw new AppError('sync_crypto', 'sync.error.crypto');
+    throw e;
+  }
 }
 
 const MAX_KEY_FILE = 64 * 1024;
@@ -58,7 +73,18 @@ async function readLimited(path: string, max: number): Promise<string> {
   return readFile(path, 'utf8');
 }
 
-export function createHandlers(d: HandlerDeps): Handlers {
+export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keystore: KeystoreKind; lock: LockManager }): Handlers {
+  // Data handlers need the open database; while it's closed (master password not entered yet) they fail.
+  const d = new Proxy({} as HandlerDeps, {
+    get(_t, k: keyof HandlerDeps) {
+      const ctx = getCtx();
+      if (!ctx) throw new AppError('locked', 'errors.locked');
+      return ctx[k];
+    },
+  });
+  const lockError = (e: unknown, key: string): never => {
+    throw new AppError('lock', key, { detail: (e as Error).message });
+  };
   const rpc = (wc: WebContents, method: Parameters<SessionManager['rpc']>[0], params: Record<string, unknown>) => {
     if (typeof params.endpoint === 'string') d.sessions.assertEndpoint(wc, params.endpoint);
     return d.sessions.rpc(method, params, wc);
@@ -71,7 +97,7 @@ export function createHandlers(d: HandlerDeps): Handlers {
         platform: process.platform as 'darwin' | 'win32' | 'linux',
         arch: process.arch,
         testMode: TEST_MODE,
-        keystore: d.keystore,
+        keystore: extras.keystore,
       }),
       getSettings: () => d.settings.getApp(),
       setSettings: (patch, e) => {
@@ -279,6 +305,30 @@ export function createHandlers(d: HandlerDeps): Handlers {
         await writeFile(res.filePath, d.sshConfig.exportText(hostIds), { mode: 0o600 });
         return { saved: true };
       },
+    },
+    sync: {
+      status: () => d.sync.status(),
+      register: (input) => syncCall(() => d.sync.register(input)),
+      login: (input) => syncCall(() => d.sync.login(input)),
+      recover: (input) => syncCall(() => d.sync.recover(input)),
+      logout: ({ keepData }) => syncCall(() => d.sync.logout(keepData)),
+      syncNow: () => syncCall(() => d.sync.syncNow()),
+      devices: () => syncCall(() => d.sync.devices()),
+      removeDevice: ({ id }) => syncCall(() => d.sync.removeDevice(id)),
+      changePassword: ({ current, next }) => syncCall(() => d.sync.changePassword(current, next)),
+      totpSetup: () => syncCall(() => d.sync.totpSetup()),
+      totpEnable: ({ code }) => syncCall(() => d.sync.totpEnable(code)),
+      totpDisable: (input) => syncCall(() => d.sync.totpDisable(input)),
+      deleteAccount: ({ password }) => syncCall(() => d.sync.deleteAccount(password)),
+    },
+    lock: {
+      state: () => extras.lock.state(),
+      lockNow: () => extras.lock.lockNow(),
+      unlock: (input) => extras.lock.unlock(input),
+      configure: (input) => extras.lock.configure(input).catch((e) => lockError(e, 'lock.error.passcodeRequired')),
+      disable: ({ secret }) => extras.lock.disable(secret).catch((e) => lockError(e, 'lock.error.wrongSecret')),
+      setMasterPassword: ({ password }) => extras.lock.setMasterPassword(password),
+      removeMasterPassword: ({ password }) => extras.lock.removeMasterPassword(password).catch((e) => lockError(e, 'lock.error.wrongSecret')),
     },
     dev: {
       seedHosts: ({ count }) => {

@@ -1,5 +1,7 @@
 import * as DM from '@radix-ui/react-context-menu';
-import { Circle, Columns2, FolderOpen, Home, Plus, Terminal as TermIcon, X } from 'lucide-react';
+import { Circle, Cloud, CloudOff, Columns2, FolderOpen, Home, Lock, Plus, RefreshCw, Terminal as TermIcon, X } from 'lucide-react';
+import { useApp } from '../../stores/app-store';
+import { useSecurity } from '../../stores/lock-store';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LocalShell } from '@cy-ssh/shared';
@@ -24,6 +26,9 @@ export function TabBar() {
   const close = useTabs((s) => s.close);
   const openLocal = useTabs((s) => s.openLocal);
   const [shells, setShells] = useState<LocalShell[]>([]);
+  const sync = useSecurity((s) => s.sync);
+  const lockConfigured = useSecurity((s) => !!s.lock && (s.lock.settings.enabled || s.lock.masterPassword));
+  const openSettings = useApp((s) => s.setSettingsOpen);
 
   useEffect(() => {
     void window.cy.sessions.localShells({}).then(setShells);
@@ -93,6 +98,29 @@ export function TabBar() {
           </DM.Content>
         </DM.Portal>
       </DM.Root>
+      <div className="ml-auto flex shrink-0 items-center gap-1 px-2">
+        {lockConfigured && (
+          <IconButton label={t('commands.app.lock')} onClick={() => void window.cy.lock.lockNow({})} data-testid="tabbar-lock">
+            <Lock size={14} />
+          </IconButton>
+        )}
+        <IconButton
+          label={sync?.signedIn ? t(`sync.state.${sync.state}`) : t('sync.notSignedIn')}
+          onClick={() => openSettings(true, 'sync')}
+          data-testid="tabbar-sync"
+          data-state={sync?.state ?? 'off'}
+        >
+          {!sync?.signedIn ? (
+            <CloudOff size={14} />
+          ) : sync.state === 'syncing' ? (
+            <RefreshCw size={14} className="animate-spin" />
+          ) : sync.state === 'error' || sync.state === 'offline' ? (
+            <CloudOff size={14} className="text-danger" />
+          ) : (
+            <Cloud size={14} className="text-accent" />
+          )}
+        </IconButton>
+      </div>
     </div>
   );
 }

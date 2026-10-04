@@ -1,0 +1,33 @@
+{
+  "name": "@cy-ssh/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "cy-ssh self-hostable sync server (zero-knowledge)",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "node build.mjs",
+    "start": "node dist/index.js",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cy-ssh/shared": "workspace:*",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fastify/websocket": "^11.3.3",
+    "fastify": "^5.12.5",
+    "hash-wasm": "^4.12.0",
+    "postgres": "^3.4.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.3"
+  }
+}

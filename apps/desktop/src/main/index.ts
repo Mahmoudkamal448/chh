@@ -1,27 +1,13 @@
-import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
-import { app, BrowserWindow, dialog, Menu, nativeTheme } from 'electron';
+import { app, dialog, Menu, type BrowserWindow } from 'electron';
 import { BRAND } from '@cy-ssh/shared';
-import { openDatabase, type Db } from './db/database';
-import { GroupsRepo } from './db/groups-repo';
-import { HostsRepo } from './db/hosts-repo';
-import { ForwardsRepo } from './db/forwards-repo';
-import { HistoryRepo } from './db/history-repo';
-import { IdentitiesRepo } from './db/identities-repo';
-import { KeysRepo } from './db/keys-repo';
-import { ItemStore } from './db/item-store';
-import { KnownHostsRepo } from './db/known-hosts-repo';
-import { SettingsRepo } from './db/settings-repo';
-import { SnippetsRepo } from './db/snippets-repo';
+import { broadcast, openContext, type AppContext } from './context';
 import { ALLOW_WEAK_KEYSTORE, USER_DATA_OVERRIDE } from './env';
-import { emit, registerHandlers } from './ipc/handle';
+import { registerHandlers } from './ipc/handle';
 import { createHandlers } from './ipc/handlers';
+import { LockManager } from './lock';
 import { errInfo, initLogger, log } from './log';
-import { keystoreKind, loadOrCreateLocalKey, memzero } from './secrets/local-key';
-import { SessionManager, sessionHostScript } from './sessions';
-import { detectMoshClient, detectShells, type MoshClient } from './shells';
-import { SshConfigIO } from './ssh-config-io';
-import { LocalVault } from './vault/local-vault';
+import { createLocalKey, keystoreKind, memzero, readKeyFile } from './secrets/local-key';
 import { createMainWindow, isTrustedSender } from './window';
 
 app.setName(BRAND.productName);
@@ -31,9 +17,8 @@ if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   let mainWindow: BrowserWindow | null = null;
-  let db: Db | null = null;
-  let vault: LocalVault | null = null;
-  let sessions: SessionManager | null = null;
+  let ctx: AppContext | null = null;
+  let lock: LockManager | null = null;
 
   app.on('second-instance', () => {
     if (mainWindow) {
@@ -55,8 +40,8 @@ if (!app.requestSingleInstanceLock()) {
       message: 'No system keyring found',
       detail:
         'cy-ssh could not find a Secret Service keyring (e.g. GNOME Keyring or KWallet). Your data will still be ' +
-        'encrypted, but the encryption key will only be obfuscated on disk. Install and unlock a keyring for full ' +
-        'protection, or continue now. A master-password lock will be available in a later release.',
+        'encrypted, but the encryption key will only be obfuscated on disk. Install and unlock a keyring, or set a ' +
+        'master password in Settings → Security for full protection.',
       buttons: ['Continue', 'Quit'],
       defaultId: 1,
       cancelId: 1,
@@ -66,78 +51,59 @@ if (!app.requestSingleInstanceLock()) {
     return true;
   }
 
+  /** Opens the database and starts everything that depends on it. */
+  async function open(key: Buffer): Promise<void> {
+    try {
+      ctx = openContext(userData, key, __dirname);
+      lock!.attach(ctx.settings, key);
+    } finally {
+      memzero(key);
+    }
+    ctx.sync.start();
+    const c = ctx;
+    const startForwards = () => {
+      for (const f of c.forwards.list().filter((x) => x.autoStart)) {
+        if (!mainWindow) return;
+        c.sessions.startForward(mainWindow.webContents, f.id).catch((err) => log.warn({ forwardId: f.id, err: errInfo(err) }, 'auto-start failed'));
+      }
+    };
+    // Auto-start forwarding rules once the UI is up (they may need to show prompts).
+    if (mainWindow && !mainWindow.webContents.isLoading()) startForwards();
+    else mainWindow?.webContents.once('did-finish-load', startForwards);
+  }
+
   async function boot(): Promise<void> {
     initLogger(join(userData, 'logs'));
     log.info({ version: app.getVersion(), platform: process.platform }, 'starting');
 
+    const keyFile = readKeyFile(userData);
     const keystore = keystoreKind();
-    if (keystore === 'weak' && !(await confirmWeakKeystore(join(userData, 'weak-keystore-accepted')))) {
+    if (keyFile.kind !== 'password' && keystore === 'weak' && !(await confirmWeakKeystore(join(userData, 'weak-keystore-accepted')))) {
       app.quit();
       return;
     }
 
-    const { key } = loadOrCreateLocalKey(userData);
-    try {
-      db = openDatabase(join(userData, `${BRAND.slug}.db`), key);
-      vault = LocalVault.openOrCreate(db, key);
-    } finally {
-      memzero(key);
-    }
-
-    const settings = new SettingsRepo(db);
-    let deviceId = settings.getRaw('device_id');
-    if (!deviceId) {
-      deviceId = randomUUID();
-      settings.setRaw('device_id', deviceId);
-    }
-    nativeTheme.themeSource = settings.getApp().uiTheme;
-
-    const store = new ItemStore(db, deviceId, vault.id);
-    const groups = new GroupsRepo(store);
-    const hosts = new HostsRepo(store, vault, groups);
-    const knownHosts = new KnownHostsRepo(store);
-    const keys = new KeysRepo(store, vault);
-    const identities = new IdentitiesRepo(store, vault);
-    const forwards = new ForwardsRepo(store);
-    const snippets = new SnippetsRepo(store);
-    const history = new HistoryRepo(db);
-    const sshConfig = new SshConfigIO({ hosts, groups, keys, identities, forwards });
-    // mosh-client detection can be slow on Windows (WSL), so cache it briefly.
-    let mosh: { at: number; client: MoshClient | null } | null = null;
-    sessions = new SessionManager({
-      keys,
-      identities,
-      forwards,
-      moshClient: () => {
-        if (!mosh || Date.now() - mosh.at > 60_000) mosh = { at: Date.now(), client: detectMoshClient() };
-        return mosh.client;
-      },
-      broadcast: (event, payload) => {
-        for (const w of BrowserWindow.getAllWindows()) emit(w.webContents, event, payload);
-      },
-      hostScript: sessionHostScript(__dirname),
-      hosts,
-      groups,
-      knownHosts,
-      shells: detectShells,
-      defaultShellId: () => settings.getApp().defaultShell,
-    });
-
+    lock = new LockManager({ userData, emit: (s) => broadcast('lock.changed', s), openWithKey: open });
+    const l = lock;
     registerHandlers(
-      createHandlers({ hosts, groups, settings, sessions, keys, identities, knownHosts, forwards, snippets, history, sshConfig, keystore }),
+      createHandlers(() => ctx, { keystore, lock: l }),
       isTrustedSender,
+      // While locked, only the lock screen's calls get through.
+      (ns, m) => !l.isLocked() || ns === 'lock' || (ns === 'app' && m === 'info'),
     );
     buildMenu();
-    mainWindow = createMainWindow(join(__dirname, '../preload/index.js'), join(__dirname, '../renderer'));
-    mainWindow.on('closed', () => (mainWindow = null));
 
-    // Auto-start forwarding rules once the UI is up (it may need to show prompts).
-    const wc = mainWindow.webContents;
-    wc.once('did-finish-load', () => {
-      for (const f of forwards.list().filter((x) => x.autoStart)) {
-        sessions?.startForward(wc, f.id).catch((err) => log.warn({ forwardId: f.id, err: errInfo(err) }, 'auto-start failed'));
-      }
-    });
+    if (keyFile.kind === 'password') {
+      // Master password: the database stays encrypted until the user unlocks.
+      l.startLockedForPassword();
+      mainWindow = createMainWindow(join(__dirname, '../preload/index.js'), join(__dirname, '../renderer'));
+    } else {
+      mainWindow = createMainWindow(join(__dirname, '../preload/index.js'), join(__dirname, '../renderer'));
+      await open(keyFile.kind === 'os' ? keyFile.key : createLocalKey(userData));
+      // A configured UI lock also applies at startup.
+      l.lockNow();
+    }
+    mainWindow.on('closed', () => (mainWindow = null));
   }
 
   function buildMenu(): void {
@@ -171,7 +137,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('activate', () => {
-    if (!mainWindow && db) {
+    if (!mainWindow && lock) {
       mainWindow = createMainWindow(join(__dirname, '../preload/index.js'), join(__dirname, '../renderer'));
       mainWindow.on('closed', () => (mainWindow = null));
     }
@@ -182,9 +148,7 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   app.on('before-quit', () => {
-    sessions?.shutdown();
-    vault?.dispose();
-    db?.close();
-    db = null;
+    ctx?.close();
+    ctx = null;
   });
 }

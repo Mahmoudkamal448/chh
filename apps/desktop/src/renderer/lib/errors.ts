@@ -1,9 +1,19 @@
-import type { IpcError } from '@cy-ssh/shared';
+import { decodeIpcError, type IpcError } from '@cy-ssh/shared';
 
-/** Extracts the i18n key from an IPC rejection (see preload). */
+/** The structured error from an IPC rejection (see preload), or null for other errors. */
+export function ipcError(err: unknown): IpcError | null {
+  return decodeIpcError(err);
+}
+
+/** Extracts the i18n key from an IPC rejection. */
 export function errorKey(err: unknown): string {
-  const e = (err as { cyError?: IpcError })?.cyError;
-  return e?.messageKey ?? 'errors.internal';
+  return ipcError(err)?.messageKey ?? 'errors.internal';
+}
+
+/** i18n key + interpolation values ({{detail}}) for an IPC rejection. */
+export function errorMessage(err: unknown): { key: string; detail: string } {
+  const e = ipcError(err);
+  return { key: e?.messageKey ?? 'errors.internal', detail: String(e?.details?.detail ?? '') };
 }
 
 /** Session status messages are "i18nKey" or "i18nKey::detail". */

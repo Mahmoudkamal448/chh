@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, IconButton, Input, Select } from '../../components/ui';
 import { cn } from '../../lib/cn';
-import { errorKey, splitStatusMessage } from '../../lib/errors';
+import { errorKey, errorMessage, splitStatusMessage } from '../../lib/errors';
 import { formatBytes } from '../../lib/format';
 import { useLibrary } from '../../stores/library-store';
 
@@ -154,8 +154,8 @@ export function ForwardsView() {
       if (s === 'running' || s === 'starting') await window.cy.forwards.stop({ id: f.id });
       else await window.cy.forwards.start({ id: f.id });
     } catch (err) {
-      const e = (err as { cyError?: { messageKey: string; details?: { detail?: string } } }).cyError;
-      setErrors((x) => ({ ...x, [f.id]: t(e?.messageKey ?? errorKey(err), { defaultValue: t('errors.internal'), detail: e?.details?.detail ?? '' }) }));
+      const { key, detail } = errorMessage(err);
+      setErrors((x) => ({ ...x, [f.id]: t(key, { defaultValue: t('errors.internal'), detail }) }));
     }
   };
 

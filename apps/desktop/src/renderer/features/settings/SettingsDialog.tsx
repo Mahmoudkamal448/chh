@@ -5,7 +5,12 @@ import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Kbd, Select } from '../../components/ui';
 import { ThemePicker } from './ThemePicker';
 import { COMMAND_IDS, defaultKeymap, displayAccelerator, effectiveKeymap, eventToAccelerator, type CommandId } from '../../lib/keymap';
-import { useApp } from '../../stores/app-store';
+import { cn } from '../../lib/cn';
+import { useApp, type SettingsSection } from '../../stores/app-store';
+import { SyncSettings } from '../sync/SyncSettings';
+import { SecuritySettings } from './SecuritySettings';
+
+const SECTIONS: SettingsSection[] = ['general', 'terminal', 'shortcuts', 'security', 'sync'];
 
 export function SettingsDialog() {
   const { t } = useTranslation();
@@ -16,6 +21,8 @@ export function SettingsDialog() {
   const update = useApp((s) => s.updateSettings);
   const [shells, setShells] = useState<LocalShell[]>([]);
   const [recording, setRecording] = useState<CommandId | null>(null);
+  const section = useApp((s) => s.settingsSection);
+  const setSection = useApp((s) => s.setSettingsSection);
 
   useEffect(() => {
     if (open) void window.cy.sessions.localShells({}).then(setShells);
@@ -36,8 +43,26 @@ export function SettingsDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} title={t('settings.title')} width="w-[640px]">
-      <div className="flex flex-col gap-6">
+    <Dialog open={open} onOpenChange={(o) => setOpen(o)} title={t('settings.title')} width="w-[860px]">
+      <div className="flex min-h-[420px] gap-6">
+        <nav aria-label={t('settings.sections')} className="flex w-40 shrink-0 flex-col gap-0.5">
+          {SECTIONS.map((id) => (
+            <button
+              key={id}
+              type="button"
+              aria-current={section === id ? 'page' : undefined}
+              onClick={() => setSection(id)}
+              className={cn('rounded-md px-3 py-1.5 text-left text-[13px]', section === id ? 'bg-surface-2 font-medium text-fg' : 'text-muted hover:bg-surface-2/60 hover:text-fg')}
+              data-testid={`settings-${id}`}
+            >
+              {t(`settings.section.${id}`)}
+            </button>
+          ))}
+        </nav>
+        <div className="flex min-w-0 flex-1 flex-col gap-6">
+          {section === 'general' && (
+            <>
+
         <section className="grid grid-cols-2 gap-3">
           <Field label={t('settings.appearance')}>
             {(id) => (
@@ -62,6 +87,16 @@ export function SettingsDialog() {
           </Field>
         </section>
 
+        <section className="text-[12px] text-muted">
+          <p>
+            {t('settings.version', { version: info?.version ?? '' })} · {info?.platform} {info?.arch}
+          </p>
+          <p>{info?.keystore === 'os' ? t('settings.keystoreOs') : t('settings.keystoreWeak')}</p>
+        </section>
+            </>
+          )}
+          {section === 'terminal' && (
+            <>
         <section className="flex flex-col gap-3">
           <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t('settings.terminal')}</h3>
           <p className="text-[12px] text-muted">{t('settings.terminalHint')}</p>
@@ -119,6 +154,10 @@ export function SettingsDialog() {
           <Checkbox label={t('settings.historyEnabled')} checked={settings.historyEnabled} onChange={(v) => void update({ historyEnabled: v })} />
         </section>
 
+            </>
+          )}
+          {section === 'shortcuts' && (
+            <>
         <section>
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t('settings.shortcuts')}</h3>
@@ -151,12 +190,11 @@ export function SettingsDialog() {
           </table>
         </section>
 
-        <section className="text-[12px] text-muted">
-          <p>
-            {t('settings.version', { version: info?.version ?? '' })} · {info?.platform} {info?.arch}
-          </p>
-          <p>{info?.keystore === 'os' ? t('settings.keystoreOs') : t('settings.keystoreWeak')}</p>
-        </section>
+            </>
+          )}
+          {section === 'security' && <SecuritySettings />}
+          {section === 'sync' && <SyncSettings />}
+        </div>
       </div>
     </Dialog>
   );

@@ -12,3 +12,4 @@ export * from './forward';
 export * from './snippet';
 export * from './history';
 export * from './ssh-import';
+export * from './sync';

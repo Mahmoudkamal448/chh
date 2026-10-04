@@ -111,3 +111,5 @@ export function openString(sealed: SealedString, key: Buffer, ad: string): strin
   memzero(plain);
   return s;
 }
+
+export * from './account';

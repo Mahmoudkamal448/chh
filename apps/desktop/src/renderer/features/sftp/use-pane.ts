@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FileEntry } from '@cy-ssh/shared';
-import { errorKey } from '../../lib/errors';
+import { errorMessage } from '../../lib/errors';
 
 export type PaneSource = { kind: 'local' } | { kind: 'host'; hostId: string; label: string };
 
@@ -29,8 +29,8 @@ export interface Pane extends PaneState {
 }
 
 function ipcErr(err: unknown): { key: string; detail?: string } {
-  const e = (err as { cyError?: { messageKey: string; details?: { detail?: string } } })?.cyError;
-  return { key: e?.messageKey ?? errorKey(err), detail: e?.details?.detail };
+  const { key, detail } = errorMessage(err);
+  return { key, detail: detail || undefined };
 }
 
 export function usePane(initial: PaneSource): Pane {

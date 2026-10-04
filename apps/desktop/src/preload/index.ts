@@ -4,7 +4,7 @@
  */
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import {
-  CyIpcError,
+  encodeIpcError,
   EVENT_CHANNEL_PREFIX,
   SESSION_PORT_CHANNEL,
   allMethods,
@@ -25,9 +25,8 @@ for (const [ns, m] of allMethods()) {
   target[m] = async (input?: unknown) => {
     const res = (await ipcRenderer.invoke(channel(ns, m), input ?? {})) as IpcResult<unknown>;
     if (res.ok) return res.value;
-    // contextBridge doesn't preserve Error subclasses, so attach the envelope as plain fields.
-    const err = new CyIpcError(res.error);
-    throw Object.assign(new Error(err.error.code), { cyError: err.error });
+    // contextBridge keeps only `message`, so the envelope is encoded into it (see decodeIpcError).
+    throw new Error(encodeIpcError(res.error));
   };
 }
 

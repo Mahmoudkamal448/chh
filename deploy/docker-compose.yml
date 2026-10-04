@@ -1,0 +1,60 @@
+# Self-hosted cy-ssh sync server.
+#   cp .env.example .env    # then edit it
+#   docker compose up -d
+# With automatic HTTPS (needs a public DNS name pointing at this machine):
+#   docker compose --profile tls up -d
+
+name: cy-ssh
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cyssh
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: cyssh
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyssh -d cyssh"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  server:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    image: cy-ssh-server:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://cyssh:${POSTGRES_PASSWORD}@db:5432/cyssh
+      SERVER_SECRET: ${SERVER_SECRET:?set SERVER_SECRET in .env (openssl rand -base64 32)}
+      ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
+      TRUST_PROXY: ${TRUST_PROXY:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${PORT:-8080}:8080"
+
+  # Optional: Caddy terminates TLS with an automatic Let's Encrypt certificate.
+  caddy:
+    profiles: ["tls"]
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [server]
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env to use the tls profile}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+
+volumes:
+  db-data:
+  caddy-data:

@@ -15,6 +15,9 @@ import {
   SnippetSchema,
   SshImportPreviewSchema,
   SshImportResultSchema,
+  LockSettingsSchema,
+  LockStateSchema,
+  SyncStatusSchema,
   GenerateKeyInputSchema,
   IdentityInputSchema,
   IdentityPatchSchema,
@@ -204,6 +207,57 @@ export const contract = {
     /** Save dialog + write. Never overwrites without the OS dialog's confirmation. */
     exportFile: method(z.object({ hostIds: z.array(IdSchema).optional() }), z.object({ saved: z.boolean() })),
   },
+  sync: {
+    status: method(Empty, SyncStatusSchema),
+    register: method(
+      z.object({ serverUrl: z.string().max(500), email: z.string().max(254), password: z.string().min(1).max(1024) }),
+      z.object({ recoveryKey: z.string() }),
+    ),
+    login: method(
+      z.object({
+        serverUrl: z.string().max(500),
+        email: z.string().max(254),
+        password: z.string().min(1).max(1024),
+        totp: z.string().max(6).optional(),
+        recoveryCode: z.string().max(64).optional(),
+      }),
+      z.object({ status: z.enum(['ok', 'totp_required']) }),
+    ),
+    recover: method(
+      z.object({
+        serverUrl: z.string().max(500),
+        email: z.string().max(254),
+        recoveryKey: z.string().max(200),
+        newPassword: z.string().min(1).max(1024),
+        totp: z.string().max(6).optional(),
+        recoveryCode: z.string().max(64).optional(),
+      }),
+      z.object({ status: z.enum(['ok', 'totp_required']) }),
+    ),
+    logout: method(z.object({ keepData: z.boolean() }), Void),
+    syncNow: method(Empty, Void),
+    devices: method(
+      Empty,
+      z.array(z.object({ id: z.string(), name: z.string(), platform: z.string(), createdAt: z.number(), lastSeenAt: z.number(), current: z.boolean() })),
+    ),
+    removeDevice: method(z.object({ id: z.string().max(64) }), Void),
+    changePassword: method(z.object({ current: z.string().min(1).max(1024), next: z.string().min(1).max(1024) }), Void),
+    totpSetup: method(Empty, z.object({ secret: z.string(), uri: z.string() })),
+    totpEnable: method(z.object({ code: z.string().regex(/^\d{6}$/) }), z.object({ recoveryCodes: z.array(z.string()) })),
+    totpDisable: method(z.object({ code: z.string().max(6).optional(), recoveryCode: z.string().max(64).optional() }), Void),
+    deleteAccount: method(z.object({ password: z.string().min(1).max(1024) }), Void),
+  },
+  lock: {
+    state: method(Empty, LockStateSchema),
+    lockNow: method(Empty, Void),
+    unlock: method(z.object({ secret: z.string().max(1024).optional(), biometric: z.boolean().optional() }), z.object({ ok: z.boolean() })),
+    /** Enables the UI lock with a passcode (or updates the passcode). */
+    configure: method(z.object({ passcode: z.string().min(4).max(1024).optional(), settings: LockSettingsSchema.partial() }), LockStateSchema),
+    disable: method(z.object({ secret: z.string().max(1024) }), LockStateSchema),
+    /** Protects the local database key with a master password (asked at every start). */
+    setMasterPassword: method(z.object({ password: z.string().min(8).max(1024) }), LockStateSchema),
+    removeMasterPassword: method(z.object({ password: z.string().max(1024) }), LockStateSchema),
+  },
   dev: {
     /** Only available when the app runs with CY_SSH_TEST=1. */
     seedHosts: method(z.object({ count: z.number().int().min(1).max(20_000) }), z.object({ created: z.number() })),
@@ -220,6 +274,8 @@ export const events = {
   'data.changed': z.object({ kinds: z.array(z.enum(['hosts', 'groups', 'settings', 'keys', 'identities', 'knownHosts', 'forwards', 'snippets', 'history'])) }),
   'transfer.update': TransferSchema,
   'forward.update': ForwardStatusSchema,
+  'sync.state': SyncStatusSchema,
+  'lock.changed': LockStateSchema,
 } as const;
 
 export type Contract = typeof contract;
@@ -278,6 +334,28 @@ export type CyApi = {
   pathForFile(file: object): string;
   platform: 'darwin' | 'win32' | 'linux';
 };
+
+/**
+ * contextBridge only preserves an Error's `message`, so the structured envelope travels inside it,
+ * prefixed so the renderer can tell it apart from other errors.
+ */
+export const IPC_ERROR_PREFIX = 'cy-ipc-error:';
+
+export function encodeIpcError(e: IpcError): string {
+  return IPC_ERROR_PREFIX + JSON.stringify(e);
+}
+
+export function decodeIpcError(err: unknown): IpcError | null {
+  const msg = (err as Error | null)?.message;
+  if (typeof msg !== 'string') return null;
+  const i = msg.indexOf(IPC_ERROR_PREFIX);
+  if (i < 0) return null;
+  try {
+    return JSON.parse(msg.slice(i + IPC_ERROR_PREFIX.length)) as IpcError;
+  } catch {
+    return null;
+  }
+}
 
 export class CyIpcError extends Error {
   constructor(public readonly error: IpcError) {

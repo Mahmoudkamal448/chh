@@ -1,0 +1,9 @@
+**/node_modules
+**/out
+**/dist
+**/release
+**/test-results
+**/playwright-report
+.git
+apps/desktop
+deploy/.env

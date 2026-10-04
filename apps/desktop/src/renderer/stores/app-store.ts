@@ -3,6 +3,8 @@ import { DEFAULT_APP_SETTINGS, type AppSettings } from '@cy-ssh/shared';
 
 type Info = Awaited<ReturnType<typeof window.cy.app.info>>;
 
+export type SettingsSection = 'general' | 'terminal' | 'shortcuts' | 'security' | 'sync';
+
 export type HomeSection = 'hosts' | 'keys' | 'identities' | 'knownHosts' | 'snippets' | 'history' | 'forwards';
 
 interface AppState {
@@ -12,11 +14,13 @@ interface AppState {
   settings: AppSettings;
   resolvedTheme: 'light' | 'dark';
   settingsOpen: boolean;
+  settingsSection: SettingsSection;
   paletteOpen: boolean;
   load(): Promise<void>;
   updateSettings(patch: Partial<AppSettings>): Promise<void>;
-  setSettingsOpen(open: boolean): void;
+  setSettingsOpen(open: boolean, section?: SettingsSection): void;
   setPaletteOpen(open: boolean): void;
+  setSettingsSection(section: SettingsSection): void;
 }
 
 const media = window.matchMedia('(prefers-color-scheme: dark)');
@@ -33,6 +37,7 @@ export const useApp = create<AppState>((set) => ({
   settings: DEFAULT_APP_SETTINGS,
   resolvedTheme: media.matches ? 'dark' : 'light',
   settingsOpen: false,
+  settingsSection: 'general',
   paletteOpen: false,
   async load() {
     const [info, settings] = await Promise.all([window.cy.app.info({}), window.cy.app.getSettings({})]);
@@ -42,7 +47,8 @@ export const useApp = create<AppState>((set) => ({
     const settings = await window.cy.app.setSettings(patch);
     set({ settings, resolvedTheme: resolveTheme(settings) });
   },
-  setSettingsOpen: (settingsOpen) => set({ settingsOpen }),
+  setSettingsOpen: (settingsOpen, section) => set(section ? { settingsOpen, settingsSection: section } : { settingsOpen }),
+  setSettingsSection: (settingsSection) => set({ settingsSection }),
   setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
 }));
 

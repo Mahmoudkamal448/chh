@@ -60,4 +60,21 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       CREATE INDEX history_host ON history (host_id, at DESC);
     `,
   },
+  {
+    version: 3,
+    sql: `
+      -- The signed-in sync account (at most one). Secrets inside are sealed with the local vault.
+      CREATE TABLE sync_account (
+        id          INTEGER PRIMARY KEY CHECK (id = 1),
+        server_url  TEXT NOT NULL,
+        email       TEXT NOT NULL,
+        user_id     TEXT NOT NULL,
+        device_id   TEXT NOT NULL,
+        kdf         TEXT NOT NULL,
+        secrets     TEXT NOT NULL,
+        totp        INTEGER NOT NULL DEFAULT 0,
+        last_sync   INTEGER
+      );
+    `,
+  },
 ];

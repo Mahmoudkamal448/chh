@@ -1,6 +1,6 @@
 # Security
 
-This document describes how cy-ssh protects data **as of Phase 3**, and what later phases add. The full
+This document describes how cy-ssh protects data **as of Phase 4**, and what later phases add. The full
 cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](ARCHITECTURE.md#5-encryption-design).
 
 ## What we protect
@@ -9,7 +9,8 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
 |---|---|---|
 | Hosts, groups, tags, notes, known hosts, settings | `cy-ssh.db` | Whole-database encryption (SQLite3 Multiple Ciphers, ChaCha20-Poly1305) |
 | Saved passwords | Inside item JSON in `cy-ssh.db` | **Also** sealed with the vault key (XChaCha20-Poly1305) and bound to the item ID and field name |
-| Database key | `db.key` | Wrapped by the OS keychain via Electron `safeStorage` (Keychain / DPAPI / libsecret) |
+| Database key | `db.key` | Wrapped by the OS keychain via Electron `safeStorage` (Keychain / DPAPI / libsecret), **or** with a master password set, encrypted with an Argon2id-derived key (256 MiB, 3 passes) |
+| Sync account secrets | `sync_account` table | Tokens and the account key are sealed with the vault key inside the encrypted database |
 | Vault key | `vaults` table | Wrapped by a subkey derived from the database key, with the vault ID as associated data |
 | Keys in the keychain | Inside item JSON in `cy-ssh.db` | The private key is stored as an **unencrypted OpenSSH key sealed with the vault key** (on top of whole-database encryption). The import passphrase is used once and isn't stored |
 | Identity passwords | Inside item JSON | Sealed with the vault key, like host passwords |
@@ -79,21 +80,62 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
 - Terminal input and output are never logged.
 - Error logging records only name, code and message.
 
-## Known limitations (Phase 1)
+## Sync and the server
 
-1. **No keyring on Linux:** on headless Linux or minimal window managers there may be no Secret Service. The app
-   warns once, then stores the database key only obfuscated, in a 0600 file. Anyone who can read your home
-   directory can then decrypt the database. Phase 4 adds a **master-password lock** that encrypts this key with
-   an Argon2id-derived key.
-2. **No app lock yet:** while you're logged in to the OS, the app opens without a prompt. Touch ID / Windows Hello /
-   master-password lock come in Phase 4.
-3. **Key material in memory:** libsodium's guarded memory (`sodium_malloc`) can't be used inside Electron (its V8
-   memory cage forbids external buffers). Keys live in ordinary buffers and are zeroed (`sodium_memzero`) when they
-   are no longer needed. Strings passed to `ssh2` (passwords) can't be wiped by JavaScript.
-4. **Default-key passphrases** are asked for on each connection (they aren't cached). Import the key into the
+**Threat model:** the sync server, its database and its operator are untrusted for confidentiality. They
+can't read hosts, credentials, keys, notes, snippets or forwarding rules. They can see email addresses, device
+names and platforms, item counts, approximate sizes (padded to 256-byte buckets) and change timing.
+
+| Secret | Where | Protection |
+|---|---|---|
+| Your password | Never leaves the device | Argon2id (256 MiB, 3 passes; the client refuses weaker parameters from a server) → master key |
+| Auth key | Sent at sign-in | Derived from the master key; the server stores only an Argon2id hash of it |
+| KEK | Never leaves the device | Derived from the master key; wraps the account key |
+| Account key | Server stores it **wrapped** (KEK, and separately the recovery key) | XChaCha20-Poly1305, bound to the email |
+| Vault key | Server stores it wrapped by the account key | Bound to the vault id |
+| Items | Server stores ciphertext | XChaCha20-Poly1305 with associated data `vault|item` (no swapping or moving), padded |
+| Recovery key | Shown once; never stored | Unwraps the account key; a derived recovery auth key (hashed server-side) proves possession for a reset |
+| TOTP secret | Server | AES-256-GCM with a key derived from `SERVER_SECRET`; codes are single-use per 30 s step |
+
+Further protections:
+
+- **Rollback resistance:** version vectors let the client recognize an older version served by the server.
+  It keeps its newer data and re-uploads it.
+- **No account enumeration:** unknown emails get deterministic decoy KDF parameters, and login burns the same
+  hashing time.
+- **Token hygiene:** short-lived opaque access tokens, rotating refresh tokens (reusing an old one signs the
+  device out), revocation on device removal, password change and recovery.
+- **Transport:** HTTPS is required except for loopback and private-network addresses (where the UI warns).
+  Redirects are refused.
+- **Delete is real:** deleting the account removes all server data immediately.
+
+What the server operator **can** do: deny service, delete your ciphertext, or withhold updates (devices then
+diverge until it behaves). It can't forge items, because the AEAD would fail and the item would be skipped.
+
+## App lock
+
+- **Lock screen** (passcode, Touch ID, Windows Hello): when locked, the main process rejects every IPC call
+  except unlocking, so a compromised or buggy renderer can't read data behind the overlay. Terminal and forwarding
+  sessions keep running. After 5 failed attempts, retries are delayed exponentially (up to 15 minutes).
+- **Master password:** without it, the database key on disk is useless, even to someone with full access to your
+  files and OS account. It's needed at every start. If it's forgotten, local data is unrecoverable (synced data can
+  be restored by signing in again).
+- A lock screen without a master password is a privacy screen: someone with access to your OS account and
+  files could still use the OS-keychain-protected key. Use the master password for protection at rest.
+
+## Known limitations
+
+1. **No keyring on Linux:** without a Secret Service, the database key is only obfuscated, unless you set a master
+   password (Settings → Security), which fixes this.
+2. **Key material in memory:** libsodium's guarded memory (`sodium_malloc`) can't be used inside Electron (its V8
+   memory cage forbids external buffers). Keys live in ordinary buffers and are zeroed (`sodium_memzero`) when no
+   longer needed. Strings passed to `ssh2` (passwords) and decrypted sync payloads in JavaScript can't be wiped.
+3. **Default-key passphrases** are asked for on each connection (they aren't cached). Import the key into the
    keychain to avoid repeated prompts.
-5. **No post-quantum key exchange:** `ssh2` doesn't implement `mlkem768x25519-sha256` or `sntrup761x25519`. The
+4. **No post-quantum key exchange:** `ssh2` doesn't implement `mlkem768x25519-sha256` or `sntrup761x25519`. The
    default KEX is `curve25519-sha256` (see risk R6 in the architecture doc).
+5. **Windows Hello** is implemented via PowerShell/WinRT and not yet verified on real hardware. The passcode
+   fallback always works.
 
 ## Reporting a vulnerability
 

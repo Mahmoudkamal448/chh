@@ -49,7 +49,11 @@ function toIpcError(err: unknown): IpcError {
  * Registers a handler for every method in the contract. Each call is checked against the
  * trusted origin, its input parsed with zod, and errors are reduced to safe envelopes.
  */
-export function registerHandlers(handlers: Handlers, isTrustedSender: (e: IpcMainInvokeEvent) => boolean): void {
+export function registerHandlers(
+  handlers: Handlers,
+  isTrustedSender: (e: IpcMainInvokeEvent) => boolean,
+  isAllowed: (ns: Namespace, method: string) => boolean = () => true,
+): void {
   for (const [ns, m] of allMethods()) {
     const def = (contract[ns] as Record<string, { input: z.ZodType }>)[m]!;
     const impl = (handlers[ns] as Record<string, (input: unknown, e: IpcMainInvokeEvent) => unknown>)[m];
@@ -59,6 +63,7 @@ export function registerHandlers(handlers: Handlers, isTrustedSender: (e: IpcMai
         log.warn({ ns, m }, 'rejected IPC from untrusted sender');
         return { ok: false, error: { code: 'forbidden', messageKey: 'errors.internal' } };
       }
+      if (!isAllowed(ns, m)) return { ok: false, error: { code: 'locked', messageKey: 'errors.locked' } };
       try {
         const input = def.input.parse(raw ?? {});
         return { ok: true, value: await impl(input, event) };

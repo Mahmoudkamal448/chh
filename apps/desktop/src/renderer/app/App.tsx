@@ -9,6 +9,7 @@ import { TabBar } from '../features/tabs/TabBar';
 import { SftpView } from '../features/sftp/SftpView';
 import { TerminalTabView } from '../features/terminal/TerminalTabView';
 import { useLibrary } from '../stores/library-store';
+import { useSecurity } from '../stores/lock-store';
 import { useVault } from '../stores/vault-store';
 import { cn } from '../lib/cn';
 import { useApp } from '../stores/app-store';
@@ -27,6 +28,8 @@ export function App() {
   }, [theme]);
 
   useEffect(() => {
+    void useApp.getState().load();
+    void window.cy.sync.status({}).then((s) => useSecurity.getState().setSync(s));
     void refreshAll();
     void useVault.getState().refresh();
     void useLibrary.getState().refreshSnippets();
@@ -37,7 +40,11 @@ export function App() {
       window.cy.on('prompt.dismiss', ({ promptId }) => usePrompts.getState().remove(promptId)),
       window.cy.on('session.status', ({ sessionId, status, message }) => useTabs.getState().setStatus(sessionId, status, message)),
       window.cy.on('data.changed', ({ kinds }) => {
+        // Local edits elsewhere and changes pulled from other devices.
         if (kinds.includes('hosts') || kinds.includes('groups')) void refreshAll();
+        if (kinds.includes('keys') || kinds.includes('identities')) void useVault.getState().refresh();
+        if (kinds.includes('snippets')) void useLibrary.getState().refreshSnippets();
+        if (kinds.includes('forwards')) void useLibrary.getState().refreshForwards();
       }),
     ];
     window.addEventListener('keydown', handleGlobalKey, true);

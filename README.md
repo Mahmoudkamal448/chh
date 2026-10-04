@@ -3,11 +3,11 @@
 A free, open, cross-platform SSH client and terminal manager for **Windows, macOS and Linux**, built from a single
 Electron + TypeScript codebase.
 
-Every feature is free for everyone: there are no plans, trials, device limits or license checks. Sync (coming in
-Phase 4) is optional and self-hostable, and the app works fully offline without an account.
+Every feature is free for everyone: there are no plans, trials, device limits or license checks. Sync is optional
+and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offline without an account.
 
-> **Status: Phase 3 of 6 complete.** SSH, Mosh, Telnet and local terminals with tabs and split panes; host,
-> key and identity management; SFTP; port forwarding; snippets; history; ssh_config import/export.
+> **Status: Phase 4 of 6 complete.** Everything from earlier phases plus end-to-end encrypted multi-device sync
+> through a self-hostable server, two-factor authentication, and an app lock with optional master password.
 > See the [roadmap](#roadmap) for what comes next.
 
 ## Features
@@ -38,6 +38,10 @@ Phase 4) is optional and self-hostable, and the app works fully offline without 
   overrides, applied live.
 - **Keyboard-first:** a command palette and rebindable shortcuts.
 - **Light and dark UI** (or match the system theme), with all strings in i18n files.
+- **End-to-end encrypted sync** across unlimited devices via your own server (Docker Compose included): offline-first,
+  field-level conflict merging, live updates, recovery key, **two-factor authentication**.
+- **App lock:** passcode with Touch ID / Windows Hello, auto-lock on idle or sleep, and an optional **master
+  password** that encrypts all local data at rest.
 - **Encrypted at rest:** the whole local database is encrypted, its key is protected by the OS keychain, and
   passwords are sealed a second time inside it.
 
@@ -79,6 +83,7 @@ Other commands:
 | Split right / down | ⌘D / ⌘⇧D | Ctrl+Shift+D / Ctrl+Shift+E |
 | Next / previous pane | ⌘] / ⌘[ | Ctrl+Shift+] / Ctrl+Shift+[ |
 | Snippets & history panel | ⌘⇧S | Ctrl+Shift+S |
+| Lock cy-ssh | ⌘⇧L | Ctrl+Shift+L |
 
 Shortcuts that would clash with shell keys (Ctrl+W, Ctrl+T, Ctrl+C…) use Ctrl+Shift on Windows and Linux, so the
 terminal still gets the plain key. You can rebind everything in **Settings → Keyboard shortcuts**.
@@ -89,6 +94,8 @@ In the host list: ↑/↓, PgUp/PgDn, Home/End to move, **Enter** to connect, **
 
 ```
 apps/desktop/          Electron app (main process, session host, preload, React renderer)
+apps/server/           Self-hostable sync server (Fastify + PostgreSQL)
+deploy/                Docker Compose (server + Postgres + optional Caddy TLS)
 packages/shared/       Models, zod schemas, typed IPC contract, i18n strings
 packages/sync-core/    Hybrid logical clocks, version vectors, field-level merge
 packages/vault-crypto/ libsodium wrappers: XChaCha20-Poly1305, KDF, key wrapping
@@ -102,7 +109,8 @@ docs/                  Architecture, development, security and phase notes
 - [Architecture](docs/ARCHITECTURE.md): process model, IPC, data model, encryption and sync design
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today
-- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md) (what was built, files, how to test, platform differences)
+- [Self-hosting](docs/SELF_HOSTING.md): run your own sync server
+- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md), [Phase 4](docs/PHASE-4.md) (what was built, files, how to test, platform differences)
 
 ## Roadmap
 
@@ -111,8 +119,8 @@ docs/                  Architecture, development, security and phase notes
 | 1 | App shell, host manager, SSH + local terminal, tabs | ✅ Done |
 | 2 | Keys, identities, known-hosts manager, SFTP dual-pane browser | ✅ Done |
 | 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | ✅ Done |
-| 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | Next |
-| 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | |
+| 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | ✅ Done |
+| 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | Next |
 | 6 | Shared team vault + audit log, signed installers, auto-update | |
 
 ## License

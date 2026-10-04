@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { DELETED_FIELD, Hlc, applyLocalPatch, incrementVv, type Replica } from '@cy-ssh/sync-core';
+import { DELETED_FIELD, Hlc, applyLocalPatch, incrementVv, type Replica, type VersionVector } from '@cy-ssh/sync-core';
 import type { Db } from './database';
 
 export type ItemType = 'host' | 'group' | 'known_host' | 'key' | 'identity' | 'forward' | 'snippet';
@@ -36,16 +36,137 @@ export function uuidv7(now = Date.now()): string {
  * Generic storage for synced entities. Every write stamps changed fields with an HLC and bumps
  * this device's entry in the version vector, so Phase 4 sync can merge without a schema change.
  */
+/** A full item as needed by the sync engine. */
+export interface SyncRow {
+  id: string;
+  vaultId: string;
+  type: ItemType;
+  fields: Record<string, unknown>;
+  clocks: Record<string, string>;
+  vv: VersionVector;
+  serverRev: number | null;
+  dirty: boolean;
+  deleted: boolean;
+  updatedAt: number;
+}
+
+interface FullRow extends Row {
+  server_rev: number | null;
+  dirty: number;
+  deleted: number;
+}
+
+const toSyncRow = (r: FullRow): SyncRow => ({
+  id: r.id,
+  vaultId: r.vault_id,
+  type: r.type,
+  fields: JSON.parse(r.fields),
+  clocks: JSON.parse(r.clocks),
+  vv: JSON.parse(r.vv),
+  serverRev: r.server_rev,
+  dirty: r.dirty === 1,
+  deleted: r.deleted === 1,
+  updatedAt: r.updated_at,
+});
+
 export class ItemStore {
   private readonly hlc: Hlc;
+  private readonly listeners = new Set<(type: ItemType) => void>();
+  private vaultIdValue: string;
 
   constructor(
     readonly db: Db,
     private readonly deviceId: string,
     /** Vault new items are written to (the personal vault until team vaults arrive). */
-    private readonly vaultId: string,
+    vaultId: string,
   ) {
     this.hlc = new Hlc(deviceId.replace(/-/g, ''));
+    this.vaultIdValue = vaultId;
+  }
+
+  get vaultId(): string {
+    return this.vaultIdValue;
+  }
+
+  /** Called when the personal vault is replaced (joining an existing sync account). */
+  setVaultId(id: string): void {
+    this.vaultIdValue = id;
+  }
+
+  get device(): string {
+    return this.deviceId;
+  }
+
+  /** Notified after every local write (used to schedule a sync push). */
+  onLocalChange(fn: (type: ItemType) => void): () => void {
+    this.listeners.add(fn);
+    return () => this.listeners.delete(fn);
+  }
+
+  private changed(type: ItemType): void {
+    for (const fn of this.listeners) fn(type);
+  }
+
+  // --- sync support --------------------------------------------------------------------------
+
+  getSyncRow(id: string): SyncRow | null {
+    const r = this.db.prepare('SELECT * FROM items WHERE id = ?').get(id) as FullRow | undefined;
+    return r ? toSyncRow(r) : null;
+  }
+
+  dirtyRows(vaultId: string, limit: number): SyncRow[] {
+    return (this.db.prepare('SELECT * FROM items WHERE vault_id = ? AND dirty = 1 ORDER BY updated_at LIMIT ?').all(vaultId, limit) as FullRow[]).map(toSyncRow);
+  }
+
+  /** Keeps the HLC ahead of every clock seen from other devices. */
+  observeClocks(clocks: Record<string, string>): void {
+    for (const c of Object.values(clocks)) {
+      try {
+        this.hlc.receive(c);
+      } catch {
+        // absurd remote clock: ignore (merge still orders deterministically)
+      }
+    }
+  }
+
+  /** Writes a merged/remote version of an item. */
+  writeSynced(row: { id: string; vaultId: string; type: ItemType; replica: Replica; serverRev: number; dirty: boolean }): void {
+    const deleted = row.replica.fields[DELETED_FIELD] === true;
+    const fields = deleted ? { [DELETED_FIELD]: true } : row.replica.fields;
+    this.db
+      .prepare(
+        `INSERT INTO items (id, vault_id, type, fields, clocks, vv, server_rev, dirty, deleted, updated_at)
+         VALUES (@id, @vault, @type, @fields, @clocks, @vv, @rev, @dirty, @deleted, @now)
+         ON CONFLICT(id) DO UPDATE SET vault_id = @vault, type = @type, fields = @fields, clocks = @clocks, vv = @vv,
+           server_rev = @rev, dirty = @dirty, deleted = @deleted, updated_at = @now`,
+      )
+      .run({
+        id: row.id,
+        vault: row.vaultId,
+        type: row.type,
+        fields: JSON.stringify(fields),
+        clocks: JSON.stringify(row.replica.clocks),
+        vv: JSON.stringify(row.replica.vv),
+        rev: row.serverRev,
+        dirty: row.dirty ? 1 : 0,
+        deleted: deleted ? 1 : 0,
+        now: Date.now(),
+      });
+  }
+
+  /** After a successful push: record the revision; clear `dirty` unless the item changed meanwhile. */
+  markPushed(id: string, rev: number, pushedUpdatedAt: number): void {
+    this.db.prepare('UPDATE items SET server_rev = ?, dirty = CASE WHEN updated_at = ? THEN 0 ELSE dirty END WHERE id = ?').run(rev, pushedUpdatedAt, id);
+  }
+
+  /** Bumps this device's counter (used when a merge produces a new version). */
+  bumpVv(vv: VersionVector): VersionVector {
+    return incrementVv(vv, this.deviceId);
+  }
+
+  /** Forget all server state (signing out): everything becomes "local, never pushed". */
+  resetSyncState(): void {
+    this.db.prepare('UPDATE items SET server_rev = NULL, dirty = 1').run();
   }
 
   get<F>(id: string, type?: ItemType): StoredItem<F> | null {
@@ -87,6 +208,7 @@ export class ItemStore {
          VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?)`,
       )
       .run(id, vaultId, type, JSON.stringify(replica.fields), JSON.stringify(replica.clocks), JSON.stringify(vv), now);
+    this.changed(type);
     return { id, vaultId, type, fields, updatedAt: now };
   }
 
@@ -104,6 +226,7 @@ export class ItemStore {
     this.db
       .prepare('UPDATE items SET fields = ?, clocks = ?, vv = ?, dirty = 1, updated_at = ? WHERE id = ?')
       .run(JSON.stringify(replica.fields), JSON.stringify(replica.clocks), JSON.stringify(vv), now, id);
+    this.changed(type);
     return { id, vaultId: row.vault_id, type, fields: replica.fields as F, updatedAt: now };
   }
 
@@ -119,6 +242,7 @@ export class ItemStore {
     this.db
       .prepare(`UPDATE items SET fields = ?, clocks = ?, vv = ?, deleted = 1, dirty = 1, updated_at = ? WHERE id = ?`)
       .run(JSON.stringify({ [DELETED_FIELD]: true }), JSON.stringify(clocks), JSON.stringify(vv), Date.now(), id);
+    this.changed(type);
     return true;
   }
 

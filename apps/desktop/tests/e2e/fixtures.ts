@@ -11,7 +11,11 @@ export interface AppHandle {
 }
 
 /** Launches the built app with an isolated, throwaway user-data directory. */
-export async function launchApp(userData = mkdtempSync(join(tmpdir(), 'cy-ssh-e2e-')), extraEnv: Record<string, string> = {}): Promise<AppHandle> {
+export async function launchApp(
+  userData = mkdtempSync(join(tmpdir(), 'cy-ssh-e2e-')),
+  extraEnv: Record<string, string> = {},
+  opts: { waitFor?: string } = {},
+): Promise<AppHandle> {
   const args = [resolve(__dirname, '../..')];
   // Chromium refuses to run as root without this; CI Linux runners also lack the SUID sandbox helper.
   if (process.getuid?.() === 0 || (process.env.CI && process.platform === 'linux')) args.push('--no-sandbox');
@@ -27,7 +31,7 @@ export async function launchApp(userData = mkdtempSync(join(tmpdir(), 'cy-ssh-e2
     } as Record<string, string>,
   });
   const page = await app.firstWindow();
-  await page.waitForSelector('[data-testid="tab-hosts"]');
+  await page.waitForSelector(`[data-testid="${opts.waitFor ?? 'tab-hosts'}"]`);
   return {
     app,
     page,

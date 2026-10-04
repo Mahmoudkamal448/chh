@@ -20,7 +20,8 @@ export type CommandId =
   | 'pane.splitDown'
   | 'pane.focusNext'
   | 'pane.focusPrev'
-  | 'panel.toggle';
+  | 'panel.toggle'
+  | 'app.lock';
 
 const isMac = () => window.cy.platform === 'darwin';
 
@@ -44,6 +45,7 @@ export function defaultKeymap(): Record<CommandId, string> {
     'pane.focusNext': mac ? 'Mod+]' : 'Ctrl+Shift+]',
     'pane.focusPrev': mac ? 'Mod+[' : 'Ctrl+Shift+[',
     'panel.toggle': mac ? 'Mod+Shift+S' : 'Ctrl+Shift+S',
+    'app.lock': mac ? 'Mod+Shift+L' : 'Ctrl+Shift+L',
   };
 }
 
@@ -65,6 +67,7 @@ export const COMMAND_IDS = Object.keys({
   'pane.focusNext': 1,
   'pane.focusPrev': 1,
   'panel.toggle': 1,
+  'app.lock': 1,
 } satisfies Record<CommandId, 1>) as CommandId[];
 
 export function effectiveKeymap(overrides: Record<string, string>): Record<CommandId, string> {
