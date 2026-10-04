@@ -3,7 +3,6 @@ import rateLimit from '@fastify/rate-limit';
 import websocket from '@fastify/websocket';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
-import type { z } from 'zod';
 import * as P from '@chh/shared/sync';
 import type { Config } from './config';
 import {
@@ -20,59 +19,17 @@ import {
   verifyAuthKey,
   verifyTotp,
 } from './crypto';
+import { HttpError, parse, type Auth } from './http';
+import { Hub } from './hub';
 import type { Store, UserRecord } from './store/types';
+import { teamService } from './teams';
 
 /** Minimum client KDF cost we accept, so a client bug can't create a weak account. */
 const MIN_KDF = { ops: 2, mem: 64 * 1024 * 1024 };
 const DEFAULT_KDF = { ops: 3, mem: 256 * 1024 * 1024 };
 const MAX_DEVICES = 1000; // effectively unlimited; just bounds abuse
 
-interface Auth {
-  userId: string;
-  deviceId: string;
-}
-
-declare module 'fastify' {
-  interface FastifyRequest {
-    auth?: Auth;
-  }
-}
-
-class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly code: string,
-    message?: string,
-  ) {
-    super(message ?? code);
-  }
-}
-
-function parse<S extends z.ZodType>(schema: S, body: unknown): z.output<S> {
-  const r = schema.safeParse(body);
-  if (!r.success) throw new HttpError(400, 'invalid_request', r.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '));
-  return r.data;
-}
-
 const b64buf = (s: string) => Buffer.from(s, 'base64');
-
-/** Live WebSocket connections per user, for "vault changed" notifications. */
-class Hub {
-  private readonly byUser = new Map<string, Set<WebSocket>>();
-  add(userId: string, ws: WebSocket) {
-    let set = this.byUser.get(userId);
-    if (!set) this.byUser.set(userId, (set = new Set()));
-    set.add(ws);
-    ws.on('close', () => set!.delete(ws));
-  }
-  notify(userId: string, msg: P.WsServerMessage) {
-    const data = JSON.stringify(msg);
-    for (const ws of this.byUser.get(userId) ?? []) if (ws.readyState === ws.OPEN) ws.send(data);
-  }
-  closeUser(userId: string) {
-    for (const ws of this.byUser.get(userId) ?? []) ws.close(4001, 'signed out');
-  }
-}
 
 export async function buildApp({ config, store }: { config: Config; store: Store }) {
   const app = Fastify({
@@ -84,6 +41,7 @@ export async function buildApp({ config, store }: { config: Config; store: Store
     trustProxy: config.trustProxy,
   });
   const hub = new Hub();
+  const teams = teamService(store, hub);
 
   await app.register(rateLimit, { global: false });
   await app.register(websocket, { options: { maxPayload: 64 * 1024 } });
@@ -161,7 +119,7 @@ export async function buildApp({ config, store }: { config: Config; store: Store
   // --- public ----------------------------------------------------------------------------------
 
   app.get('/healthz', async () => ({ ok: true }));
-  app.get('/v1/info', async () => ({ name: 'chh sync', version: 1, registration: config.allowRegistration }));
+  app.get('/v1/info', async () => ({ name: 'chh sync', version: 2, registration: config.allowRegistration, teams: true }));
 
   app.post('/v1/auth/prelogin', authLimit, async (req) => {
     const { email } = parse(P.PreloginRequest, req.body);
@@ -194,7 +152,7 @@ export async function buildApp({ config, store }: { config: Config; store: Store
           createdAt: now,
         },
         { id: deviceId, userId, name: body.device.name, platform: body.device.platform, createdAt: now, lastSeenAt: now },
-        { id: body.vault.id, kind: 'personal', ownerUserId: userId, keyWrapped: body.vault.keyWrapped, seq: 0 },
+        { id: body.vault.id, kind: 'personal', ownerUserId: userId, teamId: null, keyWrapped: body.vault.keyWrapped, seq: 0, keyGen: 1, needsRotation: false },
       );
     } catch (e) {
       if ((e as { code?: string }).code === 'EXISTS') throw new HttpError(409, 'exists');
@@ -294,6 +252,8 @@ export async function buildApp({ config, store }: { config: Config; store: Store
       const { authKey } = parse(P.DeleteAccountRequest, req.body);
       const u = (await store.getUser(req.auth!.userId))!;
       if (!(await verifyAuthKey(b64buf(authKey), u.authHash))) throw new HttpError(403, 'invalid_credentials');
+      // Deleting the owner would orphan the team: transfer ownership or delete the team first.
+      if (await store.ownedTeamCount(u.id)) throw new HttpError(409, 'team_owner');
       hub.closeUser(u.id);
       await store.deleteUser(u.id);
       reply.code(204);
@@ -355,33 +315,42 @@ export async function buildApp({ config, store }: { config: Config; store: Store
       reply.code(204);
     });
 
-    const vaultFor = async (req: FastifyRequest, vaultId: string) => {
-      const v = await store.getVault(vaultId);
-      if (!v || v.ownerUserId !== req.auth!.userId) throw new HttpError(404, 'not_found');
-      return v;
-    };
-
     r.post('/v1/sync/pull', async (req) => {
       const { vaultId, since, limit } = parse(P.PullRequest, req.body);
-      await vaultFor(req, vaultId);
+      const { vault, team } = await teams.vaultAccess(req.auth!, vaultId, 'read');
       const changes = await store.pull(vaultId, since, limit + 1);
       const page = changes.slice(0, limit);
-      return { changes: page, nextSince: page.length ? page[page.length - 1]!.seq : since, hasMore: changes.length > limit };
+      if (team && page.length) await teams.audit(req.auth!, team.id, [{ action: 'vault.pulled', meta: { items: page.length } }]);
+      return {
+        changes: page,
+        nextSince: page.length ? page[page.length - 1]!.seq : since,
+        hasMore: changes.length > limit,
+        ...(team ? { keyGen: vault.keyGen } : {}),
+      };
     });
 
     r.post('/v1/sync/push', async (req) => {
-      const { vaultId, changes } = parse(P.PushRequest, req.body);
-      const vault = await vaultFor(req, vaultId);
+      const { vaultId, changes, keyGen } = parse(P.PushRequest, req.body);
+      const { vault, team } = await teams.vaultAccess(req.auth!, vaultId, 'write');
+      // Items encrypted with a rotated-out key would be unreadable for everyone else.
+      if (team && keyGen !== vault.keyGen) throw new HttpError(409, 'stale_key');
       const results: P.PushResult[] = [];
+      const written: Array<{ action: string; itemId: string; meta: Record<string, unknown> }> = [];
       let maxSeq = 0;
       for (const c of changes) {
         const out = await store.push(vaultId, { ...c, deviceId: req.auth!.deviceId });
-        if (out.status === 'ok') maxSeq = Math.max(maxSeq, out.seq);
+        if (out.status === 'ok') {
+          maxSeq = Math.max(maxSeq, out.seq);
+          written.push({ action: 'item.written', itemId: c.itemId, meta: { rev: out.rev } });
+        }
         results.push({ itemId: c.itemId, ...out });
       }
-      if (maxSeq) hub.notify(vault.ownerUserId, { type: 'changed', vaultId, seq: maxSeq });
+      if (team) await teams.audit(req.auth!, team.id, written);
+      if (maxSeq) hub.notify(await teams.vaultAudience(vault), { type: 'changed', vaultId, seq: maxSeq });
       return { results };
     });
+
+    teams.register(r);
   });
 
   // --- WebSocket: change notifications -----------------------------------------------------------

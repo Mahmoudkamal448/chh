@@ -123,7 +123,13 @@ export const ChangeSchema = z.object({
 export type Change = z.infer<typeof ChangeSchema>;
 
 export const PullRequest = z.object({ vaultId: id, since: z.number().int().min(0), limit: z.number().int().min(1).max(1000).default(500) });
-export const PullResponse = z.object({ changes: z.array(ChangeSchema), nextSince: z.number().int(), hasMore: z.boolean() });
+export const PullResponse = z.object({
+  changes: z.array(ChangeSchema),
+  nextSince: z.number().int(),
+  hasMore: z.boolean(),
+  /** Team vaults: the current key generation (changes when an admin rotates the key). */
+  keyGen: z.number().int().optional(),
+});
 
 export const PushChangeSchema = z.object({
   itemId: id,
@@ -132,7 +138,12 @@ export const PushChangeSchema = z.object({
   nonce: b64.max(64),
   ciphertext: b64.max(350_000),
 });
-export const PushRequest = z.object({ vaultId: id, changes: z.array(PushChangeSchema).min(1).max(500) });
+export const PushRequest = z.object({
+  vaultId: id,
+  changes: z.array(PushChangeSchema).min(1).max(500),
+  /** Team vaults: the key generation the items were encrypted with (rejected when stale). */
+  keyGen: z.number().int().min(1).optional(),
+});
 export const PushResultSchema = z.discriminatedUnion('status', [
   z.object({ itemId: id, status: z.literal('ok'), rev: z.number().int(), seq: z.number().int() }),
   z.object({ itemId: id, status: z.literal('conflict'), current: ChangeSchema }),
@@ -140,8 +151,107 @@ export const PushResultSchema = z.discriminatedUnion('status', [
 export type PushResult = z.infer<typeof PushResultSchema>;
 export const PushResponse = z.object({ results: z.array(PushResultSchema) });
 
+// --- Teams (shared vaults) --------------------------------------------------------------------
+
+export const TeamRoleSchema = z.enum(['owner', 'admin', 'editor', 'viewer']);
+export type TeamRole = z.infer<typeof TeamRoleSchema>;
+/** Roles an admin can hand out (ownership is transferred, not granted). */
+export const InviteRoleSchema = z.enum(['admin', 'editor', 'viewer']);
+export const MemberStatusSchema = z.enum(['accepted', 'confirmed']);
+
+/** `nonce || ciphertext`, base64; the team name encrypted with the team vault key. */
+const sealedName = b64.max(2000);
+/** The team vault key sealed (crypto_box_seal) to one member's X25519 public key. */
+const sealedKey = b64.max(200);
+
+export const CreateTeamRequest = z.object({ teamId: id, vaultId: id, nameEnc: sealedName, keyWrapped: sealedKey });
+
+export const TeamWireSchema = z.object({
+  id,
+  vaultId: id,
+  nameEnc: sealedName,
+  role: TeamRoleSchema,
+  status: MemberStatusSchema,
+  keyGen: z.number().int(),
+  /** Null until an admin confirms this member for the current key generation. */
+  keyWrapped: sealedKey.nullable(),
+  memberCount: z.number().int(),
+  /** A member left or was removed without a key rotation. */
+  needsRotation: z.boolean(),
+});
+export type TeamWire = z.infer<typeof TeamWireSchema>;
+
+export const MemberWireSchema = z.object({
+  userId: id,
+  email: z.string(),
+  role: TeamRoleSchema,
+  status: MemberStatusSchema,
+  publicKey: b64,
+  joinedAt: z.number(),
+});
+export type MemberWire = z.infer<typeof MemberWireSchema>;
+
+export const InviteWireSchema = z.object({
+  id,
+  teamId: id,
+  email: z.string(),
+  role: InviteRoleSchema,
+  invitedBy: z.string(),
+  createdAt: z.number(),
+});
+export type InviteWire = z.infer<typeof InviteWireSchema>;
+
+export const RenameTeamRequest = z.object({ nameEnc: sealedName });
+export const InviteRequest = z.object({ email, role: InviteRoleSchema });
+export const ConfirmMemberRequest = z.object({ keyWrapped: sealedKey, keyGen: z.number().int().min(1) });
+export const SetRoleRequest = z.object({ role: TeamRoleSchema });
+
+/**
+ * Key rotation: a new team key, every item re-encrypted with it and the key re-sealed for each
+ * remaining confirmed member, applied atomically. `remove` drops members at the same time.
+ */
+export const RotateRequest = z.object({
+  /** Vault sequence the client re-encrypted from; the server rejects the rotation if it moved. */
+  baseSeq: z.number().int().min(0),
+  keyGen: z.number().int().min(2),
+  nameEnc: sealedName,
+  members: z.array(z.object({ userId: id, keyWrapped: sealedKey })).max(10_000),
+  items: z.array(z.object({ itemId: id, nonce: b64.max(64), ciphertext: b64.max(350_000) })).max(100_000),
+  remove: z.array(id).max(1000).default([]),
+});
+
+export const AUDIT_CLIENT_ACTIONS = ['host.connected', 'secret.exported', 'secret.copied'] as const;
+export const ReportEventsRequest = z.object({
+  events: z
+    .array(z.object({ action: z.enum(AUDIT_CLIENT_ACTIONS), itemId: id.nullable(), at: z.number().int() }))
+    .min(1)
+    .max(200),
+});
+
+export const AuditEntrySchema = z.object({
+  id: z.number().int(),
+  at: z.number(),
+  actorUserId: id,
+  actorEmail: z.string(),
+  deviceName: z.string().nullable(),
+  action: z.string(),
+  itemId: z.string().nullable(),
+  meta: z.record(z.string(), z.unknown()),
+  /** Reported by a member's app rather than observed by the server (a modified client could skip it). */
+  clientReported: z.boolean(),
+});
+export type AuditEntry = z.infer<typeof AuditEntrySchema>;
+export const AuditQuery = z.object({ before: z.coerce.number().int().min(1).optional(), limit: z.coerce.number().int().min(1).max(500).default(100) });
+export const AuditResponse = z.object({ entries: z.array(AuditEntrySchema), hasMore: z.boolean() });
+
 /** WebSocket messages. */
 export type WsClientMessage = { type: 'auth'; token: string } | { type: 'ping' };
-export type WsServerMessage = { type: 'ready' } | { type: 'changed'; vaultId: string; seq: number } | { type: 'pong' } | { type: 'error'; error: string };
+export type WsServerMessage =
+  | { type: 'ready' }
+  | { type: 'changed'; vaultId: string; seq: number }
+  /** Team membership, roles or keys changed: refresh the team list. */
+  | { type: 'teams' }
+  | { type: 'pong' }
+  | { type: 'error'; error: string };
 
 export const ErrorResponse = z.object({ error: z.string(), message: z.string().optional() });
