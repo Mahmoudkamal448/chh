@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { startTelnetServer } from '../support/telnet-server';
-import { accel, cleanup, expectTerminalToContain, launchApp, paneCount, startSshServer, terminalText, type AppHandle } from './fixtures';
+import { accel, cleanup, expectTerminalToContain, launchApp, paneCount, recordedCommands, startSshServer, terminalText, waitForPrompt, type AppHandle } from './fixtures';
 
 const FIX = join(__dirname, '../../../../packages/key-formats/test/fixtures');
 const hasMosh = (() => {
@@ -85,7 +85,7 @@ test('snippets with variables run from the side panel; typed commands land in Hi
   await expect(page.getByTestId('snippet-row')).toHaveCount(1);
 
   await page.getByTestId('new-local').click();
-  await page.waitForTimeout(500);
+  await waitForPrompt(page);
   // The panel shortcut is ⌘⇧S on macOS (⌘S is left to the shell) and Ctrl+Shift+S elsewhere.
   await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+S' : accel('S'));
   await page.getByTestId('side-panel').getByTestId('panel-snippet-run').click();
@@ -95,6 +95,7 @@ test('snippets with variables run from the side panel; typed commands land in Hi
 
   await typeInFocused(page, 'echo typed-history-$((3*3))');
   await expectTerminalToContain(page, 'typed-history-9');
+  await expect.poll(() => recordedCommands(page)).toContain('echo typed-history-$((3*3))');
   await page.getByTestId('panel-history').click();
   await expect(page.getByTestId('side-panel').getByText('echo typed-history-$((3*3))')).toBeVisible();
 

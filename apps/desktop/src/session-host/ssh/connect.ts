@@ -278,6 +278,12 @@ export async function connectSsh(config: SshConnectConfig, cb: ConnectCallbacks,
 
   return new Promise<Client>((resolve, reject) => {
     const onError = (err: Error) => {
+      // An unreachable agent (Windows without the OpenSSH agent service, a stale SSH_AUTH_SOCK) is
+      // reported as an error, but ssh2 carries on with the next method: it must not end the login.
+      if ((err as Error & { level?: string }).level === 'agent') {
+        client.once('error', onError);
+        return;
+      }
       client.removeListener('ready', onReady);
       reject(err);
     };

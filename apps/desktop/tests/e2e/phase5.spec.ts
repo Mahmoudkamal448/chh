@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { cleanup, expectTerminalToContain, launchApp, startSshServer, terminalText, type AppHandle } from './fixtures';
+import { cleanup, expectTerminalToContain, launchApp, recordedCommands, startSshServer, terminalText, waitForPrompt, type AppHandle } from './fixtures';
 
 const has = (cmd: string) => {
   try {
@@ -179,10 +179,10 @@ test('autocomplete: ghost suggestion from history, accepted with →; Ctrl+Space
   h = await launchApp();
   const { page } = h;
   await page.getByTestId('new-local').click();
-  await page.waitForTimeout(600);
+  await waitForPrompt(page);
   await typeLine(page, 'echo ghost-test-123');
   await expectTerminalToContain(page, 'ghost-test-123');
-  await page.waitForTimeout(400); // history is recorded shortly after Enter
+  await expect.poll(() => recordedCommands(page)).toContain('echo ghost-test-123');
   await page.keyboard.type('echo gho');
   await expect(page.getByTestId('ghost-suggestion')).toHaveText('st-test-123');
   await page.keyboard.press('ArrowRight');

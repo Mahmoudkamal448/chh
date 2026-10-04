@@ -86,6 +86,13 @@ describe('connectSsh auth', () => {
     client.end();
   });
 
+  it('falls back to the password when the configured agent is unreachable', async () => {
+    // e.g. Windows without the OpenSSH agent service running, or a stale SSH_AUTH_SOCK.
+    const missing = process.platform === 'win32' ? '\\\\.\\pipe\\chh-no-such-agent' : join(tmpdir(), 'chh-no-such-agent.sock');
+    const client = await connect(config({ useAgent: true, agent: missing, password: 'secret' }), callbacks());
+    client.end();
+  });
+
   it('fails cleanly when the user cancels', async () => {
     await expect(connectSsh(config(), callbacks([]))).rejects.toMatchObject({ level: 'client-authentication' });
   });

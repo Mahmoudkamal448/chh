@@ -55,6 +55,16 @@ export async function paneCount(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __chhTest: { paneCount(): number } }).__chhTest.paneCount());
 }
 
+/** Waits until the shell has drawn its prompt (typing earlier lands before it on slow shells). */
+export async function waitForPrompt(page: Page, index = -1): Promise<void> {
+  await expect.poll(async () => (await terminalText(page, index)).trim().length, { timeout: 30_000 }).toBeGreaterThan(0);
+}
+
+/** Commands recorded in History (newest first). */
+export async function recordedCommands(page: Page): Promise<string[]> {
+  return page.evaluate(async () => (await window.chh.history.search({ limit: 50 })).map((e) => e.command));
+}
+
 export async function expectTerminalToContain(page: Page, text: string, timeout = 15_000, index = -1): Promise<void> {
   await expect.poll(() => terminalText(page, index), { timeout }).toContain(text);
 }
