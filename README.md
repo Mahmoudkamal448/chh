@@ -58,7 +58,8 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 
 ## Quick start
 
-Installers are published on the [releases page](https://github.com/mahmoudkamal448/chh/releases). To build from
+Installers are published on the [releases page](https://github.com/mahmoudkamal448/chh/releases); see the
+**[installation guide](docs/INSTALL.md)** for Windows, macOS and Linux (including unsigned builds). To build from
 source you need **Node.js 22.12+** and **pnpm** (via Corepack), plus a C/C++ toolchain for native modules
 ([details](docs/DEVELOPMENT.md#prerequisites)).
 
@@ -118,6 +119,7 @@ docs/                  Architecture, development, security and phase notes
 
 ## Documentation
 
+- [Installation](docs/INSTALL.md): get and install chh on Windows, macOS and Linux
 - [Architecture](docs/ARCHITECTURE.md): process model, IPC, data model, encryption and sync design
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today
