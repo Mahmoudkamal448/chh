@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { startTelnetServer } from '../support/telnet-server';
-import { accel, cleanup, expectTerminalToContain, launchApp, paneCount, recordedCommands, startSshServer, terminalText, waitForPrompt, type AppHandle } from './fixtures';
+import { accel, cleanup, expectTerminalToContain, launchApp, paneCount, recordedCommands, startSshServer, terminalText, waitForOutput, waitForPrompt, type AppHandle } from './fixtures';
 
 const FIX = join(__dirname, '../../../../packages/key-formats/test/fixtures');
 const hasMosh = (() => {
@@ -91,7 +91,7 @@ test('snippets with variables run from the side panel; typed commands land in Hi
   await page.getByTestId('side-panel').getByTestId('panel-snippet-run').click();
   await page.getByTestId('var-name').fill('cy');
   await page.getByTestId('snippet-variables-run').click();
-  await expectTerminalToContain(page, 'hello-cy');
+  await waitForOutput(page, 'hello-cy');
 
   await typeInFocused(page, 'echo typed-history-$((3*3))');
   await expectTerminalToContain(page, 'typed-history-9');

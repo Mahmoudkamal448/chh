@@ -55,9 +55,21 @@ export async function paneCount(page: Page): Promise<number> {
   return page.evaluate(() => (window as unknown as { __chhTest: { paneCount(): number } }).__chhTest.paneCount());
 }
 
-/** Waits until the shell has drawn its prompt (typing earlier lands before it on slow shells). */
+/**
+ * Waits until the last line on screen is an idle shell prompt (`$`, `#`, `%` or `>` at the end), so typing
+ * doesn't race the shell: input sent before the prompt is drawn ends up in front of it (PowerShell on
+ * Windows draws its prompt well after the first output).
+ */
 export async function waitForPrompt(page: Page, index = -1): Promise<void> {
-  await expect.poll(async () => (await terminalText(page, index)).trim().length, { timeout: 30_000 }).toBeGreaterThan(0);
+  const lastLine = async () => (await terminalText(page, index)).trimEnd().split('\n').pop() ?? '';
+  await expect.poll(lastLine, { timeout: 30_000 }).toMatch(/[$#%>❯]$/);
+}
+
+/** Waits for a command's output line (not just its echo) and the prompt after it. */
+export async function waitForOutput(page: Page, line: string, index = -1): Promise<void> {
+  const escaped = line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await expect.poll(() => terminalText(page, index), { timeout: 15_000 }).toMatch(new RegExp(`^${escaped}\\s*$`, 'm'));
+  await waitForPrompt(page, index);
 }
 
 /** Commands recorded in History (newest first). */
