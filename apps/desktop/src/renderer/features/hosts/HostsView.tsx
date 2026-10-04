@@ -13,6 +13,7 @@ import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog'
 import { useTeams } from '../../stores/teams-store';
 import { HostList } from './HostList';
 import { Sidebar } from './Sidebar';
+import { QuickConnect, Welcome } from './Welcome';
 
 export const HOST_SEARCH_ID = 'host-search';
 
@@ -58,7 +59,7 @@ export function HostsView() {
             : t('sidebar.allHosts');
 
   return (
-    <div className="flex h-full min-h-0">
+    <div className="flex h-full min-h-0 min-w-0 flex-1">
       <Sidebar />
       <main className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
@@ -137,6 +138,7 @@ export function HostsView() {
           </Button>
         </div>
 
+        <QuickConnect />
         {notice && (
           <p role="status" className="flex items-center border-b border-border bg-surface-2 px-4 py-1.5 text-[12px]">
             {notice}
@@ -145,7 +147,9 @@ export function HostsView() {
             </button>
           </p>
         )}
-        {hosts.length === 0 ? (
+        {hosts.length === 0 && total === 0 && !filter.query && filter.groupId === undefined && !filter.tag && !filter.favoritesOnly ? (
+          <Welcome onNewHost={() => openEditor({ kind: 'host', id: null, groupId: null })} onImport={() => setImporting('default')} />
+        ) : hosts.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-muted">
             <p>{filter.query || filter.groupId !== undefined || filter.tag || filter.favoritesOnly ? t('hosts.noMatches') : t('hosts.empty')}</p>
             {!filter.query && (

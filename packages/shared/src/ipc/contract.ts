@@ -103,6 +103,11 @@ export const contract = {
     /** The session's MessagePort is delivered separately via the `session.port` channel. */
     /** Opens a terminal session to a host using its protocol (SSH, Telnet or Mosh). */
     openHost: method(z.object({ hostId: IdSchema, ...Dims }), z.object({ sessionId: IdSchema })),
+    /** Quick connect to user@host:port without saving a host. */
+    openQuick: method(
+      z.object({ host: z.string().trim().min(1).max(255), port: z.number().int().min(1).max(65535), username: z.string().trim().max(255), ...Dims }),
+      z.object({ sessionId: IdSchema }),
+    ),
     openLocal: method(
       z.object({ shellId: z.string().max(64).optional(), ...Dims }),
       z.object({ sessionId: IdSchema, title: z.string() }),
@@ -135,6 +140,8 @@ export const contract = {
       ImportKeyResultSchema,
     ),
     rename: method(z.object({ id: IdSchema, label: z.string().trim().min(1).max(200) }), KeySchema),
+    /** Attaches an OpenSSH certificate (the "…-cert.pub" text) to a key, or removes it with null. */
+    setCertificate: method(z.object({ id: IdSchema, certificate: z.string().max(16_384).nullable() }), KeySchema),
     remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
     /** Save-file dialog; optionally re-encrypts the exported OpenSSH key with a passphrase. */
     exportPrivate: method(z.object({ id: IdSchema, passphrase: z.string().max(1024).optional() }), z.object({ saved: z.boolean() })),

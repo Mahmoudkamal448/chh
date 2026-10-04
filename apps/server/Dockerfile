@@ -6,6 +6,7 @@ WORKDIR /repo
 RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
 COPY scripts scripts
+COPY patches patches
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
 RUN pnpm install --frozen-lockfile --filter @chh/server...

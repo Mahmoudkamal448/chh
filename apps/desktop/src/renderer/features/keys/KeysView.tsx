@@ -6,6 +6,7 @@ import { useTeams } from '../../stores/teams-store';
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../components/EmptyState';
 import type { Key } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PromptDialog } from '../../components/PromptDialog';
@@ -19,6 +20,7 @@ import { writeToPane } from '../terminal/registry';
 import { ExportKeyDialog } from './ExportKeyDialog';
 import { GenerateKeyDialog } from './GenerateKeyDialog';
 import { ImportKeyDialog } from './ImportKeyDialog';
+import { CertificateChip, CertificatePanel } from './Certificate';
 
 /** FIDO2 security keys live on the hardware; OpenSSH generates a key handle file for them. */
 function SecurityKeyCard() {
@@ -91,7 +93,7 @@ export function KeysView() {
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <h1 className="text-[15px] font-semibold">{t('keys.title')}</h1>
-        <span className="text-[12px] text-muted">{t('keys.count', { count: keys.length })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{t('keys.count', { count: keys.length })}</span>
         <div className="ml-auto flex gap-2">
           <DM.Root>
             <DM.Trigger asChild>
@@ -118,10 +120,21 @@ export function KeysView() {
 
       <SecurityKeyCard />
       {keys.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
-          <KeyRound size={28} />
-          <p>{t('keys.empty')}</p>
-        </div>
+        <EmptyState
+          icon={KeyRound}
+          action={
+            <div className="flex gap-2">
+              <Button variant="primary" onClick={() => setGenerating(true)}>
+                <Plus size={14} /> {t('keys.generate')}
+              </Button>
+              <Button onClick={() => setImportMode('file')}>
+                <Upload size={14} /> {t('identities.importKey')}
+              </Button>
+            </div>
+          }
+        >
+          {t('keys.empty')}
+        </EmptyState>
       ) : (
         <div className="flex min-h-0 flex-1">
           <ul className="w-[46%] min-w-[280px] overflow-y-auto border-r border-border" role="listbox" aria-label={t('keys.title')}>
@@ -146,6 +159,7 @@ export function KeysView() {
                   </div>
                   <div className="truncate font-mono text-[11px] text-muted">{k.fingerprint}</div>
                 </div>
+                {k.certificate && <CertificateChip cert={k.certificate} />}
                 <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{keyKind(k.type, k.bits)}</span>
               </li>
             ))}
@@ -187,6 +201,11 @@ export function KeysView() {
                 <p className="font-mono text-[12px]" data-testid="key-fingerprint">
                   {selected.fingerprint}
                 </p>
+              </div>
+
+              <div>
+                <h3 className="mb-1 text-[12px] font-medium text-muted">{t('certs.title')}</h3>
+                <CertificatePanel keyItem={selected} />
               </div>
 
               <div>

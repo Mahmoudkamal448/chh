@@ -1,6 +1,7 @@
 import { ArrowLeftRight, Pencil, Play, Plus, Square, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../components/EmptyState';
 import type { Forward, ForwardKind, Host } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
@@ -163,16 +164,23 @@ export function ForwardsView() {
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <h1 className="text-[15px] font-semibold">{t('forwards.title')}</h1>
-        <span className="text-[12px] text-muted">{t('forwards.count', { count: forwards.length })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{t('forwards.count', { count: forwards.length })}</span>
         <Button className="ml-auto" variant="primary" onClick={() => setEditing('new')} disabled={!hosts.length} data-testid="new-forward">
           <Plus size={14} /> {t('forwards.new')}
         </Button>
       </div>
       {forwards.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
-          <ArrowLeftRight size={28} />
-          <p className="max-w-sm">{t('forwards.empty')}</p>
-        </div>
+        <EmptyState
+          icon={ArrowLeftRight}
+          action={
+            <Button variant="primary" onClick={() => setEditing('new')} disabled={!hosts.length}>
+              <Plus size={14} /> {t('forwards.new')}
+            </Button>
+          }
+          note={hosts.length ? undefined : t('forwards.needHost')}
+        >
+          {t('forwards.empty')}
+        </EmptyState>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto">
           {forwards.map((f) => {
@@ -183,7 +191,7 @@ export function ForwardsView() {
             return (
               <li key={f.id} className="flex items-center gap-3 border-b border-border/60 px-4 py-2.5" data-testid="forward-row" data-state={state}>
                 <span
-                  className={cn('h-2 w-2 shrink-0 rounded-full', state === 'running' ? 'bg-[#2f9e44]' : state === 'starting' ? 'bg-[#d29b00]' : state === 'error' ? 'bg-danger' : 'bg-border')}
+                  className={cn('h-2 w-2 shrink-0 rounded-full', state === 'running' ? 'bg-success' : state === 'starting' ? 'bg-warning-fg' : state === 'error' ? 'bg-danger' : 'bg-border')}
                   aria-label={t(`forwards.state.${state}`)}
                 />
                 <div className="min-w-0 flex-1">

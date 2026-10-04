@@ -4,7 +4,11 @@ import { paneIds, removePane, setRatio, splitPane, type LayoutNode, type SplitDi
 
 export const HOSTS_TAB = 'hosts';
 
-export type PaneSource = { kind: 'host'; hostId: string } | { kind: 'local'; shellId?: string };
+export type PaneSource =
+  | { kind: 'host'; hostId: string }
+  | { kind: 'local'; shellId?: string }
+  /** Quick connect: an unsaved user@host:port. */
+  | { kind: 'quick'; host: string; port: number; username: string };
 
 /** One terminal session shown in a pane. */
 export interface TermPane {
@@ -45,6 +49,8 @@ interface TabsState {
   activeId: string;
   openHost(hostId: string, title: string): Promise<void>;
   openLocal(shellId?: string): Promise<void>;
+  /** Quick connect to an unsaved host. */
+  openQuick(target: { host: string; port: number; username: string }): Promise<void>;
   openSftp(hostId: string, title: string): void;
   /** Shows the results of a multi-host run. */
   openRun(runId: string, title: string): void;
@@ -67,9 +73,30 @@ interface TabsState {
 const INITIAL = { cols: 100, rows: 30 };
 const uid = () => crypto.randomUUID();
 
+/**
+ * Statuses that arrived before their pane exists: a session can fail (e.g. a missing certificate) before
+ * the call that opened it has returned its id. Applied when the pane is created.
+ */
+const earlyStatus = new Map<string, { status: SessionStatus; message?: string }>();
+
+function withEarlyStatus(pane: TermPane): TermPane {
+  const early = earlyStatus.get(pane.sessionId);
+  if (!early) return pane;
+  earlyStatus.delete(pane.sessionId);
+  return { ...pane, status: early.status, message: early.message };
+}
+
 async function openSession(source: PaneSource, title: string): Promise<TermPane> {
+  return withEarlyStatus(await startSession(source, title));
+}
+
+async function startSession(source: PaneSource, title: string): Promise<TermPane> {
   if (source.kind === 'host') {
     const { sessionId } = await window.chh.sessions.openHost({ hostId: source.hostId, ...INITIAL });
+    return { id: uid(), source, sessionId, title, status: 'connecting' };
+  }
+  if (source.kind === 'quick') {
+    const { sessionId } = await window.chh.sessions.openQuick({ host: source.host, port: source.port, username: source.username, ...INITIAL });
     return { id: uid(), source, sessionId, title, status: 'connecting' };
   }
   const res = await window.chh.sessions.openLocal({ shellId: source.shellId, ...INITIAL });
@@ -96,6 +123,10 @@ export const useTabs = create<TabsState>((set, get) => {
     },
     async openLocal(shellId) {
       addTab(await openSession({ kind: 'local', shellId }, ''));
+    },
+    async openQuick(target) {
+      const title = `${target.username ? `${target.username}@` : ''}${target.host}${target.port !== 22 ? `:${target.port}` : ''}`;
+      addTab(await openSession({ kind: 'quick', ...target }, title));
     },
     openRun(runId, title) {
       const tab: RunTab = { id: uid(), kind: 'run', runId, title };
@@ -186,7 +217,16 @@ export const useTabs = create<TabsState>((set, get) => {
 
     setStatus(sessionId, status, message) {
       const pane = Object.values(get().panes).find((p) => p.sessionId === sessionId);
-      if (pane) set({ panes: { ...get().panes, [pane.id]: { ...pane, status, message } } });
+      if (!pane) {
+        // Not ours yet (see earlyStatus); keep the latest, but never let "closed" hide an error.
+        const prev = earlyStatus.get(sessionId);
+        if (!(prev?.status === 'error' && status === 'closed')) earlyStatus.set(sessionId, { status, message });
+        if (earlyStatus.size > 100) earlyStatus.delete(earlyStatus.keys().next().value!);
+        return;
+      }
+      // A failed session is closed right after reporting why; keep the reason on screen.
+      if (pane.status === 'error' && status === 'closed') return;
+      set({ panes: { ...get().panes, [pane.id]: { ...pane, status, message } } });
     },
 
     async reconnect(paneId) {

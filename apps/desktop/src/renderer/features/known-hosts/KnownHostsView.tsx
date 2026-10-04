@@ -1,6 +1,7 @@
 import { Search, ShieldCheck, Trash2, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../components/EmptyState';
 import type { KnownHost } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, Input } from '../../components/ui';
@@ -44,7 +45,7 @@ export function KnownHostsView() {
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <h1 className="text-[15px] font-semibold">{t('knownHosts.title')}</h1>
-        <span className="text-[12px] text-muted">{t('knownHosts.count', { count: items.length })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{t('knownHosts.count', { count: items.length })}</span>
         <div className="relative ml-auto w-64">
           <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" aria-hidden />
           <Input
@@ -72,10 +73,7 @@ export function KnownHostsView() {
         </p>
       )}
       {items.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
-          <ShieldCheck size={28} />
-          <p className="max-w-sm">{t('knownHosts.empty')}</p>
-        </div>
+        <EmptyState icon={ShieldCheck}>{t('knownHosts.empty')}</EmptyState>
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <table className="w-full table-fixed text-[13px]">

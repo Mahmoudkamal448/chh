@@ -19,3 +19,6 @@ minimumReleaseAgeExclude:
 
 # electron-builder and native modules work best with a flat node_modules
 nodeLinker: hoisted
+
+patchedDependencies:
+  ssh2@1.17.0: patches/ssh2@1.17.0.patch

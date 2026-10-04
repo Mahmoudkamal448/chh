@@ -1,14 +1,14 @@
 import { FileKey } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ImportKeyResult } from '@chh/shared';
+import type { ImportKeyResult, Key } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
 import { useVault } from '../../stores/vault-store';
 
 /** Import from a file (picked in main, never read by the renderer) or pasted text. */
-export function ImportKeyDialog({ open, mode, onClose }: { open: boolean; mode: 'file' | 'paste'; onClose(): void }) {
+export function ImportKeyDialog({ open, mode, onClose, onImported }: { open: boolean; mode: 'file' | 'paste'; onClose(): void; onImported?(key: Key): void }) {
   const { t } = useTranslation();
   const refresh = useVault((s) => s.refresh);
   const [staged, setStaged] = useState<{ token: string; fileName: string; encrypted: boolean } | null>(null);
@@ -49,9 +49,17 @@ export function ImportKeyDialog({ open, mode, onClose }: { open: boolean; mode: 
     switch (res.status) {
       case 'imported':
         await refresh();
+        onImported?.(res.key);
         onClose();
         return;
       case 'duplicate':
+        // Picking a key for something (e.g. an identity): the one already imported will do.
+        if (onImported) {
+          await refresh();
+          onImported(res.existing);
+          onClose();
+          return;
+        }
         setMessage(t('keys.duplicate', { label: res.existing.label }));
         return;
       case 'passphrase_required':
@@ -99,6 +107,8 @@ export function ImportKeyDialog({ open, mode, onClose }: { open: boolean; mode: 
         className="flex flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
+          // React bubbles submit through portals: don't also submit a form this dialog was opened from.
+          e.stopPropagation();
           void submit();
         }}
       >

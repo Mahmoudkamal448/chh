@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { MessageChannelMain, utilityProcess, type UtilityProcess, type WebContents } from 'electron';
 import {
+  DEFAULT_HOST_SETTINGS,
   SESSION_PORT_CHANNEL,
   resolveSettings,
   type AppSettings,
@@ -21,6 +22,7 @@ import type { KnownHostsRepo } from './db/known-hosts-repo';
 import type { HostToMain, MainToHost, MoshClientSpec, RpcError, RpcMethod, SshConnectConfig } from '../session-host/protocol';
 import type { ForwardsRepo } from './db/forwards-repo';
 import { AppError, emit } from './ipc/handle';
+import { planAuth } from './auth-plan';
 import { errInfo, log } from './log';
 
 interface SessionInfo {
@@ -179,8 +181,9 @@ export class SessionManager {
     const fields = this.deps.hosts.getFields(hostId);
     const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
     const identity = settings.identityId ? this.deps.identities.getSecrets(settings.identityId) : null;
+    const plan = planAuth({ method: settings.authMethod, settings, identity, hostPassword: this.deps.hosts.getPassword(hostId) });
 
-    let username = settings.username || identity?.username || '';
+    let username = plan.username;
     if (!username) {
       const answer = await this.promptFromMain(sessionId, {
         kind: 'username',
@@ -195,23 +198,29 @@ export class SessionManager {
     }
     if (!this.sessions.has(sessionId)) return null;
 
-    const keyId = settings.keyId ?? identity?.keyId ?? null;
     let privateKey: string | null = null;
-    if (keyId) {
+    let certificate: string | null = null;
+    if (plan.keyId) {
       try {
-        privateKey = this.deps.keys.getPrivate(keyId);
+        privateKey = this.deps.keys.getPrivate(plan.keyId);
+        certificate = plan.useCertificate ? this.deps.keys.getCertificate(plan.keyId) : null;
       } catch {
         log.warn({ hostId }, 'configured key no longer exists');
       }
+    }
+    if (plan.requireCertificate && !certificate) {
+      throw new AppError('no_certificate', privateKey ? 'session.error.noCertificate' : 'session.error.noCertificateKey', { detail: fields.label });
     }
     return {
       host: fields.address,
       port: settings.port,
       username,
-      password: this.deps.hosts.getPassword(hostId) ?? identity?.password ?? null,
+      password: plan.password,
       privateKey,
-      useAgent: settings.useAgent,
-      tryDefaultKeys: settings.tryDefaultKeys,
+      certificate,
+      usePlainKey: plan.usePlainKey,
+      useAgent: plan.useAgent,
+      tryDefaultKeys: plan.tryDefaultKeys,
       keepAliveSec: settings.keepAliveSec,
       connectTimeoutSec: settings.connectTimeoutSec,
       label: fields.label,
@@ -222,6 +231,50 @@ export class SessionManager {
       jumps: [],
       proxy: null,
     };
+  }
+
+  /**
+   * Quick connect: SSH to user@host:port without a saved host. Uses the defaults (SSH agent, ~/.ssh keys,
+   * then a password prompt); a missing user name is asked for.
+   */
+  openQuick(wc: WebContents, opts: { host: string; port: number; username: string; cols: number; rows: number }): { sessionId: string } {
+    const label = `${opts.username ? `${opts.username}@` : ''}${opts.host}${opts.port !== 22 ? `:${opts.port}` : ''}`;
+    const { id, hostPort } = this.register(wc, { kind: 'ssh', hostId: null, label });
+    void (async () => {
+      let username = opts.username;
+      if (!username) {
+        const answer = await this.promptFromMain(id, { kind: 'username', title: opts.host, instructions: '', prompts: [{ prompt: 'Username', echo: true }], canSave: false, retry: false });
+        if (!answer?.[0] || !this.sessions.has(id)) return this.close(id);
+        username = answer[0];
+      }
+      const d = DEFAULT_HOST_SETTINGS;
+      const config: SshConnectConfig = {
+        host: opts.host,
+        port: opts.port,
+        username,
+        password: null,
+        privateKey: null,
+        useAgent: d.useAgent,
+        tryDefaultKeys: d.tryDefaultKeys,
+        keepAliveSec: d.keepAliveSec,
+        connectTimeoutSec: d.connectTimeoutSec,
+        label,
+        agent: this.deps.appSettings().sshAgent,
+        agentForward: false,
+        env: {},
+        envMethod: 'request',
+        jumps: [],
+        proxy: null,
+      };
+      this.send({ type: 'open-ssh', sessionId: id, label, cols: opts.cols, rows: opts.rows, config }, [hostPort]);
+      log.info({ sessionId: id }, 'quick connect opening');
+    })().catch((err) => {
+      log.error({ err: errInfo(err) }, 'quick connect failed');
+      const s = this.sessions.get(id);
+      if (s) emit(s.wc, 'session.status', { sessionId: id, status: 'error', message: 'session.error.internal' });
+      this.close(id);
+    });
+    return { sessionId: id };
   }
 
   /** Opens a terminal to a host using its protocol: SSH, Telnet or Mosh. */
@@ -288,6 +341,8 @@ export class SessionManager {
       }
       log.info({ sessionId: id, hostId: opts.hostId, protocol: fields.protocol }, 'session opening');
     })().catch((err) => {
+      // Configuration problems (a jump host loop, a missing certificate, …) explain themselves.
+      if (err instanceof AppError) return fail(err.details?.detail ? `${err.messageKey}::${err.details.detail}` : err.messageKey);
       log.error({ err: errInfo(err) }, 'openHost failed');
       fail('session.error.internal');
     });

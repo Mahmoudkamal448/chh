@@ -120,7 +120,7 @@ export function SecuritySettings() {
         <p className="text-[12px] text-muted">{t('lock.masterHint')}</p>
         {state.masterPassword ? (
           <div className="flex items-end gap-2">
-            <span className="text-[13px] text-[#2f9e44]">{t('lock.masterOn')}</span>
+            <span className="text-[13px] text-success">{t('lock.masterOn')}</span>
             <div className="ml-auto w-56">
               <Field label={t('lock.masterPassword')}>{(id) => <Input id={id} type="password" value={master} onChange={(e) => setMaster(e.target.value)} />}</Field>
             </div>
@@ -152,7 +152,7 @@ export function SecuritySettings() {
         )}
       </Card>
       {msg && (
-        <p role={msg.kind === 'error' ? 'alert' : 'status'} className={msg.kind === 'error' ? 'text-[12px] text-danger' : 'text-[12px] text-[#2f9e44]'}>
+        <p role={msg.kind === 'error' ? 'alert' : 'status'} className={msg.kind === 'error' ? 'text-[12px] text-danger' : 'text-[12px] text-success'}>
           {msg.text}
         </p>
       )}

@@ -13,13 +13,17 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 
 - **Host manager:** create, edit, duplicate and delete hosts. Organize them with nested **groups** (settings are
   inherited down the tree), **tags** and **favorites**. Search instantly, and the list stays smooth with 10,000+ hosts.
-- **SSH sessions:** authenticate with the system SSH agent, your default `~/.ssh` keys, a saved password,
-  keyboard-interactive login or a password prompt (with an optional "remember password" box).
+- **SSH sessions:** pick how each host logs in (**Password**, **Key**, **Certificate**, **SSH agent**,
+  **Identity**, **Ask every time**, or **Automatic**, which tries them all) in the host editor's Authentication
+  section; keyboard-interactive login and a password prompt (with an optional "remember password" box) still work.
 - **Host key verification:** you confirm a host's fingerprint the first time you connect. If the key ever changes,
   you get a **loud warning** that shows the previous and new fingerprints.
 - **Keys:** generate ED25519/ECDSA/RSA keys; import OpenSSH, PEM/PKCS#8 and **PuTTY .ppk (v2 and v3)**, including
   encrypted ones; copy the public key; export the private key, optionally re-encrypted with a passphrase.
 - **Identities:** reusable username + password/key bundles that you can link to hosts or whole groups.
+- **SSH certificates:** attach an OpenSSH user certificate (`…-cert.pub`) to a key, from the Keys screen or right
+  in the identity and host editors; chh shows who it's valid for and when it expires, presents it whenever the key is
+  used (also on jump hosts), and picks it up automatically when importing a key or `~/.ssh/config`.
 - **Known hosts manager:** review and remove trusted host keys, and import `~/.ssh/known_hosts` (including hashed
   entries).
 - **SFTP file browser:** dual pane (this computer or any host on either side), drag and drop between panes and
@@ -58,7 +62,8 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 
 ## Quick start
 
-Installers are published on the [releases page](https://github.com/mahmoudkamal448/chh/releases). To build from
+Installers are published on the [releases page](https://github.com/mahmoudkamal448/chh/releases); see the
+**[installation guide](docs/INSTALL.md)** for Windows, macOS and Linux (including unsigned builds). To build from
 source you need **Node.js 22.12+** and **pnpm** (via Corepack), plus a C/C++ toolchain for native modules
 ([details](docs/DEVELOPMENT.md#prerequisites)).
 
@@ -118,6 +123,7 @@ docs/                  Architecture, development, security and phase notes
 
 ## Documentation
 
+- [Installation](docs/INSTALL.md): get and install chh on Windows, macOS and Linux
 - [Architecture](docs/ARCHITECTURE.md): process model, IPC, data model, encryption and sync design
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today

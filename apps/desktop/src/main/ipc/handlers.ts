@@ -77,7 +77,7 @@ const MAX_KNOWN_HOSTS_FILE = 16 * 1024 * 1024;
 const STAGE_TTL_MS = 10 * 60 * 1000;
 
 /** Key files picked in a dialog are kept here (main process only) until imported. */
-const staged = new Map<string, { text: string; fileName: string; expires: number }>();
+const staged = new Map<string, { text: string; fileName: string; certificate?: string; expires: number }>();
 
 function keyError(err: unknown): never {
   if (err instanceof KeyFormatError) throw new AppError(`key_${err.code}`, `keys.error.${err.code}`);
@@ -176,17 +176,26 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
         for (const [k, v] of staged) if (v.expires < now) staged.delete(k);
         const token = randomUUID();
         const fileName = path.split(/[\\/]/).pop() ?? 'key';
-        staged.set(token, { text, fileName, expires: now + STAGE_TTL_MS });
+        // OpenSSH keeps a key's certificate next to it: id_ed25519 → id_ed25519-cert.pub.
+        const certificate = await readLimited(`${path}-cert.pub`, MAX_KEY_FILE).catch(() => undefined);
+        staged.set(token, { text, fileName, certificate, expires: now + STAGE_TTL_MS });
         return { token, fileName, encrypted };
       },
       importStaged: async ({ token, label, passphrase }) => {
         const s = staged.get(token);
         if (!s) throw new AppError('expired', 'keys.error.expired');
-        const result = await d.keys.importText(s.text, label || s.fileName, passphrase).catch(keyError);
+        const result = await d.keys.importText(s.text, label || s.fileName, passphrase, s.certificate).catch(keyError);
         if (result.status === 'imported' || result.status === 'duplicate') staged.delete(token);
         return result;
       },
       rename: ({ id, label }) => d.keys.rename(id, label),
+      setCertificate: ({ id, certificate }) => {
+        try {
+          return d.keys.setCertificate(id, certificate);
+        } catch (err) {
+          keyError(err);
+        }
+      },
       remove: ({ ids }) => d.keys.remove(ids),
       exportPrivate: async ({ id, passphrase }, e) => {
         const key = d.keys.get(id);
@@ -225,6 +234,7 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
     },
     sessions: {
       openHost: (input, e) => d.sessions.openHost(e.sender, input),
+      openQuick: (input, e) => d.sessions.openQuick(e.sender, input),
       openLocal: (input, e) => d.sessions.openLocal(e.sender, input),
       close: ({ sessionId }) => d.sessions.close(sessionId),
       localShells: () => detectShells(),

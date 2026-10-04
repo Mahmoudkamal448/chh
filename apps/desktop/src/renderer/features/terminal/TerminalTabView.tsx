@@ -67,7 +67,7 @@ export function TerminalTabView({ tab, visible }: { tab: TerminalTab; visible: b
             aria-orientation={d.dir === 'row' ? 'vertical' : 'horizontal'}
             onPointerDown={startDrag(d.splitId, d.dir, d.parent)}
             className={cn(
-              'absolute z-10 bg-border hover:bg-accent',
+              'absolute z-30 bg-border hover:bg-accent',
               d.dir === 'row' ? '-ml-[2px] w-[4px] cursor-col-resize' : '-mt-[2px] h-[4px] cursor-row-resize',
               dragging === d.splitId && 'bg-accent',
             )}

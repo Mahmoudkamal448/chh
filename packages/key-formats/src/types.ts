@@ -19,7 +19,7 @@ export interface PrivateKey {
   sourceFormat: SourceFormat;
 }
 
-export type KeyErrorCode = 'passphrase_required' | 'bad_passphrase' | 'unsupported' | 'invalid' | 'integrity';
+export type KeyErrorCode = 'passphrase_required' | 'bad_passphrase' | 'unsupported' | 'invalid' | 'integrity' | 'cert_invalid' | 'cert_mismatch' | 'cert_host';
 
 export class KeyFormatError extends Error {
   constructor(

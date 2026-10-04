@@ -5,6 +5,7 @@ import { useTeams } from '../../stores/teams-store';
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../components/EmptyState';
 import { snippetVariables, type Snippet } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
@@ -138,17 +139,23 @@ export function SnippetsView() {
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <h1 className="text-[15px] font-semibold">{t('snippets.title')}</h1>
-        <span className="text-[12px] text-muted">{t('snippets.count', { count: snippets.length })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{t('snippets.count', { count: snippets.length })}</span>
         <Input type="search" className="ml-auto w-64" placeholder={t('panel.search')} aria-label={t('panel.search')} value={query} onChange={(e) => setQuery(e.target.value)} />
         <Button variant="primary" onClick={() => setEditing('new')} data-testid="new-snippet">
           <Plus size={14} /> {t('snippets.new')}
         </Button>
       </div>
       {snippets.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
-          <Code2 size={28} />
-          <p className="max-w-sm">{t('snippets.empty')}</p>
-        </div>
+        <EmptyState
+          icon={Code2}
+          action={
+            <Button variant="primary" onClick={() => setEditing('new')}>
+              <Plus size={14} /> {t('snippets.new')}
+            </Button>
+          }
+        >
+          {t('snippets.empty')}
+        </EmptyState>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto">
           {shown.map((s) => (

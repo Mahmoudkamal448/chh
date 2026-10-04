@@ -1,0 +1,80 @@
+diff --git a/lib/client.js b/lib/client.js
+index 7291c2ce0b8489975c964ac82f688b59847985e0..2e46b3dd55e4292d4b6e038cf70dd2b9f59fcad2 100644
+--- a/lib/client.js
++++ b/lib/client.js
+@@ -2153,6 +2153,12 @@ function hostKeysProve(client, keys_, cb) {
+ }
+ 
+ function getKeyAlgos(client, key, serverSigAlgs) {
++  // An RSA certificate signs like a plain RSA key; offer the matching
++  // certificate algorithm names (servers list only the plain ones).
++  if (key.type === 'ssh-rsa-cert-v01@openssh.com') {
++    const plain = getKeyAlgos(client, { type: 'ssh-rsa' }, serverSigAlgs);
++    return plain.map(([algo, hash]) => [`${algo}-cert-v01@openssh.com`, hash]);
++  }
+   switch (key.type) {
+     case 'ssh-rsa':
+       if (client._protocol._compatFlags & COMPAT.IMPLY_RSA_SHA2_SIGALGS) {
+diff --git a/lib/protocol/Protocol.js b/lib/protocol/Protocol.js
+index 7302488102161b5b627f6f089d502caa6df0f356..483bd579c6d334bf95f904e517efdf2572d7c1c1 100644
+--- a/lib/protocol/Protocol.js
++++ b/lib/protocol/Protocol.js
+@@ -645,6 +645,11 @@ class Protocol {
+     }
+     if (!keyAlgo)
+       keyAlgo = keyType;
++    // OpenSSH certificates (PROTOCOL.certkeys): the request names the certificate
++    // algorithm, but the signature is made and labelled with the plain key's.
++    const sigAlgo = certBaseAlgo(keyAlgo);
++    const sigKeyType = certBaseAlgo(keyType);
++    const sigAlgoLen = Buffer.byteLength(sigAlgo);
+ 
+     const userLen = Buffer.byteLength(username);
+     const algoLen = Buffer.byteLength(keyAlgo);
+@@ -697,7 +702,7 @@ class Protocol {
+     }
+ 
+     cbSign(packet, (signature) => {
+-      signature = convertSignature(signature, keyType);
++      signature = convertSignature(signature, sigKeyType);
+       if (signature === false)
+         throw new Error('Error while converting handshake signature');
+ 
+@@ -705,7 +710,7 @@ class Protocol {
+       p = this._packetRW.write.allocStart;
+       packet = this._packetRW.write.alloc(
+         1 + 4 + userLen + 4 + 14 + 4 + 9 + 1 + 4 + algoLen + 4 + pubKeyLen + 4
+-          + 4 + algoLen + 4 + sigLen
++          + 4 + sigAlgoLen + 4 + sigLen
+       );
+ 
+       // TODO: simply copy from original "packet" to new `packet` to avoid
+@@ -729,12 +734,12 @@ class Protocol {
+       writeUInt32BE(packet, pubKeyLen, p += algoLen);
+       packet.set(pubKey, p += 4);
+ 
+-      writeUInt32BE(packet, 4 + algoLen + 4 + sigLen, p += pubKeyLen);
++      writeUInt32BE(packet, 4 + sigAlgoLen + 4 + sigLen, p += pubKeyLen);
+ 
+-      writeUInt32BE(packet, algoLen, p += 4);
+-      packet.utf8Write(keyAlgo, p += 4, algoLen);
++      writeUInt32BE(packet, sigAlgoLen, p += 4);
++      packet.utf8Write(sigAlgo, p += 4, sigAlgoLen);
+ 
+-      writeUInt32BE(packet, sigLen, p += algoLen);
++      writeUInt32BE(packet, sigLen, p += sigAlgoLen);
+       packet.set(signature, p += 4);
+ 
+       // Servers shouldn't send packet type 60 in response to signed publickey
+@@ -2133,4 +2138,11 @@ function sendExtInfo(proto) {
+   sendPacket(proto, proto._packetRW.write.finalize(packet));
+ }
+ 
++// "ssh-ed25519-cert-v01@openssh.com" -> "ssh-ed25519",
++// "rsa-sha2-256-cert-v01@openssh.com" -> "rsa-sha2-256"; other names unchanged.
++function certBaseAlgo(algo) {
++  const suffix = '-cert-v01@openssh.com';
++  return (algo.endsWith(suffix) ? algo.slice(0, -suffix.length) : algo);
++}
++
+ module.exports = Protocol;

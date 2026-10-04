@@ -19,6 +19,7 @@ import { schemeById } from '../../themes/terminal-themes';
 import { useLibrary } from '../../stores/library-store';
 import { Ghost, SuggestionList, cursorPosition, type SuggestionItem } from './Autocomplete';
 import { HistoryCapture } from './history-capture';
+import { SessionOverlay } from './SessionOverlay';
 import { registerTerminal, unregisterTerminal } from './registry';
 
 /** Let the app handle its shortcuts instead of sending them to the shell. */
@@ -362,7 +363,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       {list && <SuggestionList items={list.items} index={list.index} left={list.left} top={list.top} loading={list.loading} onPick={(i) => void pickSuggestion(i)} />}
 
       {findOpen && (
-        <div className="absolute right-3 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface p-1 shadow-lg">
+        <div className="absolute right-3 top-2 z-30 flex items-center gap-1 rounded-md border border-border bg-surface p-1 shadow-lg">
           <Input
             autoFocus
             className="h-7 w-56"
@@ -388,34 +389,14 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       )}
 
       {showOverlay && (
-        <div
-          className={
-            ended
-              ? 'absolute inset-x-0 bottom-0 flex items-center gap-3 border-t border-border bg-surface/95 px-4 py-2.5'
-              : 'pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-md bg-surface/90 px-3 py-1.5 text-[12px] text-muted shadow'
-          }
-          role="status"
-          data-testid="session-overlay"
-        >
-          {!ended && (pane.status === 'authenticating' ? t('session.authenticating') : t('session.connecting'))}
-          {ended && (
-            <>
-              <span className="text-[13px]">
-                {pane.status === 'error' && msg
-                  ? t(msg.key, { defaultValue: t('session.error.generic'), detail: msg.detail ?? '' })
-                  : exitCode !== undefined && exitCode !== null
-                    ? t('session.exited', { code: exitCode })
-                    : t('session.closed')}
-              </span>
-              <span className="ml-auto flex gap-2">
-                <Button variant="primary" onClick={() => void reconnect(pane.id)} data-testid="reconnect">
-                  {t('session.reconnect')}
-                </Button>
-                <Button onClick={() => closePane(pane.id)}>{split ? t('session.closePane') : t('session.closeTab')}</Button>
-              </span>
-            </>
-          )}
-        </div>
+        <SessionOverlay
+          pane={pane}
+          message={msg}
+          exitCode={exitCode}
+          split={split}
+          onReconnect={() => void reconnect(pane.id)}
+          onClose={() => closePane(pane.id)}
+        />
       )}
     </div>
   );

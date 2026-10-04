@@ -20,6 +20,7 @@ ServerAliveInterval 30
 Host web-*  !web-legacy
     User deploy
     IdentityFile ~/.ssh/deploy_ed25519
+    CertificateFile ~/.ssh/deploy_ed25519-cert.pub
 
 Host web-1
     HostName 10.0.0.11
@@ -98,6 +99,7 @@ describe('importCandidates', () => {
       port: 2222,
       user: 'deploy',
       identityFiles: ['/home/me/.ssh/deploy_ed25519', '/home/me/.ssh/id_ed25519'],
+      certificateFiles: ['/home/me/.ssh/deploy_ed25519-cert.pub'],
       forwards: [
         { kind: 'local', bindHost: '127.0.0.1', bindPort: 8080, destHost: 'localhost', destPort: 80 },
         { kind: 'local', bindHost: '0.0.0.0', bindPort: 9090, destHost: '::1', destPort: 9000 },

@@ -9,6 +9,8 @@ export interface ImportCandidate {
   user: string | null;
   /** Expanded paths (~ and %-tokens resolved). */
   identityFiles: string[];
+  /** CertificateFile entries (expanded); a certificate is matched to its key on import. */
+  certificateFiles: string[];
   proxyJump: string | null;
   forwardAgent: boolean | null;
   forwards: ForwardSpec[];
@@ -18,7 +20,7 @@ export interface ImportCandidate {
 
 /** Keywords we map onto chh fields (or that are irrelevant to import). */
 const HANDLED = new Set([
-  'hostname', 'port', 'user', 'identityfile', 'proxyjump', 'forwardagent', 'localforward', 'remoteforward', 'dynamicforward',
+  'hostname', 'port', 'user', 'identityfile', 'certificatefile', 'proxyjump', 'forwardagent', 'localforward', 'remoteforward', 'dynamicforward',
   // Behaviour already covered by app defaults / not meaningful to import:
   'identitiesonly', 'addkeystoagent', 'usekeychain', 'serveraliveinterval', 'serveralivecountmax', 'connecttimeout',
   'stricthostkeychecking', 'userknownhostsfile', 'hashknownhosts', 'loglevel', 'compression', 'requesttty', 'tcpkeepalive',
@@ -68,6 +70,10 @@ export function importCandidates(config: ParsedConfig, ctx: ExpandContext): Impo
       .map((a) => a[0])
       .filter((x): x is string => !!x && x.toLowerCase() !== 'none')
       .map((x) => expandTokens(x, tokenCtx));
+    const certificateFiles = (r.options.get('certificatefile') ?? [])
+      .map((a) => a[0])
+      .filter((x): x is string => !!x && x.toLowerCase() !== 'none')
+      .map((x) => expandTokens(x, tokenCtx));
     const forwards: ForwardSpec[] = [];
     for (const [kw, kind] of [['localforward', 'local'], ['remoteforward', 'remote'], ['dynamicforward', 'dynamic']] as const) {
       for (const args of r.options.get(kw) ?? []) {
@@ -82,6 +88,7 @@ export function importCandidates(config: ParsedConfig, ctx: ExpandContext): Impo
       port,
       user,
       identityFiles: [...new Set(identityFiles)],
+      certificateFiles: [...new Set(certificateFiles)],
       proxyJump: first('proxyjump'),
       forwardAgent: fa === null ? null : fa.toLowerCase() === 'yes',
       forwards,

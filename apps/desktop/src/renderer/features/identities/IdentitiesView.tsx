@@ -5,6 +5,7 @@ import { useTeams } from '../../stores/teams-store';
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../components/EmptyState';
 import type { Identity } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
@@ -12,6 +13,8 @@ import { Button, Field, IconButton, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
 import { keyKind } from '../../lib/format';
 import { useVault } from '../../stores/vault-store';
+import { CertificateChip, CertificatePanel } from '../keys/Certificate';
+import { ImportKeyDialog } from '../keys/ImportKeyDialog';
 
 function IdentityEditor({ editing, onClose }: { editing: Identity | 'new' | null; onClose(): void }) {
   const { t } = useTranslation();
@@ -23,6 +26,8 @@ function IdentityEditor({ editing, onClose }: { editing: Identity | 'new' | null
   const [keyId, setKeyId] = useState('');
   const [password, setPassword] = useState<string | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const selectedKey = keys.find((k) => k.id === keyId) ?? null;
 
   useEffect(() => {
     setLabel(existing?.label ?? '');
@@ -92,18 +97,24 @@ function IdentityEditor({ editing, onClose }: { editing: Identity | 'new' | null
             )
           }
         </Field>
-        <Field label={t('identities.key')}>
-          {(id) => (
-            <Select id={id} value={keyId} onChange={(e) => setKeyId(e.target.value)} data-testid="identity-key">
-              <option value="">{t('identities.noKey')}</option>
-              {keys.map((k) => (
-                <option key={k.id} value={k.id}>
-                  {k.label} ({keyKind(k.type, k.bits)})
-                </option>
-              ))}
-            </Select>
+        <Field label={t('identities.key')} hint={selectedKey ? undefined : t('identities.keyHint')}>
+          {(id, d) => (
+            <div className="flex gap-2">
+              <Select id={id} aria-describedby={d} className="min-w-0 flex-1" value={keyId} onChange={(e) => setKeyId(e.target.value)} data-testid="identity-key">
+                <option value="">{t('identities.noKey')}</option>
+                {keys.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.label} ({keyKind(k.type, k.bits)}){k.certificate ? ` · ${t('certs.chip')}` : ''}
+                  </option>
+                ))}
+              </Select>
+              <Button className="shrink-0 whitespace-nowrap" onClick={() => setImporting(true)} data-testid="identity-import-key">
+                {t('identities.importKey')}
+              </Button>
+            </div>
           )}
         </Field>
+        {selectedKey && <CertificatePanel keyItem={selectedKey} compact />}
         {error && (
           <p role="alert" className="text-[12px] text-danger">
             {error}
@@ -111,6 +122,7 @@ function IdentityEditor({ editing, onClose }: { editing: Identity | 'new' | null
         )}
         <button type="submit" hidden />
       </form>
+      <ImportKeyDialog open={importing} mode="file" onClose={() => setImporting(false)} onImported={(k) => setKeyId(k.id)} />
     </Dialog>
   );
 }
@@ -135,16 +147,22 @@ export function IdentitiesView() {
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <h1 className="text-[15px] font-semibold">{t('identities.title')}</h1>
-        <span className="text-[12px] text-muted">{t('identities.count', { count: identities.length })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{t('identities.count', { count: identities.length })}</span>
         <Button className="ml-auto" variant="primary" onClick={() => setEditing('new')} data-testid="new-identity">
           <Plus size={14} /> {t('identities.new')}
         </Button>
       </div>
       {identities.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
-          <UserRound size={28} />
-          <p className="max-w-sm">{t('identities.empty')}</p>
-        </div>
+        <EmptyState
+          icon={UserRound}
+          action={
+            <Button variant="primary" onClick={() => setEditing('new')}>
+              <Plus size={14} /> {t('identities.new')}
+            </Button>
+          }
+        >
+          {t('identities.empty')}
+        </EmptyState>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto">
           {identities.map((i) => (
@@ -156,6 +174,10 @@ export function IdentitiesView() {
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{i.label}</span>
                   <VaultBadge vaultId={i.vaultId} />
+                  {(() => {
+                    const cert = keys.find((k) => k.id === i.keyId)?.certificate;
+                    return cert ? <CertificateChip cert={cert} /> : null;
+                  })()}
                 </div>
                 <div className="truncate text-[12px] text-muted">
                   {[i.username || t('identities.noUsername'), i.hasPassword ? t('identities.withPassword') : null, keyLabel(i.keyId) ? t('identities.withKey', { key: keyLabel(i.keyId) }) : null]

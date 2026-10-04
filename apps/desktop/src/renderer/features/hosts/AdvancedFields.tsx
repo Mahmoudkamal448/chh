@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useInheritLabel } from './inherit';
 import { DEFAULT_HOST_SETTINGS, type Host, type HostSettings, type HostSettingsOverrides, type Protocol } from '@chh/shared';
 import { Button, Field, IconButton, Input, Select } from '../../components/ui';
 
@@ -22,6 +23,7 @@ export function AdvancedFields({
   selfId?: string | null;
 }) {
   const { t } = useTranslation();
+  const inheritLabel = useInheritLabel();
   const [hosts, setHosts] = useState<Host[]>([]);
   const [pick, setPick] = useState('');
   useEffect(() => {
@@ -39,9 +41,8 @@ export function AdvancedFields({
   const inheritedEnv = Object.entries(inherited.env).filter(([k]) => !(k in env));
 
   return (
-    <details className="rounded-md border border-border p-3" data-testid="advanced-fields">
-      <summary className="cursor-pointer text-[12px] font-semibold uppercase tracking-wide text-muted">{t('advanced.title')}</summary>
-      <div className="mt-3 flex flex-col gap-4">
+    <div data-testid="advanced-fields">
+      <div className="flex flex-col gap-4">
         {(!protocol || protocol === 'ssh') && (
           <Field label={t('advanced.engine')} hint={engine === 'openssh' ? t('advanced.engineOpensshHint') : t('advanced.engineBuiltinHint')}>
             {(id, d) => (
@@ -52,7 +53,7 @@ export function AdvancedFields({
                 onChange={(e) => set('sshEngine', (e.target.value || undefined) as HostSettings['sshEngine'] | undefined)}
                 data-testid="ssh-engine"
               >
-                <option value="">{t('settings.inherit', { value: t(`advanced.engines.${inherited.sshEngine}`) })}</option>
+                <option value="">{inheritLabel(t(`advanced.engines.${inherited.sshEngine}`))}</option>
                 <option value="builtin">{t('advanced.engines.builtin')}</option>
                 <option value="openssh">{t('advanced.engines.openssh')}</option>
               </Select>
@@ -154,7 +155,7 @@ export function AdvancedFields({
               onChange={(e) => set('agentForwarding', e.target.value === '' ? undefined : e.target.value === 'on')}
               data-testid="agent-forwarding"
             >
-              <option value="">{t('settings.inherit', { value: inherited.agentForwarding ? t('common.on') : t('common.off') })}</option>
+              <option value="">{inheritLabel(inherited.agentForwarding ? t('common.on') : t('common.off'))}</option>
               <option value="on">{t('common.on')}</option>
               <option value="off">{t('common.off')}</option>
             </Select>
@@ -176,7 +177,7 @@ export function AdvancedFields({
             <Field label={t('advanced.envMethod')}>
               {(id) => (
                 <Select id={id} value={value.envMethod ?? ''} onChange={(e) => set('envMethod', (e.target.value || undefined) as HostSettings['envMethod'] | undefined)}>
-                  <option value="">{t('settings.inherit', { value: t(`advanced.envMethods.${inherited.envMethod}`) })}</option>
+                  <option value="">{inheritLabel(t(`advanced.envMethods.${inherited.envMethod}`))}</option>
                   <option value="request">{t('advanced.envMethods.request')}</option>
                   <option value="export">{t('advanced.envMethods.export')}</option>
                 </Select>
@@ -185,7 +186,7 @@ export function AdvancedFields({
           </div>
         </div>
       </div>
-    </details>
+    </div>
   );
 }
 

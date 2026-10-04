@@ -53,7 +53,7 @@ test('jump host chain, env variables and OS detection', async () => {
     let dlg = await newHost(page, { label: 'Bastion', port: jump.port, username: 'tester', password: 'jump-pw' });
     await dlg.getByTestId('host-save').click();
     dlg = await newHost(page, { label: 'Inner', port: target.port, username: 'tester', password: 'secret' });
-    await dlg.getByTestId('advanced-fields').locator('summary').click();
+    await dlg.getByTestId('editor-tab-advanced').click();
     await dlg.getByTestId('jump-pick').selectOption({ label: 'Bastion' });
     await dlg.getByTestId('jump-add').click();
     await expect(dlg.getByTestId('jump-row')).toHaveCount(1);
@@ -160,7 +160,7 @@ test('System OpenSSH engine runs the installed ssh client', async () => {
     h = await launchApp(undefined, { HOME: home });
     const { page } = h;
     const dlg = await newHost(page, { label: 'Via OpenSSH', port: server.port, username: 'tester' });
-    await dlg.getByTestId('advanced-fields').locator('summary').click();
+    await dlg.getByTestId('editor-tab-advanced').click();
     await dlg.getByTestId('ssh-engine').selectOption('openssh');
     await dlg.getByTestId('host-save').click();
     await page.getByTestId('host-row').filter({ hasText: 'Via OpenSSH' }).dblclick();

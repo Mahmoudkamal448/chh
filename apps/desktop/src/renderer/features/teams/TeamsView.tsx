@@ -114,7 +114,7 @@ export function TeamsView() {
                   >
                     <Users size={14} className="shrink-0 text-muted" />
                     <span className="min-w-0 flex-1 truncate">{x.name ?? t('teams.pendingName')}</span>
-                    {x.needsRotation && isAdmin(x.role) && <AlertTriangle size={12} className="text-[#d29b00]" aria-label={t('teams.rotateNeeded')} />}
+                    {x.needsRotation && isAdmin(x.role) && <AlertTriangle size={12} className="text-warning-fg" aria-label={t('teams.rotateNeeded')} />}
                     <span className="text-[11px] text-muted">{t(`teams.role.${x.role}`)}</span>
                   </button>
                 </li>
@@ -263,8 +263,8 @@ function TeamDetail({ team }: { team: TeamSummary }) {
         </div>
       </div>
       {team.needsRotation && admin && (
-        <div className="flex items-center gap-2 border-b border-border bg-[#d29b00]/10 px-4 py-2 text-[12px]" role="status">
-          <AlertTriangle size={14} className="shrink-0 text-[#d29b00]" />
+        <div className="flex items-center gap-2 border-b border-border bg-warning-bg px-4 py-2 text-[12px]" role="status">
+          <AlertTriangle size={14} className="shrink-0 text-warning-fg" />
           <span className="flex-1">{t('teams.rotateNeededHint')}</span>
           <Button className="h-7" disabled={busy} onClick={() => setRotating(true)}>
             {t('teams.rotate')}
@@ -374,7 +374,7 @@ function Members({ team, onError }: { team: TeamSummary; onError(msg: string | n
               <div className="flex items-center gap-2">
                 <span className="truncate font-medium">{m.email}</span>
                 {m.isMe && <span className="text-[11px] text-muted">{t('teams.you')}</span>}
-                {m.status === 'accepted' && <span className="rounded bg-[#d29b00]/15 px-1.5 py-0.5 text-[11px] text-[#a87a00]">{t('teams.needsConfirm')}</span>}
+                {m.status === 'accepted' && <span className="rounded bg-warning-bg px-1.5 py-0.5 text-[11px] text-warning-fg">{t('teams.needsConfirm')}</span>}
               </div>
               <div className="truncate font-mono text-[11px] text-muted" title={t('teams.fingerprint')}>
                 {m.fingerprint}

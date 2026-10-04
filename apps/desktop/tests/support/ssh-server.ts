@@ -9,6 +9,7 @@ import { connect, createServer, type Server as NetServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { Server, utils, type Connection, type SFTPWrapper } from 'ssh2';
+import { verifyCertificateLogin } from './cert-auth';
 
 const { STATUS_CODE, flagsToString } = utils.sftp;
 
@@ -20,6 +21,8 @@ export interface TestSshServer {
   env: Record<string, string>;
   /** Whether the last session asked for agent forwarding. */
   agentForwardRequested(): boolean;
+  /** Outcome of each signed certificate login ("ok" or why it was refused). */
+  certificateLogins: string[];
 }
 
 export interface TestSshOptions {
@@ -28,6 +31,8 @@ export interface TestSshOptions {
   sftpRoot?: string;
   /** OpenSSH public key lines allowed for user "tester". */
   authorizedKeys?: string[];
+  /** CA public key lines (ed25519) whose user certificates are accepted, like sshd's TrustedUserCAKeys. */
+  trustedUserCAKeys?: string[];
   password?: string;
   /** Allow `exec` of mosh-server (spawned locally) so Mosh can be tested end to end. */
   allowMosh?: boolean;
@@ -157,6 +162,7 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
   let port = 0;
   const env: Record<string, string> = {};
   let agentRequested = false;
+  const certificateLogins: string[] = [];
   const server = new Server({ hostKeys: [key.private] }, (client) => {
     clients.add(client);
     client.on('close', () => clients.delete(client));
@@ -164,6 +170,19 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
     client.on('authentication', (ctx) => {
       if (ctx.username !== 'tester') return ctx.reject();
       if (ctx.method === 'password' && ctx.password === password) return ctx.accept();
+      if (ctx.method === 'publickey' && ctx.key.algo.endsWith('-cert-v01@openssh.com')) {
+        const res = verifyCertificateLogin({
+          trustedCAs: opts.trustedUserCAKeys ?? [],
+          username: ctx.username,
+          keyAlgo: ctx.key.algo,
+          keyData: ctx.key.data,
+          signature: ctx.signature,
+          signedBlob: ctx.blob,
+        });
+        if (ctx.signature) certificateLogins.push(res.ok ? 'ok' : res.reason);
+        if (res.ok) return ctx.accept();
+        return ctx.reject(['password', 'publickey']);
+      }
       if (ctx.method === 'publickey') {
         const match = authorized.find((k) => k.getPublicSSH().equals(ctx.key.data));
         if (match && (!ctx.signature || match.verify(ctx.blob!, ctx.signature, ctx.hashAlgo))) return ctx.accept();
@@ -294,6 +313,7 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
     fingerprint,
     env,
     agentForwardRequested: () => agentRequested,
+    certificateLogins,
     close: () =>
       new Promise<void>((res) => {
         // server.close() waits for open connections, so drop them first.

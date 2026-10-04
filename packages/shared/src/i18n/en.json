@@ -60,7 +60,26 @@
     "deleteTitle": "Delete host?",
     "deleteMessage": "“{{label}}” will be deleted. This can't be undone.",
     "openFiles": "Open files (SFTP)",
-    "importExport": "Import / export"
+    "importExport": "Import / export",
+    "statusConnected": "Connected",
+    "statusConnecting": "Connecting"
+  },
+  "quick": {
+    "label": "Quick connect",
+    "placeholder": "user@host:port, or paste an ssh command",
+    "connect": "Connect",
+    "invalid": "Type a host, e.g. deploy@10.0.0.5 or deploy@web-1:2222."
+  },
+  "welcome": {
+    "title": "Welcome to chh",
+    "subtitle": "Save the servers you connect to, or connect right away with Quick connect above.",
+    "newHost": "Add a host",
+    "newHostBody": "Address, how to log in (password, key, certificate, agent…), group and tags.",
+    "import": "Import from ~/.ssh/config",
+    "importBody": "Bring in your existing hosts, keys and port forwards in one go.",
+    "keys": "Set up keys",
+    "keysBody": "Generate a key, or import one (OpenSSH, PEM, PuTTY) with its certificate.",
+    "quickHint": "Tip: press Enter on a host to connect, F2 to edit it."
   },
   "groups": {
     "deleteTitle": "Delete group?",
@@ -104,7 +123,41 @@
     },
     "recordHistory": "Record command history",
     "moshServer": "Mosh server command",
-    "moshServerHint": "Used only for Mosh hosts."
+    "moshServerHint": "Used only for Mosh hosts.",
+    "auth": {
+      "title": "Authentication",
+      "method": {
+        "auto": "Automatic",
+        "password": "Password",
+        "key": "Key",
+        "certificate": "Certificate",
+        "agent": "SSH agent",
+        "identity": "Identity",
+        "ask": "Ask every time"
+      },
+      "explain": {
+        "auto": "Tries everything below in turn: the key (with its certificate), the SSH agent, your ~/.ssh keys, then the password.",
+        "password": "Logs in with a user name and password. Leave the password empty to be asked when connecting.",
+        "key": "Logs in with a private key from chh’s keychain. The server needs its public key in ~/.ssh/authorized_keys.",
+        "certificate": "Logs in with a key and its OpenSSH certificate, for servers that trust your certificate authority. No authorized_keys entry needed.",
+        "agent": "Uses the keys loaded in your SSH agent (ssh-agent, Pageant, 1Password, Secretive, …). Nothing is stored in chh.",
+        "identity": "Uses a saved identity: its user name, password and key (with certificate). Handy for many hosts with the same login.",
+        "ask": "Nothing is saved: chh asks for the user name (if not set) and password every time you connect."
+      },
+      "useGroupDefault": "Use group default ({{method}})",
+      "askUsername": "Ask when connecting",
+      "fromIdentity": "From the identity",
+      "groupPassword": "Passwords are saved on each host, or asked when connecting.",
+      "chooseKeyForCertificate": "Choose the key your certificate was issued for, then add the certificate.",
+      "keyHasCertificate": "This key has a certificate, but the Key method doesn’t use it. Choose Certificate to log in with it.",
+      "noIdentities": "Create identities under Identities."
+    },
+    "tabs": {
+      "label": "Host settings",
+      "general": "General",
+      "terminal": "Terminal",
+      "advanced": "Advanced"
+    }
   },
   "groupEditor": {
     "newTitle": "New group",
@@ -114,7 +167,8 @@
     "parent": "Parent group",
     "noParent": "None (top level)",
     "inherited": "Inherited settings",
-    "errorRequired": "Enter a name."
+    "errorRequired": "Enter a name.",
+    "inheritedHint": "Hosts in this group (and its subgroups) use these settings unless they set their own."
   },
   "settings": {
     "title": "Settings",
@@ -158,7 +212,8 @@
     "agentAuto": "Automatic (SSH_AUTH_SOCK / OpenSSH agent)",
     "agentCustom": "Custom socket or pipe…",
     "agentPath": "Agent socket / pipe path",
-    "autocomplete": "Suggest commands while typing (history and snippets; → accepts, Ctrl+Space lists)"
+    "autocomplete": "Suggest commands while typing (history and snippets; → accepts, Ctrl+Space lists)",
+    "default": "Default ({{value}})"
   },
   "commands": {
     "palette.open": "Open command palette",
@@ -235,9 +290,29 @@
       "serialNotFound": "Serial port not found. Is the device connected?",
       "serialPermission": "No permission to open the serial port (Linux: add your user to the 'dialout' group).",
       "serialBusy": "The serial port is in use by another program.",
-      "serialFailed": "Couldn't open the serial port: {{detail}}"
+      "serialFailed": "Couldn't open the serial port: {{detail}}",
+      "noCertificate": "{{detail}} is set to log in with a certificate, but its key has none. Add one in the host editor (Authentication → Certificate).",
+      "noCertificateKey": "{{detail}} is set to log in with a certificate, but no key is chosen. Choose the key in the host editor (Authentication → Certificate)."
     },
-    "closePane": "Close pane"
+    "closePane": "Close pane",
+    "connectingTo": "Connecting to {{name}}",
+    "step": {
+      "connect": "Reaching the server",
+      "login": "Logging in"
+    },
+    "failedTitle": "Couldn’t connect to {{name}}",
+    "copyDetails": "Copy details",
+    "editHost": "Edit host",
+    "retry": "Try again",
+    "hint": {
+      "timeout": "The server didn’t answer in time. Check the address and port, and that your network, VPN or firewall lets you reach it.",
+      "dns": "The name couldn’t be resolved. Check the spelling, or whether you need to be on a VPN.",
+      "refused": "The computer answered, but nothing accepts SSH on that port. Check the port number and that the SSH server is running.",
+      "unreachable": "Your computer has no route to it. Check your network or VPN.",
+      "auth": "The server didn’t accept any of the login methods tried. Check the user name and the Authentication settings (password, key or certificate) in the host editor.",
+      "reset": "The server closed the connection. It may limit connections or block your address.",
+      "jump": "Open that jump host on its own to see what fails."
+    }
   },
   "hostKey": {
     "newTitle": "Verify host identity",
@@ -272,7 +347,9 @@
     "snippets": "Snippets",
     "history": "History",
     "forwards": "Port forwarding",
-    "teams": "Teams"
+    "teams": "Teams",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "keys": {
     "title": "Keys",
@@ -337,8 +414,39 @@
       "integrity": "The key file is corrupted or was modified.",
       "expired": "The selected file expired. Please choose it again.",
       "passphrase_required": "This key needs a passphrase.",
-      "bad_passphrase": "That passphrase is incorrect."
+      "bad_passphrase": "That passphrase is incorrect.",
+      "cert_invalid": "This isn't an OpenSSH certificate. Use the “…-cert.pub” file your administrator or CA gave you.",
+      "cert_mismatch": "This certificate was issued for a different key. Choose the key it belongs to.",
+      "cert_host": "This is a host certificate. A key needs a user certificate."
     }
+  },
+  "certs": {
+    "title": "Certificate",
+    "chip": "Certificate",
+    "none": "No certificate. Add one if your servers trust a certificate authority.",
+    "add": "Add certificate…",
+    "replace": "Replace…",
+    "remove": "Remove certificate",
+    "addTitle": "Certificate for “{{label}}”",
+    "explain": "An OpenSSH certificate is signed by your certificate authority and lets you log in to servers that trust it, without adding your key to each server. chh presents it whenever this key is used, and falls back to the plain key if a server doesn’t accept it.",
+    "pasteLabel": "Certificate",
+    "pasteHint": "Paste the contents of the “…-cert.pub” file, e.g. id_ed25519-cert.pub.",
+    "chooseFile": "Choose file…",
+    "fileHint": "or pick the “…-cert.pub” file",
+    "attach": "Attach certificate",
+    "principals": "Valid for",
+    "anyUser": "any user name",
+    "keyId": "Key ID",
+    "serial": "Serial",
+    "ca": "Signed by CA",
+    "restrictions": "Restrictions",
+    "validUntil": "Valid until {{date}}",
+    "validFrom": "Not valid before {{date}}",
+    "forever": "Never expires",
+    "expiresIn_one": "Expires in {{count}} day",
+    "expiresIn_other": "Expires in {{count}} days",
+    "expiredOn": "Expired {{date}}",
+    "expired": "Certificate expired"
   },
   "identities": {
     "title": "Identities",
@@ -357,7 +465,9 @@
     "withPassword": "password",
     "withKey": "key: {{key}}",
     "deleteTitle": "Delete identity?",
-    "deleteMessage": "“{{label}}” will be deleted and unlinked from its hosts and groups."
+    "deleteMessage": "“{{label}}” will be deleted and unlinked from its hosts and groups.",
+    "keyHint": "Optional. Using an SSH certificate? Choose or import its key, then add the certificate.",
+    "importKey": "Import key…"
   },
   "knownHosts": {
     "title": "Known hosts",
@@ -537,7 +647,8 @@
       "disconnected": "The SSH connection for this tunnel was lost.",
       "cancelled": "Cancelled.",
       "generic": "Forwarding failed: {{detail}}"
-    }
+    },
+    "needHost": "Forwarding runs over a host’s SSH connection: add a host first."
   },
   "sshConfig": {
     "menu": "SSH config",
