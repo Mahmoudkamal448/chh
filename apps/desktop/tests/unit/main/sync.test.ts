@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { randomKey } from '@chh/vault-crypto';
 import { buildApp } from '../../../../server/src/app';
 import { base32Decode, hotp, totpStep } from '../../../../server/src/crypto';
@@ -18,6 +18,8 @@ import { normalizeServerUrl } from '../../../src/main/sync/http';
 import { LocalVault } from '../../../src/main/vault/local-vault';
 
 const KDF = { ops: 2, mem: 64 * 1024 * 1024 };
+// Sign-ins run Argon2id and a full sync against a real server: well past 5 s on slow CI runners.
+vi.setConfig({ testTimeout: 30_000 });
 let serverUrl: string;
 let serverStore: MemoryStore;
 let close: () => Promise<void>;
