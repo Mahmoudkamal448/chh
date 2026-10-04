@@ -190,6 +190,8 @@ test('autocomplete: ghost suggestion from history, accepted with →; Ctrl+Space
   await expect.poll(async () => (await terminalText(page)).match(/ghost-test-123/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
 
   await page.keyboard.type('echo g');
+  // Suggestions read the input line from the screen: wait until the shell has echoed it.
+  await expect(page.getByTestId('ghost-suggestion')).toHaveText('host-test-123');
   await page.keyboard.press('Control+Space');
   const list = page.getByTestId('suggestion-list');
   await expect(list).toContainText('echo ghost-test-123');
