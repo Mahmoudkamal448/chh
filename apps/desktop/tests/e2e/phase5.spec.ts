@@ -180,6 +180,11 @@ test('autocomplete: ghost suggestion from history, accepted with →; Ctrl+Space
   const { page } = h;
   await page.getByTestId('new-local').click();
   await waitForPrompt(page);
+  if (process.platform === 'win32') {
+    // PowerShell draws its own grey prediction after the cursor, and chh doesn't draw over a shell's.
+    await typeLine(page, 'Set-PSReadLineOption -PredictionSource None; echo predictions-off');
+    await waitForOutput(page, 'predictions-off');
+  }
   await typeLine(page, 'echo ghost-test-123');
   await waitForOutput(page, 'ghost-test-123');
   await expect.poll(() => recordedCommands(page)).toContain('echo ghost-test-123');
