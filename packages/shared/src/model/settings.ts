@@ -26,7 +26,15 @@ export const SerialSettingsSchema = z.object({
 });
 export type SerialSettings = z.infer<typeof SerialSettingsSchema>;
 
+/**
+ * How to log in. "auto" tries everything configured (key and certificate, agent, default keys, then the
+ * password); the others use only that method, plus a password prompt if the server asks for one.
+ */
+export const AuthMethodSchema = z.enum(['auto', 'password', 'key', 'certificate', 'agent', 'identity', 'ask']);
+export type AuthMethod = z.infer<typeof AuthMethodSchema>;
+
 export const HostSettingsSchema = z.object({
+  authMethod: AuthMethodSchema,
   username: z.string().max(255),
   /** Identity (username + password/key) to use; null = none. */
   identityId: z.string().max(64).nullable(),
@@ -72,6 +80,7 @@ export const DEFAULT_FONT_FAMILY =
   'ui-monospace, "SF Mono", Menlo, Consolas, "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono", monospace';
 
 export const DEFAULT_HOST_SETTINGS: HostSettings = {
+  authMethod: 'auto',
   username: '',
   identityId: null,
   keyId: null,

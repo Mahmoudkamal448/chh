@@ -63,6 +63,16 @@ describe('SSH certificate authentication', () => {
     expect(await login(withKeyToo.port, 'openssh-ed25519', 'openssh-ed25519-tester-cert.pub')).toBe(true);
   });
 
+  it('uses only the certificate when the plain key is not allowed', async () => {
+    const attempt = (usePlainKey: boolean) =>
+      connectChain(
+        sshConfig(withKeyToo.port, { privateKey: read('openssh-ed25519'), certificate: read('openssh-ed25519-tester-cert.pub'), usePlainKey }),
+        cb(),
+      ).then((c) => (c.end(), true), () => false);
+    expect(await attempt(true)).toBe(true);
+    expect(await attempt(false)).toBe(false); // this server only knows the plain key
+  });
+
   it('works on a jump host', async () => {
     const client = await connectChain(
       sshConfig(withKeyToo.port, {

@@ -13,8 +13,9 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 
 - **Host manager:** create, edit, duplicate and delete hosts. Organize them with nested **groups** (settings are
   inherited down the tree), **tags** and **favorites**. Search instantly, and the list stays smooth with 10,000+ hosts.
-- **SSH sessions:** authenticate with the system SSH agent, your default `~/.ssh` keys, a saved password,
-  keyboard-interactive login or a password prompt (with an optional "remember password" box).
+- **SSH sessions:** pick how each host logs in (**Password**, **Key**, **Certificate**, **SSH agent**,
+  **Identity**, **Ask every time**, or **Automatic**, which tries them all) in the host editor's Authentication
+  section; keyboard-interactive login and a password prompt (with an optional "remember password" box) still work.
 - **Host key verification:** you confirm a host's fingerprint the first time you connect. If the key ever changes,
   you get a **loud warning** that shows the previous and new fingerprints.
 - **Keys:** generate ED25519/ECDSA/RSA keys; import OpenSSH, PEM/PKCS#8 and **PuTTY .ppk (v2 and v3)**, including

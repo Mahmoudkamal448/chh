@@ -21,6 +21,7 @@ import type { KnownHostsRepo } from './db/known-hosts-repo';
 import type { HostToMain, MainToHost, MoshClientSpec, RpcError, RpcMethod, SshConnectConfig } from '../session-host/protocol';
 import type { ForwardsRepo } from './db/forwards-repo';
 import { AppError, emit } from './ipc/handle';
+import { planAuth } from './auth-plan';
 import { errInfo, log } from './log';
 
 interface SessionInfo {
@@ -179,8 +180,9 @@ export class SessionManager {
     const fields = this.deps.hosts.getFields(hostId);
     const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
     const identity = settings.identityId ? this.deps.identities.getSecrets(settings.identityId) : null;
+    const plan = planAuth({ method: settings.authMethod, settings, identity, hostPassword: this.deps.hosts.getPassword(hostId) });
 
-    let username = settings.username || identity?.username || '';
+    let username = plan.username;
     if (!username) {
       const answer = await this.promptFromMain(sessionId, {
         kind: 'username',
@@ -195,26 +197,29 @@ export class SessionManager {
     }
     if (!this.sessions.has(sessionId)) return null;
 
-    const keyId = settings.keyId ?? identity?.keyId ?? null;
     let privateKey: string | null = null;
     let certificate: string | null = null;
-    if (keyId) {
+    if (plan.keyId) {
       try {
-        privateKey = this.deps.keys.getPrivate(keyId);
-        certificate = this.deps.keys.getCertificate(keyId);
+        privateKey = this.deps.keys.getPrivate(plan.keyId);
+        certificate = plan.useCertificate ? this.deps.keys.getCertificate(plan.keyId) : null;
       } catch {
         log.warn({ hostId }, 'configured key no longer exists');
       }
+    }
+    if (plan.requireCertificate && !certificate) {
+      throw new AppError('no_certificate', privateKey ? 'session.error.noCertificate' : 'session.error.noCertificateKey', { detail: fields.label });
     }
     return {
       host: fields.address,
       port: settings.port,
       username,
-      password: this.deps.hosts.getPassword(hostId) ?? identity?.password ?? null,
+      password: plan.password,
       privateKey,
       certificate,
-      useAgent: settings.useAgent,
-      tryDefaultKeys: settings.tryDefaultKeys,
+      usePlainKey: plan.usePlainKey,
+      useAgent: plan.useAgent,
+      tryDefaultKeys: plan.tryDefaultKeys,
       keepAliveSec: settings.keepAliveSec,
       connectTimeoutSec: settings.connectTimeoutSec,
       label: fields.label,
@@ -291,6 +296,8 @@ export class SessionManager {
       }
       log.info({ sessionId: id, hostId: opts.hostId, protocol: fields.protocol }, 'session opening');
     })().catch((err) => {
+      // Configuration problems (a jump host loop, a missing certificate, …) explain themselves.
+      if (err instanceof AppError) return fail(err.details?.detail ? `${err.messageKey}::${err.details.detail}` : err.messageKey);
       log.error({ err: errInfo(err) }, 'openHost failed');
       fail('session.error.internal');
     });

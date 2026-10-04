@@ -134,8 +134,8 @@ Your data lives in `~/.config/chh`.
 
 ## 5. After installing
 
-1. Click **New host**, enter the address, username and a password or key, and connect. The first time, you confirm
-   the server's fingerprint.
+1. Click **New host**, enter the address, choose how to log in under **Authentication** (Password, Key, Certificate,
+   SSH agent, Identity or Ask every time), and connect. The first time, you confirm the server's fingerprint.
 2. Already use SSH? **Import / export** on the Hosts screen reads `~/.ssh/config` (hosts, keys and port forwards).
 3. Optional:
    - **Sync** across your devices and **team vaults**: run your own server ([SELF_HOSTING.md](SELF_HOSTING.md)),

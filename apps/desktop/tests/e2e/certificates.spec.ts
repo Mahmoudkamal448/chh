@@ -61,7 +61,7 @@ test('adds a certificate while creating an identity and logs in with it', async 
     const host = page.getByTestId('host-editor');
     await host.getByTestId('host-address').fill('127.0.0.1');
     await host.getByTestId('host-label').fill('Cert host');
-    await host.getByLabel('Port').fill(String(server.port));
+    await host.getByLabel('Port', { exact: true }).fill(String(server.port));
     await host.getByTestId('host-identity').selectOption({ label: 'Ops (certificate) (tester)' });
     await host.getByTestId('host-save').click();
     await expect(host).toBeHidden();

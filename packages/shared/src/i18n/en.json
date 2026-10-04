@@ -104,7 +104,35 @@
     },
     "recordHistory": "Record command history",
     "moshServer": "Mosh server command",
-    "moshServerHint": "Used only for Mosh hosts."
+    "moshServerHint": "Used only for Mosh hosts.",
+    "auth": {
+      "title": "Authentication",
+      "method": {
+        "auto": "Automatic",
+        "password": "Password",
+        "key": "Key",
+        "certificate": "Certificate",
+        "agent": "SSH agent",
+        "identity": "Identity",
+        "ask": "Ask every time"
+      },
+      "explain": {
+        "auto": "Tries everything below in turn: the key (with its certificate), the SSH agent, your ~/.ssh keys, then the password.",
+        "password": "Logs in with a user name and password. Leave the password empty to be asked when connecting.",
+        "key": "Logs in with a private key from chh’s keychain. The server needs its public key in ~/.ssh/authorized_keys.",
+        "certificate": "Logs in with a key and its OpenSSH certificate, for servers that trust your certificate authority. No authorized_keys entry needed.",
+        "agent": "Uses the keys loaded in your SSH agent (ssh-agent, Pageant, 1Password, Secretive, …). Nothing is stored in chh.",
+        "identity": "Uses a saved identity: its user name, password and key (with certificate). Handy for many hosts with the same login.",
+        "ask": "Nothing is saved: chh asks for the user name (if not set) and password every time you connect."
+      },
+      "useGroupDefault": "Use group default ({{method}})",
+      "askUsername": "Ask when connecting",
+      "fromIdentity": "From the identity",
+      "groupPassword": "Passwords are saved on each host, or asked when connecting.",
+      "chooseKeyForCertificate": "Choose the key your certificate was issued for, then add the certificate.",
+      "keyHasCertificate": "This key has a certificate, but the Key method doesn’t use it. Choose Certificate to log in with it.",
+      "noIdentities": "Create identities under Identities."
+    }
   },
   "groupEditor": {
     "newTitle": "New group",
@@ -235,7 +263,9 @@
       "serialNotFound": "Serial port not found. Is the device connected?",
       "serialPermission": "No permission to open the serial port (Linux: add your user to the 'dialout' group).",
       "serialBusy": "The serial port is in use by another program.",
-      "serialFailed": "Couldn't open the serial port: {{detail}}"
+      "serialFailed": "Couldn't open the serial port: {{detail}}",
+      "noCertificate": "{{detail}} is set to log in with a certificate, but its key has none. Add one in the host editor (Authentication → Certificate).",
+      "noCertificateKey": "{{detail}} is set to log in with a certificate, but no key is chosen. Choose the key in the host editor (Authentication → Certificate)."
     },
     "closePane": "Close pane"
   },

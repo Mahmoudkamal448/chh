@@ -135,7 +135,7 @@ export async function connectSsh(config: SshConnectConfig, cb: ConnectCallbacks,
     // key follows for servers that don't.
     const cert = config.certificate ? withCertificate(config.privateKey, config.certificate) : null;
     if (cert) steps.push({ type: 'key', key: cert });
-    steps.push({ type: 'key', key: config.privateKey });
+    if (config.usePlainKey !== false) steps.push({ type: 'key', key: config.privateKey });
   }
   const agent = config.useAgent ? resolveAgent(config.agent) : null;
   if (agent) steps.push({ type: 'agent', agent });

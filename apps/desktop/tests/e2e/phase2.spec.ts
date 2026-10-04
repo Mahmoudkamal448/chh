@@ -23,7 +23,7 @@ async function createHost(page: Page, opts: { label: string; port: number; usern
   const dlg = page.getByTestId('host-editor');
   await dlg.getByTestId('host-address').fill('127.0.0.1');
   await dlg.getByTestId('host-label').fill(opts.label);
-  await dlg.getByLabel('Port').fill(String(opts.port));
+  await dlg.getByLabel('Port', { exact: true }).fill(String(opts.port));
   if (opts.username) await dlg.getByLabel('Username').fill(opts.username);
   if (opts.password) await dlg.getByTestId('host-password').fill(opts.password);
   if (opts.key) await dlg.getByTestId('host-key').selectOption({ label: opts.key });

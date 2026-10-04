@@ -105,6 +105,39 @@ export function HostEditor() {
     }
   };
 
+  const passwordField = (
+    <Field label={t('hostEditor.password')} hint={t('hostEditor.passwordHint')}>
+      {(id, d) =>
+        hasPassword && form.password === undefined ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] text-muted">{t('hostEditor.passwordSaved')}</span>
+            <Button onClick={() => set({ password: '' })}>{t('hostEditor.passwordChange')}</Button>
+            <Button variant="ghost" onClick={() => set({ password: null })}>
+              {t('hostEditor.passwordRemove')}
+            </Button>
+          </div>
+        ) : form.password === null ? (
+          <div className="flex items-center gap-2">
+            <span className="text-[13px] text-muted">{t('hostEditor.passwordWillRemove')}</span>
+            <Button variant="ghost" onClick={() => set({ password: undefined })}>
+              {t('common.undo')}
+            </Button>
+          </div>
+        ) : (
+          <Input
+            id={id}
+            aria-describedby={d}
+            type="password"
+            autoComplete="off"
+            value={form.password ?? ''}
+            onChange={(e) => set({ password: e.target.value === '' && !hasPassword ? undefined : e.target.value })}
+            data-testid="host-password"
+          />
+        )
+      }
+    </Field>
+  );
+
   return (
     <Dialog
       open={open}
@@ -182,40 +215,15 @@ export function HostEditor() {
           </Field>
         </div>
 
-        <SettingsFields value={form.settings} inherited={inherited} onChange={(settings) => set({ settings })} showIdentity protocol={form.protocol} selfId={editingId} />
-
-        {(form.protocol === 'ssh' || form.protocol === 'mosh') && (
-        <Field label={t('hostEditor.password')} hint={t('hostEditor.passwordHint')}>
-          {(id, d) =>
-            hasPassword && form.password === undefined ? (
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] text-muted">{t('hostEditor.passwordSaved')}</span>
-                <Button onClick={() => set({ password: '' })}>{t('hostEditor.passwordChange')}</Button>
-                <Button variant="ghost" onClick={() => set({ password: null })}>
-                  {t('hostEditor.passwordRemove')}
-                </Button>
-              </div>
-            ) : form.password === null ? (
-              <div className="flex items-center gap-2">
-                <span className="text-[13px] text-muted">{t('hostEditor.passwordWillRemove')}</span>
-                <Button variant="ghost" onClick={() => set({ password: undefined })}>
-                  {t('common.undo')}
-                </Button>
-              </div>
-            ) : (
-              <Input
-                id={id}
-                aria-describedby={d}
-                type="password"
-                autoComplete="off"
-                value={form.password ?? ''}
-                onChange={(e) => set({ password: e.target.value === '' && !hasPassword ? undefined : e.target.value })}
-                data-testid="host-password"
-              />
-            )
-          }
-        </Field>
-        )}
+        <SettingsFields
+          value={form.settings}
+          inherited={inherited}
+          onChange={(settings) => set({ settings })}
+          showIdentity
+          protocol={form.protocol}
+          selfId={editingId}
+          passwordField={passwordField}
+        />
 
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('hostEditor.group')}>
