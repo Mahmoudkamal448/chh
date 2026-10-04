@@ -13,6 +13,7 @@
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --workspace-concurrency=1 test",
     "test:e2e": "pnpm --filter @chh/desktop test:e2e",
-    "rebuild:electron": "pnpm --filter @chh/desktop rebuild:electron"
+    "rebuild:electron": "pnpm --filter @chh/desktop rebuild:electron",
+    "postinstall": "node scripts/fix-node-pty.mjs"
   }
 }
