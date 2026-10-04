@@ -1,15 +1,17 @@
 import * as CM from '@radix-ui/react-context-menu';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { KeyRound, Star } from 'lucide-react';
+import { FolderOpen, KeyRound, Pencil, Star, TerminalSquare } from 'lucide-react';
 import { OsBadge } from '../../components/OsBadge';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Host } from '@chh/shared';
 import { cn } from '../../lib/cn';
 import { VaultBadge } from '../teams/VaultBadge';
+import { useTabs } from '../../stores/tabs-store';
 
 const ROW_HEIGHT = 48;
 
+const rowAction = 'flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-fg';
 const menuItem = 'flex h-7 cursor-default items-center rounded px-2 text-[13px] outline-none data-[highlighted]:bg-surface-2';
 
 export function HostList({
@@ -36,6 +38,17 @@ export function HostList({
 }) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
+  const panes = useTabs((s) => s.panes);
+  // Hosts with an open terminal: connected beats connecting.
+  const live = useMemo(() => {
+    const m = new Map<string, 'connected' | 'connecting'>();
+    for (const p of Object.values(panes)) {
+      if (p.source.kind !== 'host') continue;
+      if (p.status === 'ready') m.set(p.source.hostId, 'connected');
+      else if ((p.status === 'connecting' || p.status === 'authenticating') && !m.has(p.source.hostId)) m.set(p.source.hostId, 'connecting');
+    }
+    return m;
+  }, [panes]);
   const [active, setActive] = useState(0);
   const virtualizer = useVirtualizer({
     count: hosts.length,
@@ -122,12 +135,22 @@ export function HostList({
                   onDoubleClick={() => onConnect(h)}
                   onContextMenu={() => setActive(row.index)}
                   className={cn(
-                    'absolute left-0 right-0 flex items-center gap-3 border-b border-border/60 px-4',
+                    'group absolute left-0 right-0 flex items-center gap-3 border-b border-border/60 px-4',
                     row.index === active ? 'bg-surface-2' : 'hover:bg-surface-2/60',
                   )}
                   style={{ top: row.start, height: ROW_HEIGHT }}
                 >
-                  <OsBadge os={h.osHint} protocol={h.protocol} />
+                  <div className="relative shrink-0">
+                    <OsBadge os={h.osHint} protocol={h.protocol} />
+                    {live.has(h.id) && (
+                      <span
+                        className={cn('absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-surface', live.get(h.id) === 'connected' ? 'bg-success' : 'bg-warning-fg')}
+                        title={t(live.get(h.id) === 'connected' ? 'hosts.statusConnected' : 'hosts.statusConnecting')}
+                        aria-label={t(live.get(h.id) === 'connected' ? 'hosts.statusConnected' : 'hosts.statusConnecting')}
+                        data-testid="host-live"
+                      />
+                    )}
+                  </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       <span className="truncate font-medium">{h.label}</span>
@@ -142,12 +165,32 @@ export function HostList({
                       {group ? ` · ${group}` : ''}
                     </div>
                   </div>
-                  <div className="hidden max-w-[40%] shrink gap-1 overflow-hidden md:flex">
+                  <div className={cn('hidden max-w-[40%] shrink gap-1 overflow-hidden md:flex', 'group-hover:hidden', row.index === active && 'md:hidden')}>
                     {h.tags.slice(0, 4).map((tag) => (
                       <span key={tag} className="truncate rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">
                         {tag}
                       </span>
                     ))}
+                  </div>
+                  {/* Quick actions on hover (and for the selected row). */}
+                  <div className={cn('shrink-0 items-center gap-1', row.index === active ? 'flex' : 'hidden group-hover:flex')} onDoubleClick={(e) => e.stopPropagation()}>
+                    {h.protocol !== 'serial' && h.protocol !== 'telnet' && (
+                      <button type="button" className={rowAction} title={t('hosts.openFiles')} aria-label={t('hosts.openFiles')} onClick={() => onOpenFiles(h)} data-testid="host-action-files">
+                        <FolderOpen size={14} />
+                      </button>
+                    )}
+                    <button type="button" className={rowAction} title={`${t('common.edit')} (F2)`} aria-label={t('common.edit')} onClick={() => onEdit(h)} data-testid="host-action-edit">
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      className="flex h-7 items-center gap-1.5 rounded-md bg-accent px-2.5 text-[12px] font-medium text-accent-fg hover:opacity-90"
+                      title={`${t('hosts.connect')} (Enter)`}
+                      onClick={() => onConnect(h)}
+                      data-testid="host-action-connect"
+                    >
+                      <TerminalSquare size={13} /> {t('hosts.connect')}
+                    </button>
                   </div>
                 </div>
               </CM.Trigger>

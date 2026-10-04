@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { MessageChannelMain, utilityProcess, type UtilityProcess, type WebContents } from 'electron';
 import {
+  DEFAULT_HOST_SETTINGS,
   SESSION_PORT_CHANNEL,
   resolveSettings,
   type AppSettings,
@@ -230,6 +231,50 @@ export class SessionManager {
       jumps: [],
       proxy: null,
     };
+  }
+
+  /**
+   * Quick connect: SSH to user@host:port without a saved host. Uses the defaults (SSH agent, ~/.ssh keys,
+   * then a password prompt); a missing user name is asked for.
+   */
+  openQuick(wc: WebContents, opts: { host: string; port: number; username: string; cols: number; rows: number }): { sessionId: string } {
+    const label = `${opts.username ? `${opts.username}@` : ''}${opts.host}${opts.port !== 22 ? `:${opts.port}` : ''}`;
+    const { id, hostPort } = this.register(wc, { kind: 'ssh', hostId: null, label });
+    void (async () => {
+      let username = opts.username;
+      if (!username) {
+        const answer = await this.promptFromMain(id, { kind: 'username', title: opts.host, instructions: '', prompts: [{ prompt: 'Username', echo: true }], canSave: false, retry: false });
+        if (!answer?.[0] || !this.sessions.has(id)) return this.close(id);
+        username = answer[0];
+      }
+      const d = DEFAULT_HOST_SETTINGS;
+      const config: SshConnectConfig = {
+        host: opts.host,
+        port: opts.port,
+        username,
+        password: null,
+        privateKey: null,
+        useAgent: d.useAgent,
+        tryDefaultKeys: d.tryDefaultKeys,
+        keepAliveSec: d.keepAliveSec,
+        connectTimeoutSec: d.connectTimeoutSec,
+        label,
+        agent: this.deps.appSettings().sshAgent,
+        agentForward: false,
+        env: {},
+        envMethod: 'request',
+        jumps: [],
+        proxy: null,
+      };
+      this.send({ type: 'open-ssh', sessionId: id, label, cols: opts.cols, rows: opts.rows, config }, [hostPort]);
+      log.info({ sessionId: id }, 'quick connect opening');
+    })().catch((err) => {
+      log.error({ err: errInfo(err) }, 'quick connect failed');
+      const s = this.sessions.get(id);
+      if (s) emit(s.wc, 'session.status', { sessionId: id, status: 'error', message: 'session.error.internal' });
+      this.close(id);
+    });
+    return { sessionId: id };
   }
 
   /** Opens a terminal to a host using its protocol: SSH, Telnet or Mosh. */

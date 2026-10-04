@@ -4,7 +4,11 @@ import { paneIds, removePane, setRatio, splitPane, type LayoutNode, type SplitDi
 
 export const HOSTS_TAB = 'hosts';
 
-export type PaneSource = { kind: 'host'; hostId: string } | { kind: 'local'; shellId?: string };
+export type PaneSource =
+  | { kind: 'host'; hostId: string }
+  | { kind: 'local'; shellId?: string }
+  /** Quick connect: an unsaved user@host:port. */
+  | { kind: 'quick'; host: string; port: number; username: string };
 
 /** One terminal session shown in a pane. */
 export interface TermPane {
@@ -45,6 +49,8 @@ interface TabsState {
   activeId: string;
   openHost(hostId: string, title: string): Promise<void>;
   openLocal(shellId?: string): Promise<void>;
+  /** Quick connect to an unsaved host. */
+  openQuick(target: { host: string; port: number; username: string }): Promise<void>;
   openSftp(hostId: string, title: string): void;
   /** Shows the results of a multi-host run. */
   openRun(runId: string, title: string): void;
@@ -72,6 +78,10 @@ async function openSession(source: PaneSource, title: string): Promise<TermPane>
     const { sessionId } = await window.chh.sessions.openHost({ hostId: source.hostId, ...INITIAL });
     return { id: uid(), source, sessionId, title, status: 'connecting' };
   }
+  if (source.kind === 'quick') {
+    const { sessionId } = await window.chh.sessions.openQuick({ host: source.host, port: source.port, username: source.username, ...INITIAL });
+    return { id: uid(), source, sessionId, title, status: 'connecting' };
+  }
   const res = await window.chh.sessions.openLocal({ shellId: source.shellId, ...INITIAL });
   return { id: uid(), source, sessionId: res.sessionId, title: res.title, status: 'connecting' };
 }
@@ -96,6 +106,10 @@ export const useTabs = create<TabsState>((set, get) => {
     },
     async openLocal(shellId) {
       addTab(await openSession({ kind: 'local', shellId }, ''));
+    },
+    async openQuick(target) {
+      const title = `${target.username ? `${target.username}@` : ''}${target.host}${target.port !== 22 ? `:${target.port}` : ''}`;
+      addTab(await openSession({ kind: 'quick', ...target }, title));
     },
     openRun(runId, title) {
       const tab: RunTab = { id: uid(), kind: 'run', runId, title };

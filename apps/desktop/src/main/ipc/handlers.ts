@@ -234,6 +234,7 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
     },
     sessions: {
       openHost: (input, e) => d.sessions.openHost(e.sender, input),
+      openQuick: (input, e) => d.sessions.openQuick(e.sender, input),
       openLocal: (input, e) => d.sessions.openLocal(e.sender, input),
       close: ({ sessionId }) => d.sessions.close(sessionId),
       localShells: () => detectShells(),

@@ -60,7 +60,26 @@
     "deleteTitle": "Delete host?",
     "deleteMessage": "“{{label}}” will be deleted. This can't be undone.",
     "openFiles": "Open files (SFTP)",
-    "importExport": "Import / export"
+    "importExport": "Import / export",
+    "statusConnected": "Connected",
+    "statusConnecting": "Connecting"
+  },
+  "quick": {
+    "label": "Quick connect",
+    "placeholder": "user@host:port, or paste an ssh command",
+    "connect": "Connect",
+    "invalid": "Type a host, e.g. deploy@10.0.0.5 or deploy@web-1:2222."
+  },
+  "welcome": {
+    "title": "Welcome to chh",
+    "subtitle": "Save the servers you connect to, or connect right away with Quick connect above.",
+    "newHost": "Add a host",
+    "newHostBody": "Address, how to log in (password, key, certificate, agent…), group and tags.",
+    "import": "Import from ~/.ssh/config",
+    "importBody": "Bring in your existing hosts, keys and port forwards in one go.",
+    "keys": "Set up keys",
+    "keysBody": "Generate a key, or import one (OpenSSH, PEM, PuTTY) with its certificate.",
+    "quickHint": "Tip: press Enter on a host to connect, F2 to edit it."
   },
   "groups": {
     "deleteTitle": "Delete group?",
@@ -302,7 +321,9 @@
     "snippets": "Snippets",
     "history": "History",
     "forwards": "Port forwarding",
-    "teams": "Teams"
+    "teams": "Teams",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar"
   },
   "keys": {
     "title": "Keys",
