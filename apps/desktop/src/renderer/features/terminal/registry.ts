@@ -27,7 +27,7 @@ export function writeToPane(paneId: string, data: string): boolean {
 
 /** In test mode, expose a read-only accessor so E2E tests can read terminal text (WebGL draws to canvas). */
 export function installTestHooks(): void {
-  (window as unknown as { __cyTest: unknown }).__cyTest = {
+  (window as unknown as { __chhTest: unknown }).__chhTest = {
     terminalText(index = -1): string {
       const all = [...terminals.values()];
       const t = index < 0 ? all[all.length + index] : all[index];

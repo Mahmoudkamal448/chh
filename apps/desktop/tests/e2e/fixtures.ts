@@ -48,11 +48,11 @@ export function cleanup(dir: string): void {
 
 /** Full text of the most recently opened terminal (test hook installed in test mode). */
 export async function terminalText(page: Page, index = -1): Promise<string> {
-  return page.evaluate((i) => (window as unknown as { __cyTest: { terminalText(i: number): string } }).__cyTest.terminalText(i), index);
+  return page.evaluate((i) => (window as unknown as { __chhTest: { terminalText(i: number): string } }).__chhTest.terminalText(i), index);
 }
 
 export async function paneCount(page: Page): Promise<number> {
-  return page.evaluate(() => (window as unknown as { __cyTest: { paneCount(): number } }).__cyTest.paneCount());
+  return page.evaluate(() => (window as unknown as { __chhTest: { paneCount(): number } }).__chhTest.paneCount());
 }
 
 export async function expectTerminalToContain(page: Page, text: string, timeout = 15_000, index = -1): Promise<void> {

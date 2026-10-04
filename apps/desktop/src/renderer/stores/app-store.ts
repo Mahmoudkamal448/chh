@@ -3,9 +3,9 @@ import { DEFAULT_APP_SETTINGS, type AppSettings } from '@chh/shared';
 
 type Info = Awaited<ReturnType<typeof window.chh.app.info>>;
 
-export type SettingsSection = 'general' | 'terminal' | 'shortcuts' | 'security' | 'sync';
+export type SettingsSection = 'general' | 'terminal' | 'shortcuts' | 'security' | 'sync' | 'updates';
 
-export type HomeSection = 'hosts' | 'keys' | 'identities' | 'knownHosts' | 'snippets' | 'history' | 'forwards';
+export type HomeSection = 'hosts' | 'keys' | 'identities' | 'knownHosts' | 'snippets' | 'history' | 'forwards' | 'teams';
 
 interface AppState {
   info: Info | null;

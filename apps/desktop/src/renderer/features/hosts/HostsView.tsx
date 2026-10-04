@@ -9,6 +9,8 @@ import { refreshAll, useHosts } from '../../stores/hosts-store';
 import { useTabs } from '../../stores/tabs-store';
 import { CloudImportDialog } from '../cloud/CloudImportDialog';
 import { SshImportDialog } from '../ssh-config/SshImportDialog';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { useTeams } from '../../stores/teams-store';
 import { HostList } from './HostList';
 import { Sidebar } from './Sidebar';
 
@@ -27,6 +29,8 @@ export function HostsView() {
   const openHost = useTabs((s) => s.openHost);
   const openSftp = useTabs((s) => s.openSftp);
   const [deleting, setDeleting] = useState<Host | null>(null);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
   const [importing, setImporting] = useState<'default' | 'pick' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [cloud, setCloud] = useState<'aws' | 'do' | null>(null);
@@ -166,10 +170,12 @@ export function HostsView() {
               await refreshAll();
             }}
             onDelete={(h) => setDeleting(h)}
+            onMove={canMove ? (h) => setMoving({ kind: 'host', ids: [h.id], label: h.label, vaultId: h.vaultId }) : undefined}
           />
         )}
       </main>
 
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refreshAll()} />
       <CloudImportDialog provider={cloud} onClose={() => setCloud(null)} />
       <SshImportDialog open={!!importing} pickFile={importing === 'pick'} onClose={() => setImporting(null)} />
       <ConfirmDialog

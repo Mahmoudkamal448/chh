@@ -1,5 +1,9 @@
 import * as DM from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, Copy, Download, KeyRound, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, Copy, Download, FolderInput, KeyRound, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { VaultBadge } from '../teams/VaultBadge';
+import { useTeams } from '../../stores/teams-store';
+
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Key } from '@chh/shared';
@@ -56,6 +60,8 @@ export function KeysView() {
   const { t } = useTranslation();
   const keys = useVault((s) => s.keys);
   const refresh = useVault((s) => s.refresh);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [importMode, setImportMode] = useState<'file' | 'paste' | null>(null);
@@ -134,7 +140,10 @@ export function KeysView() {
                   <KeyRound size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{k.label}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{k.label}</span>
+                    <VaultBadge vaultId={k.vaultId} />
+                  </div>
                   <div className="truncate font-mono text-[11px] text-muted">{k.fingerprint}</div>
                 </div>
                 <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{keyKind(k.type, k.bits)}</span>
@@ -155,6 +164,11 @@ export function KeysView() {
                   <IconButton label={t('keys.rename')} onClick={() => setRenaming(selected)}>
                     <Pencil size={14} />
                   </IconButton>
+                  {canMove && (
+                    <IconButton label={t('teams.move.menu')} onClick={() => setMoving({ kind: 'key', ids: [selected.id], label: selected.label, vaultId: selected.vaultId })}>
+                      <FolderInput size={14} />
+                    </IconButton>
+                  )}
                   <IconButton label={t('keys.exportPrivate')} onClick={() => setExporting(selected)}>
                     <Download size={14} />
                   </IconButton>
@@ -229,6 +243,7 @@ export function KeysView() {
           await refresh();
         }}
       />
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refresh()} />
       <ConfirmDialog
         open={!!deleting}
         title={t('keys.deleteTitle')}

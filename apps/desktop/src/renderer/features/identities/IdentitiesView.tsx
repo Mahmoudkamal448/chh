@@ -1,4 +1,8 @@
-import { Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { FolderInput, Pencil, Plus, Trash2, UserRound } from 'lucide-react';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { VaultBadge } from '../teams/VaultBadge';
+import { useTeams } from '../../stores/teams-store';
+
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { Identity } from '@chh/shared';
@@ -118,6 +122,8 @@ export function IdentitiesView() {
   const refresh = useVault((s) => s.refresh);
   const [editing, setEditing] = useState<Identity | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Identity | null>(null);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
 
   useEffect(() => {
     void refresh();
@@ -147,7 +153,10 @@ export function IdentitiesView() {
                 <UserRound size={16} />
               </div>
               <div className="min-w-0 flex-1">
-                <div className="truncate font-medium">{i.label}</div>
+                <div className="flex items-center gap-2">
+                  <span className="truncate font-medium">{i.label}</span>
+                  <VaultBadge vaultId={i.vaultId} />
+                </div>
                 <div className="truncate text-[12px] text-muted">
                   {[i.username || t('identities.noUsername'), i.hasPassword ? t('identities.withPassword') : null, keyLabel(i.keyId) ? t('identities.withKey', { key: keyLabel(i.keyId) }) : null]
                     .filter(Boolean)
@@ -157,6 +166,11 @@ export function IdentitiesView() {
               <IconButton label={t('common.edit')} onClick={() => setEditing(i)}>
                 <Pencil size={14} />
               </IconButton>
+              {canMove && (
+                <IconButton label={t('teams.move.menu')} onClick={() => setMoving({ kind: 'identity', ids: [i.id], label: i.label, vaultId: i.vaultId })}>
+                  <FolderInput size={14} />
+                </IconButton>
+              )}
               <IconButton label={t('common.delete')} onClick={() => setDeleting(i)}>
                 <Trash2 size={14} />
               </IconButton>
@@ -165,6 +179,7 @@ export function IdentitiesView() {
         </ul>
       )}
       <IdentityEditor editing={editing} onClose={() => setEditing(null)} />
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refresh()} />
       <ConfirmDialog
         open={!!deleting}
         title={t('identities.deleteTitle')}

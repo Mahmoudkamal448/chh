@@ -1,4 +1,8 @@
-import { Code2, Pencil, Play, Plus, Server, Trash2 } from 'lucide-react';
+import { Code2, FolderInput, Pencil, Play, Plus, Server, Trash2 } from 'lucide-react';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { VaultBadge } from '../teams/VaultBadge';
+import { useTeams } from '../../stores/teams-store';
+
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { snippetVariables, type Snippet } from '@chh/shared';
@@ -101,6 +105,8 @@ export function SnippetsView() {
   const tabs = useTabs((s) => s.tabs);
   const [editing, setEditing] = useState<Snippet | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Snippet | null>(null);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
   const [asking, setAsking] = useState<Snippet | null>(null);
   const [query, setQuery] = useState('');
   /** Multi-host run: pick hosts first, then (if needed) variables. */
@@ -150,6 +156,7 @@ export function SnippetsView() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{s.label}</span>
+                  <VaultBadge vaultId={s.vaultId} />
                   {s.tags.map((tag) => (
                     <span key={tag} className="rounded bg-surface-2 px-1.5 text-[11px] text-muted">
                       {tag}
@@ -173,6 +180,11 @@ export function SnippetsView() {
               <IconButton label={t('common.edit')} onClick={() => setEditing(s)}>
                 <Pencil size={14} />
               </IconButton>
+              {canMove && (
+                <IconButton label={t('teams.move.menu')} onClick={() => setMoving({ kind: 'snippet', ids: [s.id], label: s.label, vaultId: s.vaultId })}>
+                  <FolderInput size={14} />
+                </IconButton>
+              )}
               <IconButton label={t('common.delete')} onClick={() => setDeleting(s)}>
                 <Trash2 size={14} />
               </IconButton>
@@ -215,6 +227,7 @@ export function SnippetsView() {
           setAsking(null);
         }}
       />
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refresh()} />
       <ConfirmDialog
         open={!!deleting}
         title={t('snippets.deleteTitle')}

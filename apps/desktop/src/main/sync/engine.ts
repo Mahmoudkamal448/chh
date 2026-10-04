@@ -654,7 +654,12 @@ export class SyncEngine {
         this.wsRetry = 0;
         this.schedule(0);
       } else if (msg.type === 'changed' && this.deps.vault.has(msg.vaultId) && msg.seq > this.cursor(msg.vaultId)) this.schedule(150);
-      else if (msg.type === 'changed' || msg.type === 'teams') this.schedule(150);
+      else if (msg.type === 'changed') this.schedule(150);
+      else if (msg.type === 'teams') {
+        // Invites and membership changes: the UI re-reads them; the sync applies key changes.
+        this.deps.onTeamsChanged?.();
+        this.schedule(150);
+      }
     };
     ws.onclose = (ev) => {
       if (ping) clearInterval(ping);

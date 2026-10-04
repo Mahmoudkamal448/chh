@@ -5,6 +5,7 @@ import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
+import { useTeams } from '../../stores/teams-store';
 import { GroupOptions, SettingsFields } from './SettingsFields';
 
 interface FormState {
@@ -31,6 +32,8 @@ export function HostEditor() {
   const editingId = open ? editor.id : null;
   const [form, setForm] = useState<FormState>(EMPTY);
   const [hasPassword, setHasPassword] = useState(false);
+  const vaults = useTeams((s) => s.vaults);
+  const [vaultId, setVaultId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [ports, setPorts] = useState<Array<{ path: string; manufacturer: string | null; serialNumber: string | null }>>([]);
@@ -44,6 +47,7 @@ export function HostEditor() {
     if (!editingId) {
       setForm({ ...EMPTY, groupId: editor.groupId ?? '' });
       setHasPassword(false);
+      setVaultId('');
       return;
     }
     void window.chh.hosts.get({ id: editingId }).then((h) => {
@@ -59,6 +63,7 @@ export function HostEditor() {
         password: undefined,
       });
       setHasPassword(h.hasPassword);
+      setVaultId(h.vaultId);
     });
   }, [open, editingId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -90,7 +95,7 @@ export function HostEditor() {
     };
     try {
       if (editingId) await window.chh.hosts.update({ id: editingId, patch: payload });
-      else await window.chh.hosts.create(payload);
+      else await window.chh.hosts.create({ ...payload, vaultId: vaultId || undefined });
       await refreshAll();
       close();
     } catch (err) {
@@ -117,6 +122,26 @@ export function HostEditor() {
       }
     >
       <form onSubmit={save} className="flex flex-col gap-4">
+        {editingId && vaults.some((v) => v.id === vaultId && !v.writable) && (
+          <p role="status" className="rounded-md bg-surface-2 px-3 py-2 text-[12px] text-muted">
+            {t('teams.readOnlyHost')}
+          </p>
+        )}
+        {!editingId && vaults.filter((v) => v.writable).length > 1 && (
+          <Field label={t('teams.vaultField')} hint={t('teams.vaultFieldHint')}>
+            {(id, d) => (
+              <Select id={id} aria-describedby={d} value={vaultId} onChange={(e) => setVaultId(e.target.value)} data-testid="host-vault">
+                {vaults
+                  .filter((v) => v.writable)
+                  .map((v) => (
+                    <option key={v.id} value={v.kind === 'personal' ? '' : v.id}>
+                      {v.kind === 'personal' ? t('teams.personalVault') : v.name || t('teams.unnamed')}
+                    </option>
+                  ))}
+              </Select>
+            )}
+          </Field>
+        )}
         <Field label={t('hostEditor.protocol')} hint={form.protocol !== 'ssh' ? t(`hostEditor.protocolHint.${form.protocol}`) : undefined}>
           {(id, d) => (
             <Select id={id} aria-describedby={d} value={form.protocol} onChange={(e) => set({ protocol: e.target.value as Protocol })} data-testid="host-protocol">

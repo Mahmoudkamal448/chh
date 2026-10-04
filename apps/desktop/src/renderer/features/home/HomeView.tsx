@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Code2, History, KeyRound, Server, ShieldCheck, UserRound } from 'lucide-react';
+import { ArrowLeftRight, Code2, History, KeyRound, Server, ShieldCheck, UserRound, Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '../../lib/cn';
 import { useApp, type HomeSection } from '../../stores/app-store';
@@ -9,6 +9,8 @@ import { SnippetsView } from '../snippets/SnippetsView';
 import { IdentitiesView } from '../identities/IdentitiesView';
 import { KeysView } from '../keys/KeysView';
 import { KnownHostsView } from '../known-hosts/KnownHostsView';
+import { TeamsView } from '../teams/TeamsView';
+import { useTeams } from '../../stores/teams-store';
 
 const SECTIONS: Array<{ id: HomeSection; icon: typeof Server }> = [
   { id: 'hosts', icon: Server },
@@ -18,6 +20,7 @@ const SECTIONS: Array<{ id: HomeSection; icon: typeof Server }> = [
   { id: 'keys', icon: KeyRound },
   { id: 'identities', icon: UserRound },
   { id: 'knownHosts', icon: ShieldCheck },
+  { id: 'teams', icon: Users },
 ];
 
 /** The home tab: a narrow navigation rail plus the selected section. */
@@ -25,6 +28,7 @@ export function HomeView() {
   const { t } = useTranslation();
   const section = useApp((s) => s.section);
   const setSection = useApp((s) => s.setSection);
+  const invites = useTeams((s) => s.invites.length);
   return (
     <div className="flex h-full min-h-0">
       <nav aria-label={t('nav.label')} className="flex w-14 shrink-0 flex-col items-center gap-1 border-r border-border bg-surface py-2">
@@ -38,11 +42,12 @@ export function HomeView() {
             onClick={() => setSection(id)}
             data-testid={`nav-${id}`}
             className={cn(
-              'flex h-10 w-10 items-center justify-center rounded-lg',
+              'relative flex h-10 w-10 items-center justify-center rounded-lg',
               section === id ? 'bg-accent text-accent-fg' : 'text-muted hover:bg-surface-2 hover:text-fg',
             )}
           >
             <Icon size={18} />
+            {id === 'teams' && invites > 0 && <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" aria-label={t('teams.invitesTitle')} />}
           </button>
         ))}
       </nav>
@@ -54,6 +59,7 @@ export function HomeView() {
         {section === 'snippets' && <SnippetsView />}
         {section === 'history' && <HistoryView />}
         {section === 'forwards' && <ForwardsView />}
+        {section === 'teams' && <TeamsView />}
       </div>
     </div>
   );
