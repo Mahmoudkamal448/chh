@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { DELETED_FIELD, Hlc, applyLocalPatch, incrementVv, type Replica } from '@cy-ssh/sync-core';
 import type { Db } from './database';
 
-export type ItemType = 'host' | 'group' | 'known_host';
+export type ItemType = 'host' | 'group' | 'known_host' | 'key' | 'identity';
 
 export interface StoredItem<F> {
   id: string;

@@ -1,5 +1,5 @@
 import * as DM from '@radix-ui/react-context-menu';
-import { Circle, Home, Plus, Terminal as TermIcon, X } from 'lucide-react';
+import { Circle, FolderOpen, Home, Plus, Terminal as TermIcon, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LocalShell } from '@cy-ssh/shared';
@@ -49,7 +49,11 @@ export function TabBar() {
             onClick={() => activate(tab.id)}
             onAuxClick={(e) => e.button === 1 && close(tab.id)}
           >
-            <Circle size={8} className={cn('shrink-0 fill-current', statusColor[tab.status])} aria-label={t(`session.status.${tab.status}`)} />
+            {tab.kind === 'sftp' ? (
+              <FolderOpen size={13} className="shrink-0 text-muted" aria-label={t('tabs.files')} />
+            ) : (
+              <Circle size={8} className={cn('shrink-0 fill-current', statusColor[tab.status])} aria-label={t(`session.status.${tab.status}`)} />
+            )}
             <span className="truncate">{tab.title}</span>
           </button>
           <IconButton label={t('tabs.close')} className="h-5 w-5 opacity-60 hover:opacity-100" onClick={() => close(tab.id)}>

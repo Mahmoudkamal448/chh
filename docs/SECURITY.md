@@ -1,6 +1,6 @@
 # Security
 
-This document describes how cy-ssh protects data **as of Phase 1**, and what later phases add. The full
+This document describes how cy-ssh protects data **as of Phase 2**, and what later phases add. The full
 cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](ARCHITECTURE.md#5-encryption-design).
 
 ## What we protect
@@ -11,7 +11,9 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
 | Saved passwords | Inside item JSON in `cy-ssh.db` | **Also** sealed with the vault key (XChaCha20-Poly1305) and bound to the item ID and field name |
 | Database key | `db.key` | Wrapped by the OS keychain via Electron `safeStorage` (Keychain / DPAPI / libsecret) |
 | Vault key | `vaults` table | Wrapped by a subkey derived from the database key, with the vault ID as associated data |
-| Private keys in `~/.ssh` | Your filesystem | Read on demand by the session host and never copied into the database (key import arrives in Phase 2) |
+| Keys in the keychain | Inside item JSON in `cy-ssh.db` | The private key is stored as an **unencrypted OpenSSH key sealed with the vault key** (on top of whole-database encryption). The import passphrase is used once and isn't stored |
+| Identity passwords | Inside item JSON | Sealed with the vault key, like host passwords |
+| Private keys in `~/.ssh` | Your filesystem | Read on demand by the session host and never copied into the database unless you import them |
 
 ## Process isolation
 
@@ -36,6 +38,23 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
   the known type.
 - Keys are stored per `host` / `[host]:port`, so non-default ports are tracked separately (OpenSSH convention).
 
+## Keys
+
+- The renderer only sees public data: public key line, fingerprint, type and label. Private keys are decrypted
+  in the main process just before connecting and passed to the session host for that connection.
+- When you import from a file, main reads it after a native file dialog. The file content never passes
+  through the renderer. (Pasted keys necessarily do, since you typed or pasted them there.)
+- Exports go through a native save dialog with mode `0600`. The app warns when you export without a
+  passphrase. With a passphrase, it uses aes256-ctr + bcrypt-pbkdf (16 rounds), the same as `ssh-keygen`.
+- PuTTY files are MAC-verified before use, so a modified `.ppk` is rejected.
+- DSA keys aren't supported (they're obsolete and insecure).
+
+## File transfers
+
+- File operations run in the session host, against the local disk or an SFTP session that belongs to the
+  requesting window. Main rejects calls that name another window's session.
+- A cancelled transfer deletes the partially written destination file.
+
 ## Logging
 
 - Logs are written to `logs/main.log` with pino.
@@ -55,8 +74,8 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
 3. **Key material in memory:** libsodium's guarded memory (`sodium_malloc`) can't be used inside Electron (its V8
    memory cage forbids external buffers). Keys live in ordinary buffers and are zeroed (`sodium_memzero`) when they
    are no longer needed. Strings passed to `ssh2` (passwords) can't be wiped by JavaScript.
-4. **Encrypted-key passphrases:** passphrase-protected `~/.ssh` keys aren't prompted for yet. They're skipped, and
-   the system agent covers them. Phase 2's key manager adds passphrase prompts.
+4. **Default-key passphrases** are asked for on each connection (they aren't cached). Import the key into the
+   keychain to avoid repeated prompts.
 5. **No post-quantum key exchange:** `ssh2` doesn't implement `mlkem768x25519-sha256` or `sntrup761x25519`. The
    default KEX is `curve25519-sha256` (see risk R6 in the architecture doc).
 

@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it, vi } from 'vitest';
 import { FlowControl, HIGH_WATER, LOW_WATER } from '../../src/session-host/flow';
 import { fingerprintSha256, keyTypeOf } from '../../src/session-host/host-key';
-import { describeSshError } from '../../src/session-host/transports/ssh';
+import { describeSshError } from '../../src/session-host/ssh/connect';
 
 function sshString(s: string): Buffer {
   const len = Buffer.alloc(4);

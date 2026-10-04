@@ -6,10 +6,10 @@ Electron + TypeScript codebase.
 Every feature is free for everyone: there are no plans, trials, device limits or license checks. Sync (coming in
 Phase 4) is optional and self-hostable, and the app works fully offline without an account.
 
-> **Status: Phase 1 of 6 complete.** The host manager, SSH and local terminals, and tabs work today. See the
-> [roadmap](#roadmap) for what comes next.
+> **Status: Phase 2 of 6 complete.** Host manager, SSH and local terminals, tabs, keys, identities, known hosts
+> and a dual-pane SFTP browser work today. See the [roadmap](#roadmap) for what comes next.
 
-## Features (Phase 1)
+## Features
 
 - **Host manager:** create, edit, duplicate and delete hosts. Organize them with nested **groups** (settings are
   inherited down the tree), **tags** and **favorites**. Search instantly, and the list stays smooth with 10,000+ hosts.
@@ -17,6 +17,14 @@ Phase 4) is optional and self-hostable, and the app works fully offline without 
   keyboard-interactive login or a password prompt (with an optional "remember password" box).
 - **Host key verification:** you confirm a host's fingerprint the first time you connect. If the key ever changes,
   you get a **loud warning** that shows the previous and new fingerprints.
+- **Keys:** generate ED25519/ECDSA/RSA keys; import OpenSSH, PEM/PKCS#8 and **PuTTY .ppk (v2 and v3)**, including
+  encrypted ones; copy the public key; export the private key, optionally re-encrypted with a passphrase.
+- **Identities:** reusable username + password/key bundles that you can link to hosts or whole groups.
+- **Known hosts manager:** review and remove trusted host keys, and import `~/.ssh/known_hosts` (including hashed
+  entries).
+- **SFTP file browser:** dual pane (this computer or any host on either side), drag and drop between panes and
+  from your desktop, recursive transfers with progress, cancel and conflict handling, plus rename, delete, new
+  folder and a permissions editor.
 - **Local terminals:** bash, zsh, fish (macOS/Linux); PowerShell 7, Windows PowerShell, cmd, WSL and Git Bash (Windows).
 - **Tabs:** with connection status, reconnect, and a find-in-terminal bar.
 - **Per-host terminal appearance:** 12 built-in color schemes, plus font family, font size, cursor and scrollback.
@@ -73,6 +81,7 @@ apps/desktop/          Electron app (main process, session host, preload, React 
 packages/shared/       Models, zod schemas, typed IPC contract, i18n strings
 packages/sync-core/    Hybrid logical clocks, version vectors, field-level merge
 packages/vault-crypto/ libsodium wrappers: XChaCha20-Poly1305, KDF, key wrapping
+packages/key-formats/  OpenSSH / PEM / PKCS#8 / PuTTY key parsing and writing, known_hosts
 docs/                  Architecture, development, security and phase notes
 ```
 
@@ -81,15 +90,15 @@ docs/                  Architecture, development, security and phase notes
 - [Architecture](docs/ARCHITECTURE.md): process model, IPC, data model, encryption and sync design
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today
-- [Phase 1 notes](docs/PHASE-1.md): what was built, files, how to test, platform differences
+- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md) (what was built, files, how to test, platform differences)
 
 ## Roadmap
 
 | Phase | Scope | Status |
 |---|---|---|
 | 1 | App shell, host manager, SSH + local terminal, tabs | ✅ Done |
-| 2 | Keys, identities, known-hosts manager, SFTP dual-pane browser | Next |
-| 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | |
+| 2 | Keys, identities, known-hosts manager, SFTP dual-pane browser | ✅ Done |
+| 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | Next |
 | 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | |
 | 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | |
 | 6 | Shared team vault + audit log, signed installers, auto-update | |

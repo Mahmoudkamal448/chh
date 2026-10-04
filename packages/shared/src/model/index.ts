@@ -5,3 +5,6 @@ export * from './group';
 export * from './known-host';
 export * from './app-settings';
 export * from './session';
+export * from './key';
+export * from './identity';
+export * from './files';

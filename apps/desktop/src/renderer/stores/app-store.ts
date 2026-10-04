@@ -3,8 +3,12 @@ import { DEFAULT_APP_SETTINGS, type AppSettings } from '@cy-ssh/shared';
 
 type Info = Awaited<ReturnType<typeof window.cy.app.info>>;
 
+export type HomeSection = 'hosts' | 'keys' | 'identities' | 'knownHosts';
+
 interface AppState {
   info: Info | null;
+  section: HomeSection;
+  setSection(section: HomeSection): void;
   settings: AppSettings;
   resolvedTheme: 'light' | 'dark';
   settingsOpen: boolean;
@@ -22,8 +26,10 @@ function resolveTheme(s: AppSettings): 'light' | 'dark' {
   return s.uiTheme;
 }
 
-export const useApp = create<AppState>((set, get) => ({
+export const useApp = create<AppState>((set) => ({
   info: null,
+  section: 'hosts',
+  setSection: (section) => set({ section }),
   settings: DEFAULT_APP_SETTINGS,
   resolvedTheme: media.matches ? 'dark' : 'light',
   settingsOpen: false,

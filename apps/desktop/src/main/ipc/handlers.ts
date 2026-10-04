@@ -1,6 +1,14 @@
-import { app, nativeTheme, shell } from 'electron';
+import { randomUUID } from 'node:crypto';
+import { readFile, stat, writeFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import { app, BrowserWindow, dialog, nativeTheme, shell, type WebContents } from 'electron';
+import { KeyFormatError, isEncrypted } from '@cy-ssh/key-formats';
 import type { GroupsRepo } from '../db/groups-repo';
 import type { HostsRepo } from '../db/hosts-repo';
+import type { IdentitiesRepo } from '../db/identities-repo';
+import type { KeysRepo } from '../db/keys-repo';
+import type { KnownHostsRepo } from '../db/known-hosts-repo';
 import type { SettingsRepo } from '../db/settings-repo';
 import type { KeystoreKind } from '../secrets/local-key';
 import type { SessionManager } from '../sessions';
@@ -13,10 +21,40 @@ export interface HandlerDeps {
   groups: GroupsRepo;
   settings: SettingsRepo;
   sessions: SessionManager;
+  keys: KeysRepo;
+  identities: IdentitiesRepo;
+  knownHosts: KnownHostsRepo;
   keystore: KeystoreKind;
 }
 
+const MAX_KEY_FILE = 64 * 1024;
+const MAX_KNOWN_HOSTS_FILE = 16 * 1024 * 1024;
+const STAGE_TTL_MS = 10 * 60 * 1000;
+
+/** Key files picked in a dialog are kept here (main process only) until imported. */
+const staged = new Map<string, { text: string; fileName: string; expires: number }>();
+
+function keyError(err: unknown): never {
+  if (err instanceof KeyFormatError) throw new AppError(`key_${err.code}`, `keys.error.${err.code}`);
+  throw err;
+}
+
+function windowOf(wc: WebContents) {
+  return BrowserWindow.fromWebContents(wc) ?? undefined;
+}
+
+async function readLimited(path: string, max: number): Promise<string> {
+  const s = await stat(path);
+  if (s.size > max) throw new AppError('too_large', 'errors.fileTooLarge');
+  return readFile(path, 'utf8');
+}
+
 export function createHandlers(d: HandlerDeps): Handlers {
+  const rpc = (wc: WebContents, method: Parameters<SessionManager['rpc']>[0], params: Record<string, unknown>) => {
+    if (typeof params.endpoint === 'string') d.sessions.assertEndpoint(wc, params.endpoint);
+    return d.sessions.rpc(method, params, wc);
+  };
+
   return {
     app: {
       info: () => ({
@@ -52,6 +90,75 @@ export function createHandlers(d: HandlerDeps): Handlers {
       update: ({ id, patch }) => d.groups.update(id, patch),
       remove: ({ id }) => d.groups.remove(id),
     },
+    keys: {
+      list: () => d.keys.list(),
+      generate: (input) => d.keys.generate(input),
+      importText: ({ text, label, passphrase }) => d.keys.importText(text, label, passphrase).catch(keyError),
+      pickFile: async (_input, e) => {
+        const res = await dialog.showOpenDialog(windowOf(e.sender)!, {
+          title: 'Import private key',
+          defaultPath: join(homedir(), '.ssh'),
+          properties: ['openFile', 'showHiddenFiles'],
+        });
+        const path = res.filePaths[0];
+        if (res.canceled || !path) return null;
+        const text = await readLimited(path, MAX_KEY_FILE);
+        let encrypted: boolean;
+        try {
+          encrypted = isEncrypted(text);
+        } catch (err) {
+          keyError(err);
+        }
+        const now = Date.now();
+        for (const [k, v] of staged) if (v.expires < now) staged.delete(k);
+        const token = randomUUID();
+        const fileName = path.split(/[\\/]/).pop() ?? 'key';
+        staged.set(token, { text, fileName, expires: now + STAGE_TTL_MS });
+        return { token, fileName, encrypted };
+      },
+      importStaged: async ({ token, label, passphrase }) => {
+        const s = staged.get(token);
+        if (!s) throw new AppError('expired', 'keys.error.expired');
+        const result = await d.keys.importText(s.text, label || s.fileName, passphrase).catch(keyError);
+        if (result.status === 'imported' || result.status === 'duplicate') staged.delete(token);
+        return result;
+      },
+      rename: ({ id, label }) => d.keys.rename(id, label),
+      remove: ({ ids }) => d.keys.remove(ids),
+      exportPrivate: async ({ id, passphrase }, e) => {
+        const key = d.keys.get(id);
+        const res = await dialog.showSaveDialog(windowOf(e.sender)!, {
+          title: 'Export private key',
+          defaultPath: join(homedir(), key.label.replace(/[^\w.-]+/g, '_') || 'id_key'),
+          showsTagField: false,
+        });
+        if (res.canceled || !res.filePath) return { saved: false };
+        await writeFile(res.filePath, await d.keys.exportPrivate(id, passphrase), { mode: 0o600 });
+        await writeFile(`${res.filePath}.pub`, `${key.publicKey}\n`, { mode: 0o644 });
+        return { saved: true };
+      },
+      usage: ({ id }) => d.keys.usage(id),
+    },
+    identities: {
+      list: () => d.identities.list(),
+      create: (input) => d.identities.create(input),
+      update: ({ id, patch }) => d.identities.update(id, patch),
+      remove: ({ ids }) => d.identities.remove(ids),
+    },
+    knownHosts: {
+      list: ({ query }) => d.knownHosts.list(query),
+      remove: ({ ids }) => d.knownHosts.remove(ids),
+      importFile: async (_input, e) => {
+        const res = await dialog.showOpenDialog(windowOf(e.sender)!, {
+          title: 'Import known_hosts',
+          defaultPath: join(homedir(), '.ssh', 'known_hosts'),
+          properties: ['openFile', 'showHiddenFiles'],
+        });
+        const path = res.filePaths[0];
+        if (res.canceled || !path) return null;
+        return d.knownHosts.importText(await readLimited(path, MAX_KNOWN_HOSTS_FILE));
+      },
+    },
     sessions: {
       openSsh: (input, e) => d.sessions.openSsh(e.sender, input),
       openLocal: (input, e) => d.sessions.openLocal(e.sender, input),
@@ -59,6 +166,33 @@ export function createHandlers(d: HandlerDeps): Handlers {
       localShells: () => detectShells(),
       respondHostKey: ({ promptId, decision }) => d.sessions.respondHostKey(promptId, decision),
       respondAuth: ({ promptId, responses, save }) => d.sessions.respondAuth(promptId, responses, save),
+    },
+    sftp: {
+      open: ({ hostId }, e) => d.sessions.openSftp(e.sender, hostId),
+      close: ({ sessionId }) => d.sessions.close(sessionId),
+      home: async (p, e) => (await rpc(e.sender, 'fs.home', p)) as { path: string; separator: '/' | '\\' },
+      list: async (p, e) => (await rpc(e.sender, 'fs.list', p)) as never,
+      mkdir: async (p, e) => {
+        await rpc(e.sender, 'fs.mkdir', p);
+      },
+      rename: async (p, e) => {
+        await rpc(e.sender, 'fs.rename', p);
+      },
+      remove: async (p, e) => {
+        await rpc(e.sender, 'fs.remove', p);
+      },
+      chmod: async (p, e) => {
+        await rpc(e.sender, 'fs.chmod', p);
+      },
+      existing: async (p, e) => (await rpc(e.sender, 'fs.existing', p)) as string[],
+      transfer: async (p, e) => {
+        d.sessions.assertEndpoint(e.sender, p.src.endpoint);
+        d.sessions.assertEndpoint(e.sender, p.dst.endpoint);
+        return (await d.sessions.rpc('transfer.start', p, e.sender)) as { transferIds: string[] };
+      },
+      cancelTransfer: async (p) => {
+        await d.sessions.rpc('transfer.cancel', p);
+      },
     },
     dev: {
       seedHosts: ({ count }) => {

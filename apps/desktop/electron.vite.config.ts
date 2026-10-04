@@ -5,7 +5,7 @@ import { defineConfig } from 'electron-vite';
 import type { Plugin } from 'vite';
 
 // Workspace packages ship TypeScript source, so they must be bundled rather than externalized.
-const workspacePackages = ['@cy-ssh/shared', '@cy-ssh/sync-core', '@cy-ssh/vault-crypto'];
+const workspacePackages = ['@cy-ssh/shared', '@cy-ssh/sync-core', '@cy-ssh/vault-crypto', '@cy-ssh/key-formats'];
 
 /** Strict CSP for production builds (dev needs inline scripts for React Fast Refresh). */
 function cspPlugin(): Plugin {

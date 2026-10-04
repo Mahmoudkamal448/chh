@@ -20,6 +20,7 @@ export function HostsView() {
   const setFilter = useHosts((s) => s.setFilter);
   const openEditor = useHosts((s) => s.openEditor);
   const openSsh = useTabs((s) => s.openSsh);
+  const openSftp = useTabs((s) => s.openSftp);
   const [deleting, setDeleting] = useState<Host | null>(null);
   const [query, setQuery] = useState(filter.query);
   const debounce = useRef<ReturnType<typeof setTimeout>>(undefined);
@@ -94,6 +95,7 @@ export function HostsView() {
             hosts={hosts}
             groupLabel={(id) => (id ? (groupLabels.get(id) ?? null) : null)}
             onConnect={(h) => void openSsh(h.id, h.label)}
+            onOpenFiles={(h) => openSftp(h.id, h.label)}
             onEdit={(h) => openEditor({ kind: 'host', id: h.id })}
             onDuplicate={async (h) => {
               await window.cy.hosts.duplicate({ id: h.id });

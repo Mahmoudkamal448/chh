@@ -14,6 +14,7 @@
     "electron.vite.config.ts",
     "*.config.ts",
     "../../packages/vault-crypto/src/sodium-native.d.ts",
-    "src/types"
+    "src/types",
+    "../../packages/key-formats/src/bcrypt-pbkdf.d.ts"
   ]
 }

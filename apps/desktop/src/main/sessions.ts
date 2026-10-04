@@ -11,15 +11,17 @@ import {
 } from '@cy-ssh/shared';
 import type { GroupsRepo } from './db/groups-repo';
 import type { HostsRepo } from './db/hosts-repo';
+import type { IdentitiesRepo } from './db/identities-repo';
+import type { KeysRepo } from './db/keys-repo';
 import type { KnownHostsRepo } from './db/known-hosts-repo';
-import type { HostToMain, MainToHost, SshConnectConfig } from '../session-host/protocol';
+import type { HostToMain, MainToHost, RpcError, RpcMethod, SshConnectConfig } from '../session-host/protocol';
 import { AppError, emit } from './ipc/handle';
 import { errInfo, log } from './log';
 
 interface SessionInfo {
   id: string;
   wc: WebContents;
-  kind: 'ssh' | 'local';
+  kind: 'ssh' | 'local' | 'sftp';
   hostId: string | null;
   label: string;
   /** User ticked "remember password" on a prompt in this session. */
@@ -40,6 +42,10 @@ export class SessionManager {
   private readonly sessions = new Map<string, SessionInfo>();
   private readonly prompts = new Map<string, PendingPrompt>();
   private readonly hooked = new WeakSet<WebContents>();
+  private rpcSeq = 0;
+  private readonly rpcPending = new Map<number, { resolve(v: unknown): void; reject(e: AppError): void }>();
+  private readonly transferOwners = new Map<string, WebContents>();
+  private lastTransferWc: WebContents | null = null;
 
   constructor(
     private readonly deps: {
@@ -47,6 +53,8 @@ export class SessionManager {
       hosts: HostsRepo;
       groups: GroupsRepo;
       knownHosts: KnownHostsRepo;
+      keys: KeysRepo;
+      identities: IdentitiesRepo;
       shells: () => LocalShell[];
       defaultShellId: () => string | null;
     },
@@ -62,6 +70,10 @@ export class SessionManager {
     child.on('exit', (code) => {
       log.warn({ code }, 'session host exited');
       if (this.child === child) this.child = null;
+      for (const [id, p] of [...this.rpcPending]) {
+        this.rpcPending.delete(id);
+        p.reject(new AppError('host_crashed', 'session.error.hostCrashed'));
+      }
       for (const s of [...this.sessions.values()]) {
         emit(s.wc, 'session.status', { sessionId: s.id, status: 'error', message: 'session.error.hostCrashed' });
         this.cleanup(s.id);
@@ -79,18 +91,24 @@ export class SessionManager {
     id: string;
     hostPort: Electron.MessagePortMain;
   } {
-    const id = randomUUID();
-    this.sessions.set(id, { ...info, id, wc, savePassword: false });
+    const id = this.registerNoPort(wc, info);
     const { port1, port2 } = new MessageChannelMain();
     // The renderer side of the port goes straight to the window; data never touches main again.
     wc.postMessage(SESSION_PORT_CHANNEL, { sessionId: id }, [port1]);
+    return { id, hostPort: port2 };
+  }
+
+  /** Sessions without a terminal stream (SFTP). */
+  private registerNoPort(wc: WebContents, info: Omit<SessionInfo, 'id' | 'wc' | 'savePassword'>): string {
+    const id = randomUUID();
+    this.sessions.set(id, { ...info, id, wc, savePassword: false });
     if (!this.hooked.has(wc)) {
       this.hooked.add(wc);
       wc.once('destroyed', () => {
         for (const s of [...this.sessions.values()]) if (s.wc === wc) this.close(s.id);
       });
     }
-    return { id, hostPort: port2 };
+    return id;
   }
 
   openLocal(wc: WebContents, opts: { shellId?: string; cols: number; rows: number }): { sessionId: string; title: string } {
@@ -107,40 +125,63 @@ export class SessionManager {
     return { sessionId: id, title: shell.label };
   }
 
+  /**
+   * Builds the connection config for a host: inherited settings, identity (username/password/key),
+   * explicit key, and a username prompt if none is configured. Returns null if the user cancels.
+   */
+  private async resolveConfig(sessionId: string, hostId: string): Promise<SshConnectConfig | null> {
+    const fields = this.deps.hosts.getFields(hostId);
+    const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
+    const identity = settings.identityId ? this.deps.identities.getSecrets(settings.identityId) : null;
+
+    let username = settings.username || identity?.username || '';
+    if (!username) {
+      const answer = await this.promptFromMain(sessionId, {
+        kind: 'username',
+        title: fields.label,
+        instructions: '',
+        prompts: [{ prompt: 'Username', echo: true }],
+        canSave: false,
+        retry: false,
+      });
+      if (!answer?.[0]) return null;
+      username = answer[0];
+    }
+    if (!this.sessions.has(sessionId)) return null;
+
+    const keyId = settings.keyId ?? identity?.keyId ?? null;
+    let privateKey: string | null = null;
+    if (keyId) {
+      try {
+        privateKey = this.deps.keys.getPrivate(keyId);
+      } catch {
+        log.warn({ hostId }, 'configured key no longer exists');
+      }
+    }
+    return {
+      host: fields.address,
+      port: settings.port,
+      username,
+      password: this.deps.hosts.getPassword(hostId) ?? identity?.password ?? null,
+      privateKey,
+      useAgent: settings.useAgent,
+      tryDefaultKeys: settings.tryDefaultKeys,
+      keepAliveSec: settings.keepAliveSec,
+      connectTimeoutSec: settings.connectTimeoutSec,
+    };
+  }
+
   async openSsh(wc: WebContents, opts: { hostId: string; cols: number; rows: number }): Promise<{ sessionId: string }> {
     const fields = this.deps.hosts.getFields(opts.hostId);
-    const settings = resolveSettings(fields.groupId, fields.settings, this.deps.groups.map());
     const { id, hostPort } = this.register(wc, { kind: 'ssh', hostId: opts.hostId, label: fields.label });
 
     // Run the rest asynchronously so the renderer gets the session id (and can show prompts) right away.
     void (async () => {
-      let username = settings.username;
-      if (!username) {
-        const answer = await this.promptFromMain(id, {
-          kind: 'username',
-          title: fields.label,
-          instructions: '',
-          prompts: [{ prompt: 'Username', echo: true }],
-          canSave: false,
-          retry: false,
-        });
-        if (!answer?.[0]) {
-          this.close(id);
-          return;
-        }
-        username = answer[0];
+      const config = await this.resolveConfig(id, opts.hostId);
+      if (!config) {
+        this.close(id);
+        return;
       }
-      if (!this.sessions.has(id)) return;
-      const config: SshConnectConfig = {
-        host: fields.address,
-        port: settings.port,
-        username,
-        password: this.deps.hosts.getPassword(opts.hostId),
-        useAgent: settings.useAgent,
-        tryDefaultKeys: settings.tryDefaultKeys,
-        keepAliveSec: settings.keepAliveSec,
-        connectTimeoutSec: settings.connectTimeoutSec,
-      };
       this.send({ type: 'open-ssh', sessionId: id, label: fields.label, cols: opts.cols, rows: opts.rows, config }, [hostPort]);
       log.info({ sessionId: id, hostId: opts.hostId }, 'ssh session opening');
     })().catch((err) => {
@@ -151,6 +192,43 @@ export class SessionManager {
     });
 
     return { sessionId: id };
+  }
+
+  /** Opens an SFTP session; resolves once connected and authenticated. */
+  async openSftp(wc: WebContents, hostId: string): Promise<{ sessionId: string }> {
+    const fields = this.deps.hosts.getFields(hostId);
+    const id = this.registerNoPort(wc, { kind: 'sftp', hostId, label: fields.label });
+    try {
+      const config = await this.resolveConfig(id, hostId);
+      if (!config) throw new AppError('cancelled', 'files.error.cancelled');
+      await this.rpc('sftp.open', { sessionId: id, config });
+      if (!this.sessions.has(id)) throw new AppError('cancelled', 'files.error.cancelled');
+      log.info({ sessionId: id, hostId }, 'sftp session opened');
+      return { sessionId: id };
+    } catch (err) {
+      this.close(id);
+      throw err instanceof AppError ? err : new AppError('internal', 'errors.internal');
+    }
+  }
+
+  /** Request/response call into the session host (file operations, transfers). */
+  rpc(method: RpcMethod, params: Record<string, unknown>, wc?: WebContents): Promise<unknown> {
+    if (method === 'transfer.start' && wc) this.lastTransferWc = wc;
+    const id = ++this.rpcSeq;
+    return new Promise((resolve, reject) => {
+      this.rpcPending.set(id, { resolve, reject });
+      this.send({ type: 'rpc', id, method, params });
+    }).then((v) => {
+      if (method === 'transfer.start' && wc) for (const tid of (v as { transferIds: string[] }).transferIds) this.transferOwners.set(tid, wc);
+      return v;
+    });
+  }
+
+  /** Endpoints must be "local" or an open SFTP session of this window. */
+  assertEndpoint(wc: WebContents, endpoint: string): void {
+    if (endpoint === 'local') return;
+    const s = this.sessions.get(endpoint);
+    if (!s || s.kind !== 'sftp' || s.wc !== wc) throw new AppError('not_found', 'files.error.sessionClosed');
   }
 
   close(sessionId: string): void {
@@ -207,9 +285,27 @@ export class SessionManager {
         if (msg.status === 'error') log.warn({ sessionId: msg.sessionId, message: msg.message?.split('::')[0] }, 'session error');
         return;
       }
-      case 'closed':
+      case 'closed': {
+        const s = this.sessions.get(msg.sessionId);
+        if (s?.kind === 'sftp') emit(s.wc, 'session.status', { sessionId: s.id, status: 'closed' });
         this.cleanup(msg.sessionId);
         return;
+      }
+      case 'rpc-result': {
+        const p = this.rpcPending.get(msg.id);
+        if (!p) return;
+        this.rpcPending.delete(msg.id);
+        if (msg.ok) p.resolve(msg.value);
+        else p.reject(rpcToAppError(msg.error));
+        return;
+      }
+      case 'transfer': {
+        const t = msg.transfer;
+        const wc = this.transferOwners.get(t.id) ?? this.lastTransferWc;
+        emit(wc, 'transfer.update', t);
+        if (t.state === 'done' || t.state === 'error' || t.state === 'cancelled') this.transferOwners.delete(t.id);
+        return;
+      }
       case 'hostkey-check': {
         const s = this.sessions.get(msg.sessionId);
         if (!s) return this.send({ type: 'hostkey-result', promptId: msg.promptId, decision: 'reject' });
@@ -250,7 +346,7 @@ export class SessionManager {
           title: msg.title,
           instructions: msg.instructions,
           prompts: msg.prompts,
-          canSave: s.kind === 'ssh' && s.hostId !== null && isPassword,
+          canSave: s.kind !== 'local' && s.hostId !== null && isPassword && msg.kind !== 'passphrase',
           retry: msg.retry,
         });
         return;
@@ -281,6 +377,10 @@ export class SessionManager {
       if (s) emit(s.wc, 'prompt.dismiss', { promptId });
     }
   }
+}
+
+function rpcToAppError(e: RpcError): AppError {
+  return new AppError(e.key.split('.').pop() ?? 'error', e.key, e.detail ? { detail: e.detail.slice(0, 300) } : undefined);
 }
 
 export function sessionHostScript(mainDir: string): string {

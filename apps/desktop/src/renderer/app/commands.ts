@@ -5,12 +5,16 @@ import { useHosts } from '../stores/hosts-store';
 import { HOSTS_TAB, useTabs } from '../stores/tabs-store';
 import { HOST_SEARCH_ID } from '../features/hosts/HostsView';
 
-export type Action = { type: 'command'; id: CommandId } | { type: 'connect'; host: Host };
+export type Action = { type: 'command'; id: CommandId } | { type: 'connect'; host: Host } | { type: 'files'; host: Host };
 
 export function runCommand(a: Action): void {
   const tabs = useTabs.getState();
   if (a.type === 'connect') {
     void tabs.openSsh(a.host.id, a.host.label);
+    return;
+  }
+  if (a.type === 'files') {
+    tabs.openSftp(a.host.id, a.host.label);
     return;
   }
   switch (a.id) {
@@ -34,10 +38,12 @@ export function runCommand(a: Action): void {
       break;
     case 'host.new':
       tabs.activate(HOSTS_TAB);
+      useApp.getState().setSection('hosts');
       useHosts.getState().openEditor({ kind: 'host', id: null });
       break;
     case 'hosts.search':
       tabs.activate(HOSTS_TAB);
+      useApp.getState().setSection('hosts');
       requestAnimationFrame(() => document.getElementById(HOST_SEARCH_ID)?.focus());
       break;
     case 'terminal.find':

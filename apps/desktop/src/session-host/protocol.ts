@@ -3,7 +3,7 @@
  * Terminal bytes never travel on this channel — they use a per-session MessagePort that goes
  * straight to the renderer.
  */
-import type { HostKeyDecision } from '@cy-ssh/shared';
+import type { HostKeyDecision, Transfer } from '@cy-ssh/shared';
 
 export interface SshConnectConfig {
   host: string;
@@ -11,10 +11,30 @@ export interface SshConnectConfig {
   username: string;
   /** Plaintext password, only if the user saved one. Lives in memory for the session only. */
   password: string | null;
+  /** Unencrypted OpenSSH private key from the vault, tried first. */
+  privateKey: string | null;
   useAgent: boolean;
   tryDefaultKeys: boolean;
   keepAliveSec: number;
   connectTimeoutSec: number;
+}
+
+export type RpcMethod =
+  | 'sftp.open'
+  | 'fs.home'
+  | 'fs.list'
+  | 'fs.mkdir'
+  | 'fs.rename'
+  | 'fs.remove'
+  | 'fs.chmod'
+  | 'fs.existing'
+  | 'transfer.start'
+  | 'transfer.cancel';
+
+/** RPC failures carry an i18n key ("files.error.not_found", "session.error.auth", ...) plus detail. */
+export interface RpcError {
+  key: string;
+  detail?: string;
 }
 
 export type MainToHost =
@@ -23,6 +43,7 @@ export type MainToHost =
   | { type: 'close'; sessionId: string }
   | { type: 'hostkey-result'; promptId: string; decision: HostKeyDecision }
   | { type: 'auth-result'; promptId: string; responses: string[] | null }
+  | { type: 'rpc'; id: number; method: RpcMethod; params: Record<string, unknown> }
   | { type: 'shutdown' };
 
 export type HostToMain =
@@ -40,7 +61,7 @@ export type HostToMain =
       type: 'auth-prompt';
       sessionId: string;
       promptId: string;
-      kind: 'password' | 'keyboard-interactive' | 'username';
+      kind: 'password' | 'keyboard-interactive' | 'username' | 'passphrase';
       title: string;
       instructions: string;
       prompts: Array<{ prompt: string; echo: boolean }>;
@@ -49,4 +70,7 @@ export type HostToMain =
   | { type: 'status'; sessionId: string; status: 'connecting' | 'authenticating' | 'ready' | 'closed' | 'error'; message?: string }
   /** The password that just succeeded, so main can store it if the user ticked "remember". */
   | { type: 'auth-succeeded'; sessionId: string; password: string | null }
-  | { type: 'closed'; sessionId: string };
+  | { type: 'closed'; sessionId: string }
+  | { type: 'rpc-result'; id: number; ok: true; value: unknown }
+  | { type: 'rpc-result'; id: number; ok: false; error: RpcError }
+  | { type: 'transfer'; transfer: Transfer };

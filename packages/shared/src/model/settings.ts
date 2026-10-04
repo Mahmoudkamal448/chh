@@ -6,6 +6,10 @@ import { z } from 'zod';
  */
 export const HostSettingsSchema = z.object({
   username: z.string().max(255),
+  /** Identity (username + password/key) to use; null = none. */
+  identityId: z.string().max(64).nullable(),
+  /** Key to authenticate with; null = none (agent and default keys still apply). */
+  keyId: z.string().max(64).nullable(),
   port: z.number().int().min(1).max(65535),
   useAgent: z.boolean(),
   tryDefaultKeys: z.boolean(),
@@ -28,6 +32,8 @@ export const DEFAULT_FONT_FAMILY =
 
 export const DEFAULT_HOST_SETTINGS: HostSettings = {
   username: '',
+  identityId: null,
+  keyId: null,
   port: 22,
   useAgent: true,
   tryDefaultKeys: true,

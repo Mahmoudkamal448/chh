@@ -2,7 +2,7 @@
  * Preload (sandboxed). Exposes a typed, minimal API as `window.cy`. The renderer gets no
  * direct access to ipcRenderer, Node, or raw MessagePorts.
  */
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import {
   CyIpcError,
   EVENT_CHANNEL_PREFIX,
@@ -99,5 +99,6 @@ api.attachTerminal = (sessionId: string, h: TerminalHandlers): TerminalStream =>
 };
 
 api.platform = process.platform;
+api.pathForFile = (file: File) => webUtils.getPathForFile(file);
 
 contextBridge.exposeInMainWorld('cy', api as CyApi);

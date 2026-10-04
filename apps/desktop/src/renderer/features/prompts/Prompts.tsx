@@ -88,7 +88,12 @@ function AuthDialog({ p }: { p: AuthPrompt }) {
     remove(p.promptId);
     void window.cy.sessions.respondAuth({ promptId: p.promptId, responses, save: save && !!responses });
   };
-  const title = p.kind === 'username' ? t('auth.usernameTitle', { host: p.hostLabel }) : t('auth.title', { target: p.title });
+  const title =
+    p.kind === 'username'
+      ? t('auth.usernameTitle', { host: p.hostLabel })
+      : p.kind === 'passphrase'
+        ? t('auth.passphraseTitle', { target: p.title })
+        : t('auth.title', { target: p.title });
 
   return (
     <Dialog

@@ -63,6 +63,11 @@ export function CommandPalette() {
                       <span className="ml-auto truncate text-[12px] text-muted">{h.address}</span>
                     </Command.Item>
                   ))}
+                  {hosts.slice(0, search ? 10 : 3).map((h) => (
+                    <Command.Item key={`sftp-${h.id}`} value={`sftp:${h.id}`} className={item} onSelect={() => run(() => runCommand({ type: 'files', host: h }))}>
+                      <span className="truncate">{t('palette.filesOn', { label: h.label })}</span>
+                    </Command.Item>
+                  ))}
                 </Command.Group>
               )}
               <Command.Group heading={t('palette.commands')} className="[&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:text-muted">

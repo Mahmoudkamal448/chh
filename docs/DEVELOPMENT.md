@@ -103,8 +103,13 @@ Deleting the directory resets the app.
     verdicts, sync metadata, 10k-host performance
   - IPC contract validation
   - Session-host helpers: fingerprints, flow control, error mapping
-- **E2E tests (Playwright `_electron`)** launch the built app with a throwaway profile. They start an in-process
-  `ssh2` server, so no Docker or sshd is needed. Coverage:
+- **Test SSH server:** `apps/desktop/tests/support/ssh-server.ts` is an in-process `ssh2` server with password and
+  public-key auth, a fake shell, and a real SFTP subsystem backed by a temp directory. Unit and E2E tests share
+  it, so no Docker or sshd is needed.
+- **Key fixtures:** `packages/key-formats/test/fixtures` holds throwaway keys made by `ssh-keygen`, `puttygen`
+  (`apt install putty-tools`) and `openssl`. Regenerate them only if you add formats. The tests compare against
+  each tool's own output, not against round trips of our code.
+- **E2E tests (Playwright `_electron`)** launch the built app with a throwaway profile. Coverage:
   - Local shell
   - SSH connect with host-key trust
   - Reconnect from the palette with no prompt
@@ -112,6 +117,8 @@ Deleting the directory resets the app.
   - Password retry and "remember password"
   - 5,000-host list performance
   - Theme switching
+  - Phase 2: key generation + key login, encrypted PuTTY import, identities, known-hosts removal, and the SFTP
+    browser (F5 upload, drag-and-drop download, conflict prompt, mkdir, chmod, delete)
 
 ## Platform notes and troubleshooting
 

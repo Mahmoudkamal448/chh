@@ -2,6 +2,17 @@ import { z } from 'zod';
 import {
   AppSettingsSchema,
   AuthPromptSchema,
+  ConflictPolicySchema,
+  EndpointSchema,
+  FileEntrySchema,
+  GenerateKeyInputSchema,
+  IdentityInputSchema,
+  IdentityPatchSchema,
+  IdentitySchema,
+  ImportKeyResultSchema,
+  KeySchema,
+  KnownHostSchema,
+  TransferSchema,
   GroupInputSchema,
   GroupPatchSchema,
   GroupSchema,
@@ -82,6 +93,64 @@ export const contract = {
       Void,
     ),
   },
+  keys: {
+    list: method(Empty, z.array(KeySchema)),
+    generate: method(GenerateKeyInputSchema, KeySchema),
+    /** Import pasted key text (OpenSSH, PEM/PKCS#8, PuTTY .ppk). */
+    importText: method(
+      z.object({ label: z.string().trim().max(200).optional(), text: z.string().min(1).max(65_536), passphrase: z.string().max(1024).optional() }),
+      ImportKeyResultSchema,
+    ),
+    /** Shows an open-file dialog and stages the chosen file; the text never reaches the renderer. */
+    pickFile: method(Empty, z.object({ token: z.string(), fileName: z.string(), encrypted: z.boolean() }).nullable()),
+    importStaged: method(
+      z.object({ token: z.string(), label: z.string().trim().max(200).optional(), passphrase: z.string().max(1024).optional() }),
+      ImportKeyResultSchema,
+    ),
+    rename: method(z.object({ id: IdSchema, label: z.string().trim().min(1).max(200) }), KeySchema),
+    remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
+    /** Save-file dialog; optionally re-encrypts the exported OpenSSH key with a passphrase. */
+    exportPrivate: method(z.object({ id: IdSchema, passphrase: z.string().max(1024).optional() }), z.object({ saved: z.boolean() })),
+    /** Names of hosts/identities/groups that reference this key (shown before deleting). */
+    usage: method(ById, z.array(z.string())),
+  },
+  identities: {
+    list: method(Empty, z.array(IdentitySchema)),
+    create: method(IdentityInputSchema, IdentitySchema),
+    update: method(z.object({ id: IdSchema, patch: IdentityPatchSchema }), IdentitySchema),
+    remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
+  },
+  knownHosts: {
+    list: method(z.object({ query: z.string().max(200).optional() }), z.array(KnownHostSchema)),
+    remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
+    /** Import an OpenSSH known_hosts file (open dialog defaults to ~/.ssh/known_hosts). */
+    importFile: method(Empty, z.object({ imported: z.number(), skipped: z.number() }).nullable()),
+  },
+  sftp: {
+    /** Connects an SFTP session to a host; resolves when ready (prompts may appear meanwhile). */
+    open: method(z.object({ hostId: IdSchema }), z.object({ sessionId: IdSchema })),
+    close: method(z.object({ sessionId: IdSchema }), Void),
+    home: method(z.object({ endpoint: EndpointSchema }), z.object({ path: z.string(), separator: z.enum(['/', '\\']) })),
+    list: method(z.object({ endpoint: EndpointSchema, path: z.string().max(4096) }), z.object({ path: z.string(), parent: z.string().nullable(), entries: z.array(FileEntrySchema) })),
+    mkdir: method(z.object({ endpoint: EndpointSchema, path: z.string().max(4096) }), Void),
+    rename: method(z.object({ endpoint: EndpointSchema, from: z.string().max(4096), to: z.string().max(4096) }), Void),
+    remove: method(z.object({ endpoint: EndpointSchema, paths: z.array(z.string().max(4096)).min(1) }), Void),
+    chmod: method(
+      z.object({ endpoint: EndpointSchema, paths: z.array(z.string().max(4096)).min(1), mode: z.number().int().min(0).max(0o7777), recursive: z.boolean() }),
+      Void,
+    ),
+    /** Which of `names` already exist in `dir` (for conflict prompts before a transfer). */
+    existing: method(z.object({ endpoint: EndpointSchema, dir: z.string().max(4096), names: z.array(z.string()) }), z.array(z.string())),
+    transfer: method(
+      z.object({
+        src: z.object({ endpoint: EndpointSchema, paths: z.array(z.string().max(4096)).min(1) }),
+        dst: z.object({ endpoint: EndpointSchema, dir: z.string().max(4096) }),
+        conflict: ConflictPolicySchema,
+      }),
+      z.object({ transferIds: z.array(z.string()) }),
+    ),
+    cancelTransfer: method(z.object({ id: z.string() }), Void),
+  },
   dev: {
     /** Only available when the app runs with CY_SSH_TEST=1. */
     seedHosts: method(z.object({ count: z.number().int().min(1).max(20_000) }), z.object({ created: z.number() })),
@@ -95,7 +164,8 @@ export const events = {
   'auth.prompt': AuthPromptSchema,
   /** Prompt was answered/cancelled elsewhere (e.g. session closed) — dismiss the dialog. */
   'prompt.dismiss': z.object({ promptId: IdSchema }),
-  'data.changed': z.object({ kinds: z.array(z.enum(['hosts', 'groups', 'settings'])) }),
+  'data.changed': z.object({ kinds: z.array(z.enum(['hosts', 'groups', 'settings', 'keys', 'identities', 'knownHosts'])) }),
+  'transfer.update': TransferSchema,
 } as const;
 
 export type Contract = typeof contract;
@@ -150,6 +220,8 @@ export type CyApi = {
   on<E extends EventName>(event: E, cb: (payload: EventPayload<E>) => void): () => void;
   /** Attach to a session's byte stream. Data is buffered until attach is called. */
   attachTerminal(sessionId: string, handlers: TerminalHandlers): TerminalStream;
+  /** Absolute path of a File dropped from the OS (Electron webUtils). */
+  pathForFile(file: object): string;
   platform: 'darwin' | 'win32' | 'linux';
 };
 

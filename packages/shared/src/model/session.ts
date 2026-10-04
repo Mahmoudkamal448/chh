@@ -32,7 +32,7 @@ export const AuthPromptSchema = z.object({
   promptId: IdSchema,
   sessionId: IdSchema,
   hostLabel: z.string(),
-  kind: z.enum(['password', 'keyboard-interactive', 'username']),
+  kind: z.enum(['password', 'keyboard-interactive', 'username', 'passphrase']),
   title: z.string(),
   instructions: z.string(),
   prompts: z.array(z.object({ prompt: z.string(), echo: z.boolean() })),

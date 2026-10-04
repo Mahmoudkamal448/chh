@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { HostSettings, HostSettingsOverrides } from '@cy-ssh/shared';
 import { Field, Input, Select } from '../../components/ui';
+import { keyKind } from '../../lib/format';
+import { useVault } from '../../stores/vault-store';
 import { TERMINAL_SCHEMES, schemeById } from '../../themes/terminal-themes';
 
 /**
@@ -19,6 +21,8 @@ export function SettingsFields({
   showIdentity: boolean;
 }) {
   const { t } = useTranslation();
+  const keys = useVault((s) => s.keys);
+  const identities = useVault((s) => s.identities);
   const set = <K extends keyof HostSettings>(k: K, v: HostSettings[K] | undefined) => {
     const next = { ...value };
     if (v === undefined) delete next[k];
@@ -30,6 +34,11 @@ export function SettingsFields({
   const boolValue = (b: boolean | undefined) => (b === undefined ? '' : b ? 'on' : 'off');
   const inheritLabel = (v: string) => t('settings.inherit', { value: v });
   const onOff = (b: boolean) => (b ? t('common.on') : t('common.off'));
+  /** "" = inherit, "none" = explicitly none, otherwise an id. */
+  const refValue = (v: string | null | undefined) => (v === undefined ? '' : v === null ? 'none' : v);
+  const refParse = (s: string) => (s === '' ? undefined : s === 'none' ? null : s);
+  const identityName = (id: string | null) => (id ? (identities.find((i) => i.id === id)?.label ?? t('settings.missing')) : t('settings.none'));
+  const keyName = (id: string | null) => (id ? (keys.find((k) => k.id === id)?.label ?? t('settings.missing')) : t('settings.none'));
 
   return (
     <div className="grid grid-cols-2 gap-3">
@@ -47,6 +56,33 @@ export function SettingsFields({
           </Field>
         </>
       )}
+      <Field label={t('hostEditor.identity')} hint={t('hostEditor.identityHint')}>
+        {(id, d) => (
+          <Select id={id} aria-describedby={d} value={refValue(value.identityId)} onChange={(e) => set('identityId', refParse(e.target.value))} data-testid="host-identity">
+            <option value="">{inheritLabel(identityName(inherited.identityId))}</option>
+            <option value="none">{t('settings.none')}</option>
+            {identities.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.label}
+                {i.username ? ` (${i.username})` : ''}
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
+      <Field label={t('hostEditor.key')}>
+        {(id) => (
+          <Select id={id} value={refValue(value.keyId)} onChange={(e) => set('keyId', refParse(e.target.value))} data-testid="host-key">
+            <option value="">{inheritLabel(keyName(inherited.keyId))}</option>
+            <option value="none">{t('settings.none')}</option>
+            {keys.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label} ({keyKind(k.type, k.bits)})
+              </option>
+            ))}
+          </Select>
+        )}
+      </Field>
       <Field label={t('hostEditor.terminalTheme')}>
         {(id) => (
           <Select id={id} value={value.terminalTheme ?? ''} onChange={(e) => set('terminalTheme', e.target.value || undefined)}>

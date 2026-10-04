@@ -14,6 +14,7 @@ export function HostList({
   hosts,
   groupLabel,
   onConnect,
+  onOpenFiles,
   onEdit,
   onDuplicate,
   onToggleFavorite,
@@ -22,6 +23,7 @@ export function HostList({
   hosts: Host[];
   groupLabel(id: string | null): string | null;
   onConnect(h: Host): void;
+  onOpenFiles(h: Host): void;
   onEdit(h: Host): void;
   onDuplicate(h: Host): void;
   onToggleFavorite(h: Host): void;
@@ -149,6 +151,9 @@ export function HostList({
                 <CM.Content className="z-50 min-w-[180px] rounded-md border border-border bg-surface p-1 shadow-xl">
                   <CM.Item className={menuItem} onSelect={() => onConnect(h)}>
                     {t('hosts.connect')}
+                  </CM.Item>
+                  <CM.Item className={menuItem} onSelect={() => onOpenFiles(h)} data-testid="host-open-files">
+                    {t('hosts.openFiles')}
                   </CM.Item>
                   <CM.Item className={menuItem} onSelect={() => onEdit(h)}>
                     {t('common.edit')}

@@ -5,7 +5,7 @@ export const HOSTS_TAB = 'hosts';
 
 export interface SessionTab {
   id: string;
-  kind: 'ssh' | 'local';
+  kind: 'ssh' | 'local' | 'sftp';
   sessionId: string;
   title: string;
   hostId: string | null;
@@ -19,6 +19,8 @@ interface TabsState {
   activeId: string;
   openSsh(hostId: string, title: string): Promise<void>;
   openLocal(shellId?: string): Promise<void>;
+  /** File browser tab; the view opens its own SFTP sessions. */
+  openSftp(hostId: string, title: string): void;
   close(id: string): void;
   activate(id: string): void;
   cycle(dir: 1 | -1): void;
@@ -43,11 +45,15 @@ export const useTabs = create<TabsState>((set, get) => ({
     const tab: SessionTab = { id: crypto.randomUUID(), kind: 'local', sessionId, title, hostId: null, shellId, status: 'connecting' };
     set({ tabs: [...get().tabs, tab], activeId: tab.id });
   },
+  openSftp(hostId, title) {
+    const tab: SessionTab = { id: crypto.randomUUID(), kind: 'sftp', sessionId: '', title, hostId, status: 'ready' };
+    set({ tabs: [...get().tabs, tab], activeId: tab.id });
+  },
   close(id) {
     const { tabs, activeId } = get();
     const idx = tabs.findIndex((t) => t.id === id);
     if (idx < 0) return;
-    void window.cy.sessions.close({ sessionId: tabs[idx]!.sessionId });
+    if (tabs[idx]!.kind !== 'sftp') void window.cy.sessions.close({ sessionId: tabs[idx]!.sessionId });
     const next = tabs.filter((t) => t.id !== id);
     let nextActive = activeId;
     if (activeId === id) nextActive = next[Math.min(idx, next.length - 1)]?.id ?? HOSTS_TAB;
@@ -61,7 +67,7 @@ export const useTabs = create<TabsState>((set, get) => ({
   },
   async reconnect(tabId) {
     const tab = get().tabs.find((t) => t.id === tabId);
-    if (!tab) return;
+    if (!tab || tab.kind === 'sftp') return;
     void window.cy.sessions.close({ sessionId: tab.sessionId });
     const { sessionId } =
       tab.kind === 'ssh' && tab.hostId

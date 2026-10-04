@@ -5,6 +5,8 @@ import { BRAND } from '@cy-ssh/shared';
 import { openDatabase, type Db } from './db/database';
 import { GroupsRepo } from './db/groups-repo';
 import { HostsRepo } from './db/hosts-repo';
+import { IdentitiesRepo } from './db/identities-repo';
+import { KeysRepo } from './db/keys-repo';
 import { ItemStore } from './db/item-store';
 import { KnownHostsRepo } from './db/known-hosts-repo';
 import { SettingsRepo } from './db/settings-repo';
@@ -90,7 +92,11 @@ if (!app.requestSingleInstanceLock()) {
     const groups = new GroupsRepo(store);
     const hosts = new HostsRepo(store, vault, groups);
     const knownHosts = new KnownHostsRepo(store);
+    const keys = new KeysRepo(store, vault);
+    const identities = new IdentitiesRepo(store, vault);
     sessions = new SessionManager({
+      keys,
+      identities,
       hostScript: sessionHostScript(__dirname),
       hosts,
       groups,
@@ -99,7 +105,7 @@ if (!app.requestSingleInstanceLock()) {
       defaultShellId: () => settings.getApp().defaultShell,
     });
 
-    registerHandlers(createHandlers({ hosts, groups, settings, sessions, keystore }), isTrustedSender);
+    registerHandlers(createHandlers({ hosts, groups, settings, sessions, keys, identities, knownHosts, keystore }), isTrustedSender);
     buildMenu();
     mainWindow = createMainWindow(join(__dirname, '../preload/index.js'), join(__dirname, '../renderer'));
     mainWindow.on('closed', () => (mainWindow = null));

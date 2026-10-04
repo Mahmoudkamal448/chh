@@ -14,6 +14,7 @@
     "tests",
     "src/preload/api.d.ts",
     "src/types",
-    "../../packages/vault-crypto/src/sodium-native.d.ts"
+    "../../packages/vault-crypto/src/sodium-native.d.ts",
+    "../../packages/key-formats/src/bcrypt-pbkdf.d.ts"
   ]
 }
