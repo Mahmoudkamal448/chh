@@ -151,6 +151,12 @@
       "chooseKeyForCertificate": "Choose the key your certificate was issued for, then add the certificate.",
       "keyHasCertificate": "This key has a certificate, but the Key method doesn’t use it. Choose Certificate to log in with it.",
       "noIdentities": "Create identities under Identities."
+    },
+    "tabs": {
+      "label": "Host settings",
+      "general": "General",
+      "terminal": "Terminal",
+      "advanced": "Advanced"
     }
   },
   "groupEditor": {
@@ -161,7 +167,8 @@
     "parent": "Parent group",
     "noParent": "None (top level)",
     "inherited": "Inherited settings",
-    "errorRequired": "Enter a name."
+    "errorRequired": "Enter a name.",
+    "inheritedHint": "Hosts in this group (and its subgroups) use these settings unless they set their own."
   },
   "settings": {
     "title": "Settings",
@@ -205,7 +212,8 @@
     "agentAuto": "Automatic (SSH_AUTH_SOCK / OpenSSH agent)",
     "agentCustom": "Custom socket or pipe…",
     "agentPath": "Agent socket / pipe path",
-    "autocomplete": "Suggest commands while typing (history and snippets; → accepts, Ctrl+Space lists)"
+    "autocomplete": "Suggest commands while typing (history and snippets; → accepts, Ctrl+Space lists)",
+    "default": "Default ({{value}})"
   },
   "commands": {
     "palette.open": "Open command palette",

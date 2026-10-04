@@ -8,6 +8,7 @@ import { keyKind } from '../../lib/format';
 import { useVault } from '../../stores/vault-store';
 import { CertificatePanel } from '../keys/Certificate';
 import { ImportKeyDialog } from '../keys/ImportKeyDialog';
+import { useInheritLabel } from './inherit';
 
 const METHODS: Array<{ id: AuthMethod; icon: typeof KeyRound }> = [
   { id: 'password', icon: LockKeyhole },
@@ -47,7 +48,7 @@ export function AuthSection({
   /** "" = inherit, "none" = explicitly none, otherwise an id. */
   const refValue = (v: string | null | undefined) => (v === undefined ? '' : v === null ? 'none' : v);
   const refParse = (s: string) => (s === '' ? undefined : s === 'none' ? null : s);
-  const inheritLabel = (v: string) => t('settings.inherit', { value: v });
+  const inheritLabel = useInheritLabel();
   const keyName = (id: string | null) => (id ? (keys.find((k) => k.id === id)?.label ?? t('settings.missing')) : t('settings.none'));
   const identityName = (id: string | null) => (id ? (identities.find((i) => i.id === id)?.label ?? t('settings.missing')) : t('settings.none'));
   const effectiveKeyId = value.keyId === undefined ? inherited.keyId : value.keyId;
@@ -236,12 +237,13 @@ function KeyPicker({
 
 function OnOff({ label, value, inherited, onChange }: { label: string; value: boolean | undefined; inherited: boolean; onChange(v: boolean | undefined): void }) {
   const { t } = useTranslation();
+  const inheritLabel = useInheritLabel();
   const onOff = (b: boolean) => (b ? t('common.on') : t('common.off'));
   return (
     <Field label={label}>
       {(id) => (
         <Select id={id} value={value === undefined ? '' : value ? 'on' : 'off'} onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value === 'on')}>
-          <option value="">{t('settings.inherit', { value: onOff(inherited) })}</option>
+          <option value="">{inheritLabel(onOff(inherited))}</option>
           <option value="on">{t('common.on')}</option>
           <option value="off">{t('common.off')}</option>
         </Select>

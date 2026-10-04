@@ -5,6 +5,8 @@ import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
+import { EditorTabs, type EditorTab } from './EditorTabs';
+import { InheritSource } from './inherit';
 import { GroupOptions, SettingsFields } from './SettingsFields';
 
 export function GroupEditor() {
@@ -18,10 +20,12 @@ export function GroupEditor() {
   const [parentId, setParentId] = useState('');
   const [settings, setSettings] = useState<HostSettingsOverrides>({});
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<EditorTab>('general');
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setTab('general');
     const g = editingId ? groups.find((x) => x.id === editingId) : null;
     setLabel(g?.label ?? '');
     setParentId(g ? (g.parentId ?? '') : (editor.parentId ?? ''));
@@ -87,8 +91,11 @@ export function GroupEditor() {
             )}
           </Field>
         </div>
-        <h3 className="text-[12px] font-semibold uppercase tracking-wide text-muted">{t('groupEditor.inherited')}</h3>
-        <SettingsFields value={settings} inherited={inherited} onChange={setSettings} showIdentity selfId={null} />
+        <p className="text-[12px] text-muted">{t('groupEditor.inheritedHint')}</p>
+        <EditorTabs value={tab} onChange={setTab} />
+        <InheritSource.Provider value={parentId ? 'group' : 'defaults'}>
+          <SettingsFields section={tab} value={settings} inherited={inherited} onChange={setSettings} showIdentity selfId={null} />
+        </InheritSource.Provider>
         {error && (
           <p role="alert" className="text-[12px] text-danger">
             {error}

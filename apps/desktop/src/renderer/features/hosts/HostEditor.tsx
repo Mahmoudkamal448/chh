@@ -6,6 +6,8 @@ import { Button, Checkbox, Field, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
 import { useTeams } from '../../stores/teams-store';
+import { EditorTabs, type EditorTab } from './EditorTabs';
+import { InheritSource } from './inherit';
 import { GroupOptions, SettingsFields } from './SettingsFields';
 
 interface FormState {
@@ -19,6 +21,14 @@ interface FormState {
   settings: HostSettingsOverrides;
   /** undefined = unchanged, null = remove, string = new password. */
   password: string | null | undefined;
+}
+
+/** Port field text → settings ("" = inherit). */
+function withPort(settings: HostSettingsOverrides, text: string): HostSettingsOverrides {
+  const next = { ...settings };
+  if (text.trim() === '') delete next.port;
+  else next.port = Number(text);
+  return next;
 }
 
 const EMPTY: FormState = { protocol: 'ssh', label: '', address: '', groupId: '', tags: '', notes: '', favorite: false, settings: {}, password: undefined };
@@ -36,6 +46,7 @@ export function HostEditor() {
   const [vaultId, setVaultId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tab, setTab] = useState<EditorTab>('general');
   const [ports, setPorts] = useState<Array<{ path: string; manufacturer: string | null; serialNumber: string | null }>>([]);
   useEffect(() => {
     if (open && form.protocol === 'serial') void window.chh.serial.ports({}).then(setPorts, () => setPorts([]));
@@ -44,6 +55,7 @@ export function HostEditor() {
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setTab('general');
     if (!editingId) {
       setForm({ ...EMPTY, groupId: editor.groupId ?? '' });
       setHasPassword(false);
@@ -154,7 +166,9 @@ export function HostEditor() {
         </>
       }
     >
+      <InheritSource.Provider value={form.groupId ? 'group' : 'defaults'}>
       <form onSubmit={save} className="flex flex-col gap-4">
+        <EditorTabs value={tab} onChange={setTab} />
         {editingId && vaults.some((v) => v.id === vaultId && !v.writable) && (
           <p role="status" className="rounded-md bg-surface-2 px-3 py-2 text-[12px] text-muted">
             {t('teams.readOnlyHost')}
@@ -175,6 +189,8 @@ export function HostEditor() {
             )}
           </Field>
         )}
+        {tab === 'general' && (
+          <>
         <Field label={t('hostEditor.protocol')} hint={form.protocol !== 'ssh' ? t(`hostEditor.protocolHint.${form.protocol}`) : undefined}>
           {(id, d) => (
             <Select id={id} aria-describedby={d} value={form.protocol} onChange={(e) => set({ protocol: e.target.value as Protocol })} data-testid="host-protocol">
@@ -185,7 +201,7 @@ export function HostEditor() {
             </Select>
           )}
         </Field>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[1fr_7rem] gap-3">
           <Field label={form.protocol === 'serial' ? t('serial.port') : t('hostEditor.address')} hint={form.protocol === 'serial' ? t('serial.portHint') : t('hostEditor.addressHint')}>
             {(id, d) => (
               <>
@@ -210,22 +226,28 @@ export function HostEditor() {
               </>
             )}
           </Field>
+          {form.protocol !== 'serial' && (
+            <Field label={t('hostEditor.port')}>
+              {(id) => (
+                <Input
+                  id={id}
+                  type="number"
+                  min={1}
+                  max={65535}
+                  value={form.settings.port ?? ''}
+                  // Telnet ignores inherited (SSH) ports and defaults to 23.
+                  placeholder={form.protocol === 'telnet' ? '23' : String(inherited.port)}
+                  onChange={(e) => set({ settings: withPort(form.settings, e.target.value) })}
+                  data-testid="host-port"
+                />
+              )}
+            </Field>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-3">
           <Field label={t('hostEditor.label')}>
             {(id) => <Input id={id} value={form.label} placeholder={form.address} onChange={(e) => set({ label: e.target.value })} data-testid="host-label" />}
           </Field>
-        </div>
-
-        <SettingsFields
-          value={form.settings}
-          inherited={inherited}
-          onChange={(settings) => set({ settings })}
-          showIdentity
-          protocol={form.protocol}
-          selfId={editingId}
-          passwordField={passwordField}
-        />
-
-        <div className="grid grid-cols-2 gap-3">
           <Field label={t('hostEditor.group')}>
             {(id) => (
               <Select id={id} value={form.groupId} onChange={(e) => set({ groupId: e.target.value })}>
@@ -234,11 +256,21 @@ export function HostEditor() {
               </Select>
             )}
           </Field>
-          <Field label={t('hostEditor.tags')} hint={t('hostEditor.tagsHint')}>
-            {(id, d) => <Input id={id} aria-describedby={d} value={form.tags} onChange={(e) => set({ tags: e.target.value })} />}
-          </Field>
         </div>
-
+        <SettingsFields
+          section="general"
+          showPort={false}
+          value={form.settings}
+          inherited={inherited}
+          onChange={(settings) => set({ settings })}
+          showIdentity
+          protocol={form.protocol}
+          selfId={editingId}
+          passwordField={passwordField}
+        />
+        <Field label={t('hostEditor.tags')} hint={t('hostEditor.tagsHint')}>
+          {(id, d) => <Input id={id} aria-describedby={d} value={form.tags} onChange={(e) => set({ tags: e.target.value })} />}
+        </Field>
         <Field label={t('hostEditor.notes')}>
           {(id) => (
             <textarea
@@ -252,6 +284,11 @@ export function HostEditor() {
         </Field>
 
         <Checkbox label={t('hosts.favorite')} checked={form.favorite} onChange={(favorite) => set({ favorite })} />
+          </>
+        )}
+        {tab !== 'general' && (
+          <SettingsFields section={tab} value={form.settings} inherited={inherited} onChange={(settings) => set({ settings })} showIdentity protocol={form.protocol} selfId={editingId} />
+        )}
         {error && (
           <p role="alert" className="text-[12px] text-danger">
             {error}
@@ -259,6 +296,7 @@ export function HostEditor() {
         )}
         <button type="submit" hidden />
       </form>
+      </InheritSource.Provider>
     </Dialog>
   );
 }
