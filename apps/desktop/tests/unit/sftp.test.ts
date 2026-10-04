@@ -122,8 +122,13 @@ describe('SftpFs + TransferManager', () => {
     expect(listing.parent).toBe('/');
     expect(listing.entries.map((e) => [e.name, e.type, e.size])).toEqual([['a.txt', 'file', 5]]);
     await sftp.rename('/ops/a.txt', '/ops/b.txt');
+    // Windows keeps only a read-only flag, so modes read back as 0o444 / 0o666 there.
+    const mode = () => statSync(join(remoteRoot, 'ops', 'b.txt')).mode & 0o777;
+    const win = process.platform === 'win32';
+    await sftp.chmod('/ops/b.txt', 0o400);
+    expect(mode()).toBe(win ? 0o444 : 0o400);
     await sftp.chmod('/ops/b.txt', 0o600);
-    expect(statSync(join(remoteRoot, 'ops', 'b.txt')).mode & 0o777).toBe(0o600);
+    expect(mode()).toBe(win ? 0o666 : 0o600);
     await sftp.remove('/ops');
     expect(await sftp.stat('/ops')).toBeNull();
     await expect(sftp.list('/missing')).rejects.toMatchObject({ code: 'not_found' });

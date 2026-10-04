@@ -22,6 +22,7 @@ let serverUrl: string;
 let serverStore: MemoryStore;
 let close: () => Promise<void>;
 const dirs: string[] = [];
+const opened: Device[] = [];
 
 interface Device {
   db: Db;
@@ -48,6 +49,7 @@ function device(name: string): Device {
     remoteChanges: 0,
     sync: null as unknown as SyncEngine,
   };
+  opened.push(d);
   d.sync = new SyncEngine({ db, store, vault, kdfCost: KDF, deviceName: name, onStatus: () => undefined, onRemoteChange: () => d.remoteChanges++ });
   return d;
 }
@@ -67,6 +69,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await close();
+  // Windows can't delete a database file that is still open.
+  for (const d of opened) {
+    d.sync.stop();
+    d.db.close();
+  }
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 

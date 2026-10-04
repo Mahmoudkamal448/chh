@@ -1,7 +1,5 @@
-import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { createServer, type AddressInfo } from 'node:net';
-import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MockBinding } from '@serialport/binding-mock';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -12,6 +10,7 @@ import { parseOs } from '../../src/session-host/ssh/os-detect';
 import { openSerial, translateInput } from '../../src/session-host/transports/serial';
 import { exportLine, openSsh } from '../../src/session-host/transports/ssh';
 import { sshConfig } from '../support/config';
+import { startFakeAgent } from '../support/agent';
 import { startHttpProxy, startSocks5Proxy } from '../support/proxies';
 import { startSshServer, type TestSshServer } from '../support/ssh-server';
 
@@ -99,18 +98,9 @@ describe('proxies', () => {
 
 describe('shell sessions: env, agent forwarding, OS detection', () => {
   it('sends env requests, requests agent forwarding, and detects the OS', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'cy-agent-'));
-    const sock = join(dir, 'agent.sock');
-    const agent: ChildProcess = spawn('ssh-agent', ['-D', '-a', sock], { stdio: 'ignore' });
+    const agent = await startFakeAgent();
+    const sock = agent.path;
     try {
-      await expect.poll(() => {
-        try {
-          execFileSync('ssh-add', ['-l'], { env: { SSH_AUTH_SOCK: sock }, stdio: 'ignore' });
-          return true;
-        } catch (e) {
-          return (e as { status?: number }).status === 1; // 1 = agent up, no keys
-        }
-      }).toBe(true);
       let os: string | null = null;
       let ready = false;
       const t = openSsh(
@@ -135,8 +125,7 @@ describe('shell sessions: env, agent forwarding, OS detection', () => {
       expect(target.agentForwardRequested()).toBe(true);
       t.close();
     } finally {
-      agent.kill();
-      rmSync(dir, { recursive: true, force: true });
+      await agent.close();
     }
   });
 

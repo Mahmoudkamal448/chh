@@ -21,6 +21,7 @@ let serverUrl: string;
 let serverStore: MemoryStore;
 let close: () => Promise<void>;
 const dirs: string[] = [];
+const opened: Device[] = [];
 
 interface Device {
   db: Db;
@@ -42,6 +43,7 @@ function device(name: string): Device {
   store.setWritePolicy((id) => vault.canWrite(id));
   const groups = new GroupsRepo(store);
   const d = { db, vault, hosts: new HostsRepo(store, vault, groups), snippets: new SnippetsRepo(store), teamEvents: 0 } as Device;
+  opened.push(d);
   const onTeamsChanged = () => d.teamEvents++;
   d.sync = new SyncEngine({ db, store, vault, kdfCost: KDF, deviceName: name, onStatus: () => undefined, onRemoteChange: () => undefined, onTeamsChanged });
   d.teams = new TeamService({ sync: d.sync, vault, store, onRemoteChange: () => undefined, onTeamsChanged });
@@ -64,6 +66,11 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await close();
+  // Windows can't delete a database file that is still open.
+  for (const d of opened) {
+    d.sync.stop();
+    d.db.close();
+  }
   for (const d of dirs) rmSync(d, { recursive: true, force: true });
 });
 
