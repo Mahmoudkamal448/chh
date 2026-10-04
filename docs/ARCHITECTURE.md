@@ -1,11 +1,12 @@
 # chh — Architecture
 
-> **Status:** approved. Phases 1–5 are implemented (risk R1 outcome: FIDO2 via the System OpenSSH engine, see PHASE-5.md); see the deviation notes in [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft),
+> **Status:** approved. All six phases are implemented (Phase 6: team vaults, audit log, signed installers, auto-update; see [PHASE-6.md](PHASE-6.md#design-notes-and-deviations)) (risk R1 outcome: FIDO2 via the System OpenSSH engine, see PHASE-5.md); see the deviation notes in [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft),
 > [PHASE-2.md](PHASE-2.md#design-notes-and-deviations), [PHASE-3.md](PHASE-3.md#design-notes-and-deviations) and
 > [PHASE-4.md](PHASE-4.md#design-notes-and-deviations) and [PHASE-5.md](PHASE-5.md#design-notes-and-deviations).
 
-> **Product name:** `chh` (npm scope `@chh/*`, bundle ID `dev.chh.app`). Name, icon and
-> colors live in `packages/shared/src/brand.ts` + `apps/desktop/build/`. All branding/UI is original.
+> **Product name:** `chh` (npm scope `@chh/*`, bundle ID `dev.chh.app`), renamed from `cy-ssh` in Phase 6. Name, icon and
+> colors live in `packages/shared/src/brand.ts` + `apps/desktop/build/`. All branding/UI is original. The `cy/…` and
+> `cy-…` strings in the crypto design below are frozen domain-separation constants of the data format, not branding.
 
 ---
 

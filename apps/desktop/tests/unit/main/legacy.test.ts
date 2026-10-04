@@ -24,8 +24,17 @@ describe('moving data from a pre-rename (cy-ssh) install', () => {
     expect(readFileSync(join(current, 'chh.db-wal'), 'utf8')).toBe('cy-ssh.db-wal');
     expect(existsSync(join(current, 'logs'))).toBe(true);
     expect(readFileSync(join(current, 'Local State'), 'utf8')).toBe('new');
+    expect(existsSync(legacy)).toBe(false);
     // Never twice, and never over existing data.
     expect(migrateLegacyUserData(current)).toBe(false);
+  });
+
+  it('creates the new folder if needed', () => {
+    root = mkdtempSync(join(tmpdir(), 'chh-legacy-'));
+    mkdirSync(join(root, 'cy-ssh'));
+    writeFileSync(join(root, 'cy-ssh', 'db.key'), 'k');
+    expect(migrateLegacyUserData(join(root, 'chh'))).toBe(true);
+    expect(readFileSync(join(root, 'chh', 'db.key'), 'utf8')).toBe('k');
   });
 
   it('does nothing without a legacy install', () => {

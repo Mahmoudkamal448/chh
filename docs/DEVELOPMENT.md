@@ -87,6 +87,8 @@ To try sync between two app instances on one machine, start the second with a se
 | `CHH_USER_DATA=/path` | Use a different user-data directory (isolated profiles, E2E tests, portable installs) |
 | `CHH_TEST=1` | Test mode: enables `dev.seedHosts` and a read-only terminal-text hook for E2E |
 | `CHH_ALLOW_WEAK_KEYSTORE=1` | Skip the "no keyring" confirmation dialog (CI only) |
+| `CHH_DISABLE_UPDATES=1` | Turn off update checks (managed installations) |
+| `CHH_RELEASE_REPO=owner/repo` | Packaging: publish releases (and point the updater) to another GitHub repository |
 
 ## Data locations
 
@@ -102,7 +104,8 @@ The directory contains:
 - `db.key`: the database key, wrapped by the OS keychain
 - `logs/main.log`: the log, with secrets redacted
 
-Deleting the directory resets the app.
+Deleting the directory resets the app. Installs from before the rename used a `cy-ssh` directory; it's moved to
+`chh` automatically on first start (see [PHASE-6.md](PHASE-6.md#upgrading-from-cy-ssh)).
 
 ## Testing
 
@@ -142,6 +145,14 @@ Deleting the directory resets the app.
     browser (F5 upload, drag-and-drop download, conflict prompt, mkdir, chmod, delete)
   - Phase 3: split panes, snippets with variables + side panel, history capture, Telnet, Mosh, port
     forwarding through a real tunnel, ssh_config import and export
+  - Phase 6: a team between two app instances (create, invite, fingerprint confirmation, moving a host in, viewer
+    read-only, audit log, removal with key rotation) and the update settings
+- **Team sync** (`tests/unit/main/teams.test.ts`) runs two accounts and several devices against the real server
+  code: sharing, moves between vaults, roles, client-reported audit events, rotation and sign-out cleanup.
+- **Server tests** run against the memory store and, when `TEST_DATABASE_URL` points to a PostgreSQL database,
+  against Postgres too (CI does both).
+- **Packaging:** CI builds an unpacked Linux package on every run. See [RELEASING.md](RELEASING.md) for full
+  installers and signing.
 
 ## Platform notes and troubleshooting
 

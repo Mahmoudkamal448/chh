@@ -86,6 +86,31 @@ There are no plans, quotas or device limits. Every account gets every feature.
   hash the auth key (Argon2id).
 - **Rate limits:** auth endpoints allow 30 requests per minute per IP.
 
+## Teams
+
+Teams work with no extra configuration. A few things to know as an operator:
+
+- **Invites** are matched to the email an account signs in with; the server sends no email. Keep
+  `ALLOW_REGISTRATION=true` until invited people have created their accounts.
+- **The audit log** lives in the `audit_log` table. It is append-only: a trigger rejects `UPDATE`, `DELETE` and
+  `TRUNCATE`, and entries outlive deleted teams and accounts. For stronger guarantees, run the server with a
+  database role that has only `INSERT, SELECT` on that table, and back it up separately.
+- Deleting an account is refused while it owns a team (ownership must be transferred or the team deleted first).
+
+## Upgrading from cy-ssh
+
+The project was renamed from *cy-ssh* to *chh* in Phase 6. The Compose project, database user and database name
+changed with it, so a fresh `docker compose up` would start with an empty database. To keep your existing data,
+add these to `deploy/.env` (they're in `.env.example` too) before starting the new version:
+
+```bash
+COMPOSE_PROJECT_NAME=cy-ssh
+POSTGRES_USER=cyssh
+POSTGRES_DB=cyssh
+```
+
+The server image is now called `chh-server`; database migrations (teams and the audit log) run automatically.
+
 ## Running without Docker
 
 ```bash
@@ -106,7 +131,11 @@ For local development: `STORE=memory SERVER_SECRET=$(openssl rand -base64 32) pn
 | `GET/DELETE /v1/account`, `POST /v1/account/password`, `/v1/account/totp/*` | Account, password change, TOTP 2FA |
 | `GET /v1/devices`, `DELETE /v1/devices/:id` | Devices / remote sign-out |
 | `POST /v1/sync/pull`, `/v1/sync/push` | Encrypted items with optimistic concurrency |
-| `GET /v1/sync/ws` | WebSocket "vault changed" notifications |
+| `GET /v1/sync/ws` | WebSocket "vault changed" / "teams changed" notifications |
+| `GET/POST /v1/teams`, `PATCH/DELETE /v1/teams/:id` | Teams the account belongs to; create, rename, delete |
+| `/v1/teams/:id/members[/:userId[/confirm]]`, `/rotate`, `/leave` | Members, confirmation (sealed key), roles, removal, key rotation |
+| `/v1/teams/:id/invites`, `/v1/invites[/:id/accept]` | Invites (by account email) |
+| `GET/POST /v1/teams/:id/audit` | Audit log (owners/admins) and client-reported events |
 | `GET /healthz`, `/v1/info` | Health and server info |
 
 Schemas live in `packages/shared/src/sync/protocol.ts` and are validated on both ends.

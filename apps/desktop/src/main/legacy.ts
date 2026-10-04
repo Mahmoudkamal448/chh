@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, renameSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { BRAND } from '@chh/shared';
 
@@ -13,11 +13,13 @@ const LEGACY_SLUG = 'cy-ssh';
 export function migrateLegacyUserData(userData: string): boolean {
   const legacy = join(dirname(userData), LEGACY_SLUG);
   if (legacy === userData || existsSync(join(userData, 'db.key')) || !existsSync(join(legacy, 'db.key'))) return false;
+  mkdirSync(userData, { recursive: true });
   for (const name of readdirSync(legacy)) {
     const target = join(userData, renameDbFile(name));
     // Chromium may already have created its own files (Local State, caches) in the new folder.
     if (!existsSync(target)) renameSync(join(legacy, name), target);
   }
+  if (readdirSync(legacy).length === 0) rmdirSync(legacy);
   return true;
 }
 

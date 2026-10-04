@@ -16,6 +16,19 @@ import { createMainWindow, isTrustedSender } from './window';
 app.setName(BRAND.productName);
 if (USER_DATA_OVERRIDE) app.setPath('userData', USER_DATA_OVERRIDE);
 
+/**
+ * Data from a pre-rename (cy-ssh) install moves before Chromium or the single-instance lock touch
+ * the user-data folder: on Windows the safeStorage key lives in Chromium's "Local State" file there.
+ */
+let migrated: boolean | Error = false;
+if (!USER_DATA_OVERRIDE) {
+  try {
+    migrated = migrateLegacyUserData(app.getPath('userData'));
+  } catch (err) {
+    migrated = err as Error;
+  }
+}
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
@@ -78,10 +91,10 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   async function boot(): Promise<void> {
-    const migrated = !USER_DATA_OVERRIDE && migrateLegacyUserData(userData);
     initLogger(join(userData, 'logs'));
     log.info({ version: app.getVersion(), platform: process.platform }, 'starting');
-    if (migrated) log.info({ from: 'cy-ssh' }, 'moved data from the pre-rename user-data folder');
+    if (migrated instanceof Error) log.error({ err: errInfo(migrated) }, 'moving data from the pre-rename user-data folder failed');
+    else if (migrated) log.info({ from: 'cy-ssh' }, 'moved data from the pre-rename user-data folder');
 
     let keyFile: ReturnType<typeof readKeyFile>;
     try {

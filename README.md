@@ -6,9 +6,8 @@ Electron + TypeScript codebase.
 Every feature is free for everyone: there are no plans, trials, device limits or license checks. Sync is optional
 and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offline without an account.
 
-> **Status: Phase 5 of 6 complete.** Everything from earlier phases plus jump hosts, proxies, agent forwarding, serial
-> ports, FIDO2 security keys, environment variables, multi-host snippets, autocomplete, and AWS/DigitalOcean import.
-> See the [roadmap](#roadmap) for what comes next.
+> **Status: all 6 phases complete (v1.0.0).** Phase 6 added shared team vaults with an audit log, signed installers
+> and automatic updates, and renamed the project from *cy-ssh* to **chh** ([upgrade notes](docs/PHASE-6.md#upgrading-from-cy-ssh)).
 
 ## Features
 
@@ -47,6 +46,11 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 - **Light and dark UI** (or match the system theme), with all strings in i18n files.
 - **End-to-end encrypted sync** across unlimited devices via your own server (Docker Compose included): offline-first,
   field-level conflict merging, live updates, recovery key, **two-factor authentication**.
+- **Team vaults:** share hosts, identities, keys and snippets with other people, end-to-end encrypted. Invite by
+  email, confirm members by comparing key fingerprints, owner/admin/editor/viewer roles, automatic key rotation when
+  someone is removed, and an **audit log** of who did what from which device.
+- **Signed installers and automatic updates** for Windows (NSIS), macOS (DMG, notarized) and Linux (AppImage, deb,
+  rpm), with stable and beta channels.
 - **App lock:** passcode with Touch ID / Windows Hello, auto-lock on idle or sleep, and an optional **master
   password** that encrypts all local data at rest.
 - **Encrypted at rest:** the whole local database is encrypted, its key is protected by the OS keychain, and
@@ -54,7 +58,8 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 
 ## Quick start
 
-Requirements: **Node.js 22.12+** and **pnpm** (via Corepack), plus a C/C++ toolchain for native modules
+Installers are published on the [releases page](https://github.com/mahmoudkamal448/chh/releases). To build from
+source you need **Node.js 22.12+** and **pnpm** (via Corepack), plus a C/C++ toolchain for native modules
 ([details](docs/DEVELOPMENT.md#prerequisites)).
 
 ```bash
@@ -72,7 +77,7 @@ Other commands:
 | `pnpm typecheck` | Type-check every package |
 | `pnpm test` | Unit tests (crypto, sync primitives, data layer, IPC contract, …) |
 | `pnpm test:e2e` | Build, then run Playwright end-to-end tests against the real app |
-| `pnpm --filter @chh/desktop package` | Build an installer for the current OS (unsigned until Phase 6) |
+| `pnpm --filter @chh/desktop package` | Build installers for the current OS (signed when credentials are set, see [Releasing](docs/RELEASING.md)) |
 
 ## Keyboard shortcuts (defaults)
 
@@ -117,7 +122,8 @@ docs/                  Architecture, development, security and phase notes
 - [Development guide](docs/DEVELOPMENT.md): setup per OS, testing, debugging, troubleshooting
 - [Security](docs/SECURITY.md): threat model and how data is protected today
 - [Self-hosting](docs/SELF_HOSTING.md): run your own sync server
-- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md), [Phase 4](docs/PHASE-4.md), [Phase 5](docs/PHASE-5.md) (what was built, files, how to test, platform differences)
+- [Releasing](docs/RELEASING.md): cutting a release, code signing and notarization
+- Phase notes: [Phase 1](docs/PHASE-1.md), [Phase 2](docs/PHASE-2.md), [Phase 3](docs/PHASE-3.md), [Phase 4](docs/PHASE-4.md), [Phase 5](docs/PHASE-5.md), [Phase 6](docs/PHASE-6.md) (what was built, files, how to test, platform differences)
 
 ## Roadmap
 
@@ -128,7 +134,7 @@ docs/                  Architecture, development, security and phase notes
 | 3 | Port forwarding, snippets, history, split view, Telnet, Mosh, ssh_config import/export | ✅ Done |
 | 4 | Zero-knowledge vault, self-hostable sync server, multi-device sync, 2FA, app lock | ✅ Done |
 | 5 | Jump hosts, proxies, agent forwarding, serial, FIDO2, env vars, multi-host snippets, autocomplete, AWS/DO import | ✅ Done |
-| 6 | Shared team vault + audit log, signed installers, auto-update | Next |
+| 6 | Shared team vault + audit log, signed installers, auto-update, rename to chh | ✅ Done |
 
 ## License
 

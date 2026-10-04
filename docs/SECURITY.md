@@ -1,6 +1,6 @@
 # Security
 
-This document describes how chh protects data **as of Phase 5**, and what later phases add. The full
+This document describes how chh protects data **as of Phase 6** (v1.0.0). The full
 cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](ARCHITECTURE.md#5-encryption-design).
 
 ## What we protect
@@ -131,6 +131,49 @@ Further protections:
 What the server operator **can** do: deny service, delete your ciphertext, or withhold updates (devices then
 diverge until it behaves). It can't forge items, because the AEAD would fail and the item would be skipped.
 
+## Team vaults
+
+**Threat model:** the same as for personal sync. The server can't read team names, items or secrets, and it
+never holds a team key. It does see who belongs to which team, their roles, invites (by email), and the audit
+log.
+
+| Secret | Protection |
+|---|---|
+| Team key | Random 32 bytes made on the creator's device; stored on the server only as one `crypto_box_seal` copy per confirmed member (sealed to that member's X25519 public key) |
+| Team items and their secrets | Same envelope as personal items, with the team key; secrets inside are sealed again, bound to vault, item and field |
+| Team name | XChaCha20-Poly1305 with the team key, bound to the team id |
+| Locally | Team keys are wrapped by a subkey of the database key, like the personal vault key |
+
+- **Key substitution:** before sharing the key, an admin compares the member's public-key fingerprint
+  (BLAKE2b-128 of the key, 32 hex digits) with the member through another channel. The app re-derives the
+  fingerprint from the key it is about to seal to and refuses if it changed. This is the defence against a server
+  that hands out its own key; skipping the comparison means trusting the server for that member.
+- **Roles** are enforced by the server (writes need editor, membership changes need admin, deleting the team needs
+  the owner) and mirrored in the app. Reading is protected by cryptography: only confirmed members hold the key.
+- **Removal rotates the key.** The admin's device re-encrypts every item with a new key and seals it for the
+  remaining members; the server applies this atomically and refuses pushes made with an older key generation.
+  A removed member can't decrypt anything that changes afterwards. What they had already synced may remain on
+  their devices (their app deletes it, a modified app wouldn't). When someone leaves on their own, admins are
+  prompted to rotate.
+- **Audit log:** every authenticated team action is recorded server-side with the actor, device and time, in an
+  append-only table (a trigger rejects UPDATE, DELETE and TRUNCATE; you can also revoke those privileges from the
+  server's database role). Events only the app can observe (connecting to a shared host, exporting a shared key)
+  are reported by the app and labelled "reported by app": a modified client could omit them. The audit log is
+  readable by team owners and admins, and by the server operator.
+- **Leaving a team or signing out** removes that team's data from the device.
+
+## Updates and release integrity
+
+- Release builds are **code-signed** (Windows: Authenticode via Azure Trusted Signing or a certificate; macOS:
+  Developer ID with the hardened runtime, notarized). See [RELEASING.md](RELEASING.md).
+- The updater (electron-updater) downloads from the project's GitHub releases over HTTPS and checks every file
+  against the SHA-512 in the release metadata. On Windows it additionally refuses an update not signed by the
+  configured publisher; on macOS Squirrel only installs updates signed with the same Developer ID.
+- Update checks send no account or usage data. They can be limited to manual checks, and
+  `CHH_DISABLE_UPDATES=1` turns them off for managed installations.
+- Release builds set Electron fuses that stop the binary from being used as a Node.js interpreter
+  (`RunAsNode`, `NODE_OPTIONS`, `--inspect` disabled) and only load the integrity-checked `app.asar`.
+
 ## App lock
 
 - **Lock screen** (passcode, Touch ID, Windows Hello): when locked, the main process rejects every IPC call
@@ -155,6 +198,9 @@ diverge until it behaves). It can't forge items, because the AEAD would fail and
    default KEX is `curve25519-sha256` (see risk R6 in the architecture doc).
 5. **Windows Hello** is implemented via PowerShell/WinRT and not yet verified on real hardware. The passcode
    fallback always works.
+6. **Team metadata is visible to the server:** membership, roles, invite emails, item counts and timing, and the
+   audit log. Only names, items and secrets are encrypted.
+7. **Linux packages aren't code-signed;** updates rely on HTTPS and the SHA-512 hashes in the release metadata.
 
 ## Reporting a vulnerability
 
