@@ -56,7 +56,7 @@ export function SessionOverlay({
     // Local shells start instantly: a small hint is enough.
     if (!remote)
       return (
-        <div className="pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-md bg-surface/90 px-3 py-1.5 text-[12px] text-muted shadow" role="status" data-testid="session-overlay">
+        <div className="pointer-events-none absolute left-1/2 top-4 z-30 -translate-x-1/2 rounded-md bg-surface/90 px-3 py-1.5 text-[12px] text-muted shadow" role="status" data-testid="session-overlay">
           {t('session.connecting')}
         </div>
       );
@@ -65,7 +65,7 @@ export function SessionOverlay({
       { id: 'login', label: t('session.step.login'), state: pane.status === 'authenticating' ? 'active' : 'pending' },
     ] as const;
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40" data-testid="session-overlay">
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40" data-testid="session-overlay">
         <div className="w-80 rounded-xl border border-border bg-surface p-4 text-fg shadow-2xl" role="status" aria-live="polite">
           <p className="font-semibold">{t('session.connectingTo', { name: pane.title })}</p>
           {target && !pane.title.startsWith(target.replace(/:22$/, '')) && <p className="selectable mt-0.5 truncate font-mono text-[12px] text-muted">{target}</p>}
@@ -98,7 +98,7 @@ export function SessionOverlay({
     const code = message.key.replace(/^session\.error\./, '');
     const hint = HINTS.has(code) ? t(`session.hint.${code}`, { target: target ?? pane.title }) : null;
     return (
-      <div className="absolute inset-0 flex items-center justify-center bg-black/40" data-testid="session-overlay">
+      <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40" data-testid="session-overlay">
         <div className="w-[32rem] max-w-[calc(100%-2rem)] rounded-xl border border-border bg-surface p-4 text-fg shadow-2xl" role="alert" data-testid="session-error">
           <div className="flex items-start gap-3">
             <AlertTriangle size={20} className="mt-0.5 shrink-0 text-danger" aria-hidden />
@@ -140,7 +140,7 @@ export function SessionOverlay({
 
   // Ended normally (or failed without details): a bar that leaves the scrollback readable.
   return (
-    <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 border-t border-border bg-surface/95 px-4 py-2.5" role="status" data-testid="session-overlay">
+    <div className="absolute inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-border bg-surface/95 px-4 py-2.5" role="status" data-testid="session-overlay">
       <span className="text-[13px]">{exitCode !== undefined && exitCode !== null ? t('session.exited', { code: exitCode }) : t('session.closed')}</span>
       <span className="ml-auto flex gap-2">
         <Button variant="primary" onClick={onReconnect} data-testid="reconnect">

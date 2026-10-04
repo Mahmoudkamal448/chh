@@ -43,7 +43,7 @@ export function SuggestionList({
     <ul
       role="listbox"
       aria-label={t('autocomplete.label')}
-      className="absolute z-20 max-h-64 w-[420px] max-w-[80%] overflow-y-auto rounded-md border border-border bg-surface p-1 text-[12px] shadow-xl"
+      className="absolute z-30 max-h-64 w-[420px] max-w-[80%] overflow-y-auto rounded-md border border-border bg-surface p-1 text-[12px] shadow-xl"
       style={{ left, top }}
       data-testid="suggestion-list"
     >

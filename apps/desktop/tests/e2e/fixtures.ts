@@ -19,6 +19,8 @@ export async function launchApp(
   const args = [resolve(__dirname, '../..')];
   // Chromium refuses to run as root without this; CI Linux runners also lack the SUID sandbox helper.
   if (process.getuid?.() === 0 || (process.env.CI && process.platform === 'linux')) args.push('--no-sandbox');
+  // Software WebGL, so headless Linux uses the same WebGL terminal renderer as macOS and Windows.
+  if (process.env.CHH_E2E_WEBGL) args.push('--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist');
   const app = await electron.launch({
     args,
     env: {

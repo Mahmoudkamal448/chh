@@ -363,7 +363,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       {list && <SuggestionList items={list.items} index={list.index} left={list.left} top={list.top} loading={list.loading} onPick={(i) => void pickSuggestion(i)} />}
 
       {findOpen && (
-        <div className="absolute right-3 top-2 z-10 flex items-center gap-1 rounded-md border border-border bg-surface p-1 shadow-lg">
+        <div className="absolute right-3 top-2 z-30 flex items-center gap-1 rounded-md border border-border bg-surface p-1 shadow-lg">
           <Input
             autoFocus
             className="h-7 w-56"
