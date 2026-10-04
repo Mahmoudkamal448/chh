@@ -117,13 +117,15 @@ export class SshConfigIO {
     const result: SshImportResult = { hosts: 0, keys: 0, forwards: 0, skippedKeys: [] };
     const keyByPath = new Map<string, string | null>();
 
-    const importKey = async (path: string): Promise<string | null> => {
+    const importKey = async (path: string, certificateFiles: string[]): Promise<string | null> => {
       if (keyByPath.has(path)) return keyByPath.get(path)!;
       let id: string | null = null;
       try {
         if (!existsSync(path)) result.skippedKeys.push({ path, reason: 'missing' });
         else {
-          const res = await this.d.keys.importText(readLimited(path), path.split(/[\\/]/).pop());
+          // Like OpenSSH: CertificateFile entries, then "<key>-cert.pub"; the one that certifies this key is attached.
+          const certificates = [...certificateFiles, `${path}-cert.pub`].filter((f) => existsSync(f)).map((f) => readLimited(f));
+          const res = await this.d.keys.importText(readLimited(path), path.split(/[\\/]/).pop(), undefined, certificates);
           if (res.status === 'imported') {
             id = res.key.id;
             result.keys++;
@@ -142,7 +144,7 @@ export class SshConfigIO {
       let keyId: string | null = null;
       if (opts.importKeys) {
         for (const f of c.identityFiles) {
-          const id = await importKey(f);
+          const id = await importKey(f, c.certificateFiles);
           keyId ??= id;
         }
       }

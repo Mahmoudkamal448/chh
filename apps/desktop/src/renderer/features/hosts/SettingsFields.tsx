@@ -5,6 +5,7 @@ import { keyKind } from '../../lib/format';
 import { useVault } from '../../stores/vault-store';
 import { TERMINAL_SCHEMES, schemeById } from '../../themes/terminal-themes';
 import { AdvancedFields, SerialFields } from './AdvancedFields';
+import { CertificatePanel } from '../keys/Certificate';
 
 /**
  * Editors for inheritable settings. Empty = inherit; the inherited value is shown as placeholder.
@@ -100,12 +101,18 @@ export function SettingsFields({
             <option value="none">{t('settings.none')}</option>
             {keys.map((k) => (
               <option key={k.id} value={k.id}>
-                {k.label} ({keyKind(k.type, k.bits)})
+                {k.label} ({keyKind(k.type, k.bits)}){k.certificate ? ` · ${t('certs.chip')}` : ''}
               </option>
             ))}
           </Select>
         )}
       </Field>
+      {(() => {
+        // The key this host uses (its own or inherited): show its certificate, or offer to add one.
+        const effective = value.keyId === undefined ? inherited.keyId : value.keyId;
+        const key = effective ? keys.find((k) => k.id === effective) : undefined;
+        return key ? <CertificatePanel keyItem={key} compact /> : null;
+      })()}
       </>
       )}
       <Field label={t('hostEditor.terminalTheme')}>

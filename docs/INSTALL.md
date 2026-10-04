@@ -141,6 +141,23 @@ Your data lives in `~/.config/chh`.
    - **Sync** across your devices and **team vaults**: run your own server ([SELF_HOSTING.md](SELF_HOSTING.md)),
      then Settings → **Sync & account**.
    - **App lock** and **master password**: Settings → **Security**.
+   - **SSH certificates** (if your servers trust a certificate authority): see below.
+
+### SSH certificates
+
+If your organization signs SSH keys with a certificate authority, you log in with your key plus its certificate
+(usually a file named like `id_ed25519-cert.pub` next to your key) instead of adding your key to every server.
+
+1. Import the key: Keys → **Import**. A `…-cert.pub` file next to it is attached automatically, and so are
+   `CertificateFile` entries when you import `~/.ssh/config`.
+2. Otherwise add it yourself: select the key on the Keys screen, or choose it in an identity or host editor, then
+   **Add certificate…** and paste the certificate or choose the file. chh checks that it belongs to that key.
+3. Connect as usual. chh presents the certificate first and falls back to the plain key if a server doesn't trust
+   the CA. The Keys screen shows who the certificate is valid for and when it expires (amber a week before, red once
+   expired); ask your CA for a new one and use **Replace…**.
+
+Administrators issue one with `ssh-keygen -s ca_key -I alice -n alice -V +52w id_ed25519.pub`, and servers trust
+the CA with `TrustedUserCAKeys` in `sshd_config`.
 
 **Coming from cy-ssh?** chh moves your data from the old `cy-ssh` folder automatically on first start. If you
 didn't use a master password on macOS or Linux, read

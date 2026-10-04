@@ -52,7 +52,7 @@ export class KeysRepo {
    * Parses, decrypts and stores a key. Passphrase problems are returned, not thrown. A certificate found
    * next to the key file is attached if it belongs to it (and to an existing key without one).
    */
-  async importText(text: string, label?: string, passphrase?: string, certificate?: string): Promise<ImportKeyResult> {
+  async importText(text: string, label?: string, passphrase?: string, certificates?: string | string[]): Promise<ImportKeyResult> {
     let key: PrivateKey;
     try {
       key = await parsePrivateKey(text, passphrase || undefined);
@@ -63,7 +63,7 @@ export class KeysRepo {
       throw err;
     }
     const fp = fingerprint(key.publicBlob);
-    const cert = certificate && certificateFor(certificate, key.publicBlob) ? certificate.trim() : null;
+    const cert = [certificates ?? []].flat().find((c) => certificateFor(c, key.publicBlob))?.trim() ?? null;
     const existing = this.list().find((k) => k.fingerprint === fp);
     if (existing) {
       if (cert && !existing.certificate) return { status: 'duplicate', existing: this.setCertificate(existing.id, cert) };

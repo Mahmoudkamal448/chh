@@ -337,8 +337,39 @@
       "integrity": "The key file is corrupted or was modified.",
       "expired": "The selected file expired. Please choose it again.",
       "passphrase_required": "This key needs a passphrase.",
-      "bad_passphrase": "That passphrase is incorrect."
+      "bad_passphrase": "That passphrase is incorrect.",
+      "cert_invalid": "This isn't an OpenSSH certificate. Use the “…-cert.pub” file your administrator or CA gave you.",
+      "cert_mismatch": "This certificate was issued for a different key. Choose the key it belongs to.",
+      "cert_host": "This is a host certificate. A key needs a user certificate."
     }
+  },
+  "certs": {
+    "title": "Certificate",
+    "chip": "Certificate",
+    "none": "No certificate. Add one if your servers trust a certificate authority.",
+    "add": "Add certificate…",
+    "replace": "Replace…",
+    "remove": "Remove certificate",
+    "addTitle": "Certificate for “{{label}}”",
+    "explain": "An OpenSSH certificate is signed by your certificate authority and lets you log in to servers that trust it, without adding your key to each server. chh presents it whenever this key is used, and falls back to the plain key if a server doesn’t accept it.",
+    "pasteLabel": "Certificate",
+    "pasteHint": "Paste the contents of the “…-cert.pub” file, e.g. id_ed25519-cert.pub.",
+    "chooseFile": "Choose file…",
+    "fileHint": "or pick the “…-cert.pub” file",
+    "attach": "Attach certificate",
+    "principals": "Valid for",
+    "anyUser": "any user name",
+    "keyId": "Key ID",
+    "serial": "Serial",
+    "ca": "Signed by CA",
+    "restrictions": "Restrictions",
+    "validUntil": "Valid until {{date}}",
+    "validFrom": "Not valid before {{date}}",
+    "forever": "Never expires",
+    "expiresIn_one": "Expires in {{count}} day",
+    "expiresIn_other": "Expires in {{count}} days",
+    "expiredOn": "Expired {{date}}",
+    "expired": "Certificate expired"
   },
   "identities": {
     "title": "Identities",
@@ -357,7 +388,9 @@
     "withPassword": "password",
     "withKey": "key: {{key}}",
     "deleteTitle": "Delete identity?",
-    "deleteMessage": "“{{label}}” will be deleted and unlinked from its hosts and groups."
+    "deleteMessage": "“{{label}}” will be deleted and unlinked from its hosts and groups.",
+    "keyHint": "Optional. Using an SSH certificate? Choose or import its key, then add the certificate.",
+    "importKey": "Import key…"
   },
   "knownHosts": {
     "title": "Known hosts",

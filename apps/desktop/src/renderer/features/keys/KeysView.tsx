@@ -19,6 +19,7 @@ import { writeToPane } from '../terminal/registry';
 import { ExportKeyDialog } from './ExportKeyDialog';
 import { GenerateKeyDialog } from './GenerateKeyDialog';
 import { ImportKeyDialog } from './ImportKeyDialog';
+import { CertificateChip, CertificatePanel } from './Certificate';
 
 /** FIDO2 security keys live on the hardware; OpenSSH generates a key handle file for them. */
 function SecurityKeyCard() {
@@ -146,6 +147,7 @@ export function KeysView() {
                   </div>
                   <div className="truncate font-mono text-[11px] text-muted">{k.fingerprint}</div>
                 </div>
+                {k.certificate && <CertificateChip cert={k.certificate} />}
                 <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{keyKind(k.type, k.bits)}</span>
               </li>
             ))}
@@ -187,6 +189,11 @@ export function KeysView() {
                 <p className="font-mono text-[12px]" data-testid="key-fingerprint">
                   {selected.fingerprint}
                 </p>
+              </div>
+
+              <div>
+                <h3 className="mb-1 text-[12px] font-medium text-muted">{t('certs.title')}</h3>
+                <CertificatePanel keyItem={selected} />
               </div>
 
               <div>

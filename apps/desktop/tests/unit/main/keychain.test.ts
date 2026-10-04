@@ -69,6 +69,39 @@ describe('KeysRepo', () => {
     expect((await keys.importText(fixture('ppk3-ed25519.ppk'))).status).toBe('duplicate');
   });
 
+  it('attaches only a user certificate for the same key, and can remove it', async () => {
+    const res = await keys.importText(fixture('openssh-ed25519'));
+    if (res.status !== 'imported') throw new Error(res.status);
+    expect(res.key.certificate).toBeNull();
+    const other = await keys.importText(fixture('openssh-ecdsa256'));
+    if (other.status !== 'imported') throw new Error(other.status);
+
+    const withCert = keys.setCertificate(res.key.id, fixture('openssh-ed25519-cert.pub'));
+    expect(withCert.certificate).toMatchObject({ kind: 'user', principals: ['alice', 'deploy'], keyId: 'openssh-ed25519-id', serial: '42' });
+    expect(keys.getCertificate(res.key.id)).toBe(fixture('openssh-ed25519-cert.pub').trim());
+    expect(keys.list().find((k) => k.id === res.key.id)!.certificate?.caFingerprint).toMatch(/^SHA256:/);
+
+    expect(() => keys.setCertificate(other.key.id, fixture('openssh-ed25519-cert.pub'))).toThrow(expect.objectContaining({ code: 'cert_mismatch' }));
+    expect(() => keys.setCertificate(res.key.id, fixture('openssh-ed25519-host-cert.pub'))).toThrow(expect.objectContaining({ code: 'cert_host' }));
+    expect(() => keys.setCertificate(res.key.id, fixture('openssh-ed25519.pub'))).toThrow(expect.objectContaining({ code: 'cert_invalid' }));
+    expect(keys.getCertificate(res.key.id)).not.toBeNull(); // failed attempts change nothing
+
+    expect(keys.setCertificate(res.key.id, null).certificate).toBeNull();
+    expect(keys.getCertificate(res.key.id)).toBeNull();
+  });
+
+  it('attaches a matching certificate found next to an imported key, also to an existing key', async () => {
+    const wrongAndRight = [fixture('openssh-ecdsa256-cert.pub'), fixture('openssh-ed25519-cert.pub')];
+    const res = await keys.importText(fixture('openssh-ed25519'), undefined, undefined, wrongAndRight);
+    if (res.status !== 'imported') throw new Error(res.status);
+    expect(res.key.certificate?.keyId).toBe('openssh-ed25519-id');
+
+    const plain = await keys.importText(fixture('openssh-ecdsa256'));
+    if (plain.status !== 'imported') throw new Error(plain.status);
+    const again = await keys.importText(fixture('openssh-ecdsa256'), undefined, undefined, fixture('openssh-ecdsa256-cert.pub'));
+    expect(again).toMatchObject({ status: 'duplicate', existing: { id: plain.key.id, certificate: { keyId: 'openssh-ecdsa256-id' } } });
+  });
+
   it('imports PuTTY keys and exports re-encrypted OpenSSH', async () => {
     const res = await keys.importText(fixture('ppk2-rsa2048-enc.ppk'), 'putty', 'test-pass');
     if (res.status !== 'imported') throw new Error(res.status);

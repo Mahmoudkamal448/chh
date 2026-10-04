@@ -20,6 +20,9 @@ and self-hostable ([guide](docs/SELF_HOSTING.md)), and the app works fully offli
 - **Keys:** generate ED25519/ECDSA/RSA keys; import OpenSSH, PEM/PKCS#8 and **PuTTY .ppk (v2 and v3)**, including
   encrypted ones; copy the public key; export the private key, optionally re-encrypted with a passphrase.
 - **Identities:** reusable username + password/key bundles that you can link to hosts or whole groups.
+- **SSH certificates:** attach an OpenSSH user certificate (`…-cert.pub`) to a key, from the Keys screen or right
+  in the identity and host editors; chh shows who it's valid for and when it expires, presents it whenever the key is
+  used (also on jump hosts), and picks it up automatically when importing a key or `~/.ssh/config`.
 - **Known hosts manager:** review and remove trusted host keys, and import `~/.ssh/known_hosts` (including hashed
   entries).
 - **SFTP file browser:** dual pane (this computer or any host on either side), drag and drop between panes and
