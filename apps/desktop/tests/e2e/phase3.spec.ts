@@ -86,7 +86,8 @@ test('snippets with variables run from the side panel; typed commands land in Hi
 
   await page.getByTestId('new-local').click();
   await page.waitForTimeout(500);
-  await page.keyboard.press(accel('S'));
+  // The panel shortcut is ⌘⇧S on macOS (⌘S is left to the shell) and Ctrl+Shift+S elsewhere.
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+S' : accel('S'));
   await page.getByTestId('side-panel').getByTestId('panel-snippet-run').click();
   await page.getByTestId('var-name').fill('cy');
   await page.getByTestId('snippet-variables-run').click();
