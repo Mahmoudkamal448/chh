@@ -200,7 +200,10 @@ export const useTabs = create<TabsState>((set, get) => {
 
     setStatus(sessionId, status, message) {
       const pane = Object.values(get().panes).find((p) => p.sessionId === sessionId);
-      if (pane) set({ panes: { ...get().panes, [pane.id]: { ...pane, status, message } } });
+      if (!pane) return;
+      // A failed session is closed right after reporting why; keep the reason on screen.
+      if (pane.status === 'error' && status === 'closed') return;
+      set({ panes: { ...get().panes, [pane.id]: { ...pane, status, message } } });
     },
 
     async reconnect(paneId) {

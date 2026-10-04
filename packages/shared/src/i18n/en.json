@@ -294,7 +294,25 @@
       "noCertificate": "{{detail}} is set to log in with a certificate, but its key has none. Add one in the host editor (Authentication → Certificate).",
       "noCertificateKey": "{{detail}} is set to log in with a certificate, but no key is chosen. Choose the key in the host editor (Authentication → Certificate)."
     },
-    "closePane": "Close pane"
+    "closePane": "Close pane",
+    "connectingTo": "Connecting to {{name}}",
+    "step": {
+      "connect": "Reaching the server",
+      "login": "Logging in"
+    },
+    "failedTitle": "Couldn’t connect to {{name}}",
+    "copyDetails": "Copy details",
+    "editHost": "Edit host",
+    "retry": "Try again",
+    "hint": {
+      "timeout": "The server didn’t answer in time. Check the address and port, and that your network, VPN or firewall lets you reach it.",
+      "dns": "The name couldn’t be resolved. Check the spelling, or whether you need to be on a VPN.",
+      "refused": "The computer answered, but nothing accepts SSH on that port. Check the port number and that the SSH server is running.",
+      "unreachable": "Your computer has no route to it. Check your network or VPN.",
+      "auth": "The server didn’t accept any of the login methods tried. Check the user name and the Authentication settings (password, key or certificate) in the host editor.",
+      "reset": "The server closed the connection. It may limit connections or block your address.",
+      "jump": "Open that jump host on its own to see what fails."
+    }
   },
   "hostKey": {
     "newTitle": "Verify host identity",
