@@ -44,6 +44,10 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Package smoke test (Linux, unsigned, unpacked)
+        if: runner.os == 'Linux'
+        run: pnpm --filter @chh/desktop exec electron-builder --config electron-builder.config.cjs --linux dir --publish never
+
       - name: E2E tests (Linux, virtual display)
         if: runner.os == 'Linux'
         run: xvfb-run --auto-servernum -- pnpm --filter @chh/desktop exec playwright test
