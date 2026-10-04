@@ -5,6 +5,7 @@ import { useTeams } from '../../stores/teams-store';
 
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyState } from '../../components/EmptyState';
 import type { Identity } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
@@ -146,16 +147,22 @@ export function IdentitiesView() {
     <div className="flex h-full min-w-0 flex-1 flex-col">
       <div className="flex items-center gap-2 border-b border-border px-4 py-2.5">
         <h1 className="text-[15px] font-semibold">{t('identities.title')}</h1>
-        <span className="text-[12px] text-muted">{t('identities.count', { count: identities.length })}</span>
+        <span className="shrink-0 whitespace-nowrap text-[12px] text-muted">{t('identities.count', { count: identities.length })}</span>
         <Button className="ml-auto" variant="primary" onClick={() => setEditing('new')} data-testid="new-identity">
           <Plus size={14} /> {t('identities.new')}
         </Button>
       </div>
       {identities.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 text-center text-muted">
-          <UserRound size={28} />
-          <p className="max-w-sm">{t('identities.empty')}</p>
-        </div>
+        <EmptyState
+          icon={UserRound}
+          action={
+            <Button variant="primary" onClick={() => setEditing('new')}>
+              <Plus size={14} /> {t('identities.new')}
+            </Button>
+          }
+        >
+          {t('identities.empty')}
+        </EmptyState>
       ) : (
         <ul className="min-h-0 flex-1 overflow-y-auto">
           {identities.map((i) => (

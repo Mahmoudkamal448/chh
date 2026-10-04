@@ -647,7 +647,8 @@
       "disconnected": "The SSH connection for this tunnel was lost.",
       "cancelled": "Cancelled.",
       "generic": "Forwarding failed: {{detail}}"
-    }
+    },
+    "needHost": "Forwarding runs over a host’s SSH connection: add a host first."
   },
   "sshConfig": {
     "menu": "SSH config",

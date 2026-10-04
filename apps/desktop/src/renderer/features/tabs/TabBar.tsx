@@ -10,9 +10,9 @@ import { cn } from '../../lib/cn';
 import { HOSTS_TAB, tabInfo, useTabs } from '../../stores/tabs-store';
 
 const statusColor: Record<string, string> = {
-  connecting: 'text-[#d29b00]',
-  authenticating: 'text-[#d29b00]',
-  ready: 'text-[#2f9e44]',
+  connecting: 'text-warning-fg',
+  authenticating: 'text-warning-fg',
+  ready: 'text-success',
   closed: 'text-muted',
   error: 'text-danger',
 };

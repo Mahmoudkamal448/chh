@@ -8,7 +8,7 @@ import { startRun, useRuns, type RunHost } from '../../stores/runs-store';
 import { useTabs } from '../../stores/tabs-store';
 
 function StatusIcon({ h }: { h: RunHost }) {
-  if (h.status === 'done' && h.exitCode === 0) return <CheckCircle2 size={15} className="text-[#2f9e44]" />;
+  if (h.status === 'done' && h.exitCode === 0) return <CheckCircle2 size={15} className="text-success" />;
   if (h.status === 'done' || h.status === 'error') return <XCircle size={15} className="text-danger" />;
   if (h.status === 'cancelled' || h.status === 'skipped') return <MinusCircle size={15} className="text-muted" />;
   return <Loader2 size={15} className="animate-spin text-muted" />;

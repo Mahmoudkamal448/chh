@@ -189,7 +189,7 @@ function TwoFactor({ enabled }: { enabled: boolean }) {
       <p className="text-[12px] text-muted">{t('sync.twoFactorHint')}</p>
       {enabled && !codes ? (
         <div className="flex items-end gap-2">
-          <span className="text-[13px] text-[#2f9e44]">{t('sync.twoFactorOn')}</span>
+          <span className="text-[13px] text-success">{t('sync.twoFactorOn')}</span>
           <div className="ml-auto w-44">
             <Field label={t('sync.totpCode')}>{(id) => <Input id={id} value={code} onChange={(e) => setCode(e.target.value.trim())} />}</Field>
           </div>
@@ -365,7 +365,7 @@ function SignedIn() {
         </div>
       </section>
       {msg && (
-        <p role={msg.kind === 'error' ? 'alert' : 'status'} className={msg.kind === 'error' ? 'text-[12px] text-danger' : 'text-[12px] text-[#2f9e44]'}>
+        <p role={msg.kind === 'error' ? 'alert' : 'status'} className={msg.kind === 'error' ? 'text-[12px] text-danger' : 'text-[12px] text-success'}>
           {msg.text}
         </p>
       )}

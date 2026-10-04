@@ -12,6 +12,7 @@ import { useTabs } from '../../stores/tabs-store';
 const ROW_HEIGHT = 48;
 
 const rowAction = 'flex h-7 w-7 items-center justify-center rounded-md text-muted hover:bg-surface hover:text-fg';
+const kbd = 'ml-auto pl-6 font-sans text-[11px] text-muted';
 const menuItem = 'flex h-7 cursor-default items-center rounded px-2 text-[13px] outline-none data-[highlighted]:bg-surface-2';
 
 export function HostList({
@@ -165,7 +166,7 @@ export function HostList({
                       {group ? ` · ${group}` : ''}
                     </div>
                   </div>
-                  <div className={cn('hidden max-w-[40%] shrink gap-1 overflow-hidden md:flex', 'group-hover:hidden', row.index === active && 'md:hidden')}>
+                  <div className="hidden max-w-[40%] shrink gap-1 overflow-hidden group-focus-within:!hidden group-hover:!hidden md:flex">
                     {h.tags.slice(0, 4).map((tag) => (
                       <span key={tag} className="truncate rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">
                         {tag}
@@ -173,7 +174,7 @@ export function HostList({
                     ))}
                   </div>
                   {/* Quick actions on hover (and for the selected row). */}
-                  <div className={cn('shrink-0 items-center gap-1', row.index === active ? 'flex' : 'hidden group-hover:flex')} onDoubleClick={(e) => e.stopPropagation()}>
+                  <div className="hidden shrink-0 items-center gap-1 group-focus-within:flex group-hover:flex" onDoubleClick={(e) => e.stopPropagation()}>
                     {h.protocol !== 'serial' && h.protocol !== 'telnet' && (
                       <button type="button" className={rowAction} title={t('hosts.openFiles')} aria-label={t('hosts.openFiles')} onClick={() => onOpenFiles(h)} data-testid="host-action-files">
                         <FolderOpen size={14} />
@@ -198,12 +199,14 @@ export function HostList({
                 <CM.Content className="z-50 min-w-[180px] rounded-md border border-border bg-surface p-1 shadow-xl">
                   <CM.Item className={menuItem} onSelect={() => onConnect(h)}>
                     {t('hosts.connect')}
+                    <kbd className={kbd}>Enter</kbd>
                   </CM.Item>
                   <CM.Item className={menuItem} onSelect={() => onOpenFiles(h)} data-testid="host-open-files">
                     {t('hosts.openFiles')}
                   </CM.Item>
                   <CM.Item className={menuItem} onSelect={() => onEdit(h)}>
                     {t('common.edit')}
+                    <kbd className={kbd}>F2</kbd>
                   </CM.Item>
                   <CM.Item className={menuItem} onSelect={() => onDuplicate(h)}>
                     {t('hosts.duplicate')}
@@ -219,6 +222,7 @@ export function HostList({
                   <CM.Separator className="my-1 h-px bg-border" />
                   <CM.Item className={cn(menuItem, 'text-danger')} onSelect={() => onDelete(h)}>
                     {t('common.delete')}
+                    <kbd className={kbd}>Del</kbd>
                   </CM.Item>
                 </CM.Content>
               </CM.Portal>
