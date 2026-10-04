@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "pnpm --filter @chh/desktop dev",
-    "build": "pnpm -r --filter ./packages/** build && pnpm --filter @chh/desktop build",
+    "build": "pnpm -r --filter \"./packages/**\" run --if-present build && pnpm --filter @chh/desktop build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --workspace-concurrency=1 test",
     "test:e2e": "pnpm --filter @chh/desktop test:e2e",
