@@ -31,7 +31,7 @@ function Root() {
 
 async function start() {
   await initI18n('en');
-  const [info, lock] = await Promise.all([window.cy.app.info({}), window.cy.lock.state({})]);
+  const [info, lock] = await Promise.all([window.chh.app.info({}), window.chh.lock.state({})]);
   if (info.testMode) installTestHooks();
   useSecurity.getState().setLock(lock);
   createRoot(document.getElementById('root')!).render(

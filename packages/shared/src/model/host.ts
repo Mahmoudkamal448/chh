@@ -35,6 +35,9 @@ export type HostFields = z.infer<typeof HostFieldsSchema>;
 /** What the renderer sees: never the secret, only whether one is stored. */
 export const HostSchema = HostFieldsSchema.omit({ password: true }).extend({
   id: IdSchema,
+  /** Vault the item lives in: the personal vault or a team vault. */
+  vaultId: IdSchema,
+
   hasPassword: z.boolean(),
   updatedAt: z.number(),
 });
@@ -51,6 +54,8 @@ export const HostInputSchema = z.object({
   settings: HostSettingsOverridesSchema.default({}),
   password: SecretInputSchema,
   externalId: z.string().max(200).nullable().optional(),
+  /** Create in this vault (default: the personal vault). */
+  vaultId: IdSchema.optional(),
 });
 export type HostInput = z.input<typeof HostInputSchema>;
 
@@ -73,6 +78,8 @@ export const HostQuerySchema = z.object({
   includeSubgroups: z.boolean().default(true),
   tag: z.string().max(50).optional(),
   favoritesOnly: z.boolean().optional(),
+  /** Only hosts in this vault. */
+  vaultId: IdSchema.optional(),
   offset: z.number().int().min(0).default(0),
   limit: z.number().int().min(1).max(50_000).default(50_000),
 });

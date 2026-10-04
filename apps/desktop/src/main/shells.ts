@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import type { LocalShell } from '@cy-ssh/shared';
+import type { LocalShell } from '@chh/shared';
 
 function which(cmd: string): string | null {
   const dirs = (process.env.PATH ?? '').split(process.platform === 'win32' ? ';' : ':');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Snippet } from '@cy-ssh/shared';
+import type { Snippet } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input } from '../../components/ui';
 import { needsVariables } from './run-snippet';

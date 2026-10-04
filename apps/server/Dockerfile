@@ -1,17 +1,18 @@
-# cy-ssh sync server. Build from the repository root:
-#   docker build -f apps/server/Dockerfile -t cy-ssh-server .
+# chh sync server. Build from the repository root:
+#   docker build -f apps/server/Dockerfile -t chh-server .
 
 FROM node:22-alpine AS build
 WORKDIR /repo
 RUN corepack enable
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml tsconfig.base.json ./
+COPY scripts scripts
 COPY packages/shared/package.json packages/shared/
 COPY apps/server/package.json apps/server/
-RUN pnpm install --frozen-lockfile --filter @cy-ssh/server...
+RUN pnpm install --frozen-lockfile --filter @chh/server...
 COPY packages/shared packages/shared
 COPY apps/server apps/server
-RUN pnpm --filter @cy-ssh/server build \
- && node -e "const p=require('./apps/server/package.json');delete p.dependencies['@cy-ssh/shared'];delete p.devDependencies;delete p.scripts;require('fs').writeFileSync('/tmp/package.json',JSON.stringify(p,null,2))"
+RUN pnpm --filter @chh/server build \
+ && node -e "const p=require('./apps/server/package.json');delete p.dependencies['@chh/shared'];delete p.devDependencies;delete p.scripts;require('fs').writeFileSync('/tmp/package.json',JSON.stringify(p,null,2))"
 
 FROM node:22-alpine
 ENV NODE_ENV=production

@@ -4,8 +4,9 @@ import { KeyRound, Star } from 'lucide-react';
 import { OsBadge } from '../../components/OsBadge';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Host } from '@cy-ssh/shared';
+import type { Host } from '@chh/shared';
 import { cn } from '../../lib/cn';
+import { VaultBadge } from '../teams/VaultBadge';
 
 const ROW_HEIGHT = 48;
 
@@ -20,6 +21,7 @@ export function HostList({
   onDuplicate,
   onToggleFavorite,
   onDelete,
+  onMove,
 }: {
   hosts: Host[];
   groupLabel(id: string | null): string | null;
@@ -29,6 +31,8 @@ export function HostList({
   onDuplicate(h: Host): void;
   onToggleFavorite(h: Host): void;
   onDelete(h: Host): void;
+  /** Absent when there's no other vault to move to. */
+  onMove?(h: Host): void;
 }) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
@@ -129,6 +133,7 @@ export function HostList({
                       <span className="truncate font-medium">{h.label}</span>
                       {h.favorite && <Star size={12} className="shrink-0 fill-current text-[#d29b00]" aria-label={t('hosts.favorite')} />}
                       {h.hasPassword && <KeyRound size={12} className="shrink-0 text-muted" aria-label={t('hosts.passwordSaved')} />}
+                      <VaultBadge vaultId={h.vaultId} />
                     </div>
                     <div className="truncate text-[12px] text-muted">
                       {user ? `${user}@` : ''}
@@ -163,6 +168,11 @@ export function HostList({
                   <CM.Item className={menuItem} onSelect={() => onToggleFavorite(h)}>
                     {h.favorite ? t('hosts.unfavorite') : t('hosts.makeFavorite')}
                   </CM.Item>
+                  {onMove && (
+                    <CM.Item className={menuItem} onSelect={() => onMove(h)} data-testid="host-move">
+                      {t('teams.move.menu')}
+                    </CM.Item>
+                  )}
                   <CM.Separator className="my-1 h-px bg-border" />
                   <CM.Item className={cn(menuItem, 'text-danger')} onSelect={() => onDelete(h)}>
                     {t('common.delete')}

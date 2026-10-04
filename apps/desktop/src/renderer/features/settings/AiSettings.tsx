@@ -15,7 +15,7 @@ export function AiSettings() {
   const [hasKey, setHasKey] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   useEffect(() => {
-    void window.cy.suggest.aiKeyStatus({}).then((s) => setHasKey(s.configured));
+    void window.chh.suggest.aiKeyStatus({}).then((s) => setHasKey(s.configured));
   }, []);
 
   return (
@@ -44,7 +44,7 @@ export function AiSettings() {
             <Button
               disabled={!key}
               onClick={async () => {
-                await window.cy.suggest.setAiKey({ key });
+                await window.chh.suggest.setAiKey({ key });
                 setKey('');
                 setHasKey(true);
               }}
@@ -55,7 +55,7 @@ export function AiSettings() {
               <Button
                 variant="ghost"
                 onClick={async () => {
-                  await window.cy.suggest.setAiKey({ key: null });
+                  await window.chh.suggest.setAiKey({ key: null });
                   setHasKey(false);
                 }}
               >
@@ -70,7 +70,7 @@ export function AiSettings() {
             onClick={async () => {
               setMsg(null);
               try {
-                const r = await window.cy.suggest.ai({ line: 'list files by size', hostId: null, recent: [] });
+                const r = await window.chh.suggest.ai({ line: 'list files by size', hostId: null, recent: [] });
                 setMsg(t('ai.testOk', { example: r.suggestions[0] ?? '' }));
               } catch (err) {
                 const { key: k, detail } = errorMessage(err);

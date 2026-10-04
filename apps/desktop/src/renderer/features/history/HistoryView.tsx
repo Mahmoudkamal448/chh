@@ -1,7 +1,7 @@
 import { Copy, History, Save, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HistoryEntry } from '@cy-ssh/shared';
+import type { HistoryEntry } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, IconButton, Input } from '../../components/ui';
 import { formatDate } from '../../lib/format';
@@ -16,11 +16,11 @@ export function HistoryView() {
   const [clearing, setClearing] = useState(false);
   const [saving, setSaving] = useState<string | null>(null);
 
-  const load = async () => setItems(await window.cy.history.search({ query: query || undefined, limit: 1000 }));
+  const load = async () => setItems(await window.chh.history.search({ query: query || undefined, limit: 1000 }));
 
   useEffect(() => {
     const h = setTimeout(() => void load(), 100);
-    const off = window.cy.on('data.changed', ({ kinds }) => kinds.includes('history') && void load());
+    const off = window.chh.on('data.changed', ({ kinds }) => kinds.includes('history') && void load());
     return () => {
       clearTimeout(h);
       off();
@@ -69,7 +69,7 @@ export function HistoryView() {
               <IconButton
                 label={t('common.delete')}
                 onClick={async () => {
-                  await window.cy.history.remove({ ids: [h.id] });
+                  await window.chh.history.remove({ ids: [h.id] });
                   await load();
                 }}
               >
@@ -88,7 +88,7 @@ export function HistoryView() {
         danger
         onCancel={() => setClearing(false)}
         onConfirm={async () => {
-          await window.cy.history.clear({});
+          await window.chh.history.clear({});
           setClearing(false);
           await load();
         }}

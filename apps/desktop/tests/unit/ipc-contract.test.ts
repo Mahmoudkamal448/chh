@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { allMethods, channel, contract, events } from '@cy-ssh/shared';
+import { allMethods, channel, contract, events } from '@chh/shared';
 import { REDACT_PATHS } from '../../src/main/log';
 
 describe('IPC contract', () => {
   it('has unique channels for every method', () => {
     const chans = allMethods().map(([ns, m]) => channel(ns, m));
     expect(new Set(chans).size).toBe(chans.length);
-    expect(chans).toContain('cy:hosts.list');
+    expect(chans).toContain('chh:hosts.list');
   });
 
   it('validates inputs strictly', () => {

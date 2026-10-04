@@ -41,6 +41,16 @@ import {
   IdSchema,
   LocalShellSchema,
   SessionStatusSchema,
+  AuditEntryViewSchema,
+  InviteRoleSchema,
+  MovableKindSchema,
+  MyInviteSchema,
+  PendingInviteSchema,
+  TeamMemberSchema,
+  TeamRoleSchema,
+  TeamSummarySchema,
+  UpdateStatusSchema,
+  VaultSummarySchema,
 } from '../model';
 
 /** Declares one request/response IPC method. */
@@ -54,7 +64,7 @@ const ById = z.object({ id: IdSchema });
 const Dims = { cols: z.number().int().min(1).max(2000), rows: z.number().int().min(1).max(1000) };
 
 /**
- * THE typed IPC contract. Preload exposes it as `window.cy.<ns>.<method>()`; main registers
+ * THE typed IPC contract. Preload exposes it as `window.chh.<ns>.<method>()`; main registers
  * a handler for every entry. Inputs are validated with zod in main before reaching handlers.
  */
 export const contract = {
@@ -250,6 +260,36 @@ export const contract = {
     totpDisable: method(z.object({ code: z.string().max(6).optional(), recoveryCode: z.string().max(64).optional() }), Void),
     deleteAccount: method(z.object({ password: z.string().min(1).max(1024) }), Void),
   },
+  /** Shared team vaults (need a sync account). */
+  teams: {
+    list: method(Empty, z.object({ teams: z.array(TeamSummarySchema), invites: z.array(MyInviteSchema), myFingerprint: z.string().nullable() })),
+    create: method(z.object({ name: z.string().trim().min(1).max(100) }), TeamSummarySchema),
+    rename: method(z.object({ teamId: IdSchema, name: z.string().trim().min(1).max(100) }), Void),
+    members: method(z.object({ teamId: IdSchema }), z.object({ members: z.array(TeamMemberSchema), invites: z.array(PendingInviteSchema) })),
+    invite: method(z.object({ teamId: IdSchema, email: z.string().trim().email().max(254), role: InviteRoleSchema }), Void),
+    cancelInvite: method(z.object({ teamId: IdSchema, inviteId: IdSchema }), Void),
+    acceptInvite: method(z.object({ inviteId: IdSchema }), Void),
+    declineInvite: method(z.object({ inviteId: IdSchema }), Void),
+    /** Shares the team key with an accepted member; `fingerprint` is what the admin compared. */
+    confirm: method(z.object({ teamId: IdSchema, userId: IdSchema, fingerprint: z.string().max(64) }), Void),
+    setRole: method(z.object({ teamId: IdSchema, userId: IdSchema, role: TeamRoleSchema }), Void),
+    /** Removes a member; confirmed members trigger a key rotation. */
+    remove: method(z.object({ teamId: IdSchema, userId: IdSchema }), Void),
+    rotateKey: method(z.object({ teamId: IdSchema }), Void),
+    leave: method(z.object({ teamId: IdSchema }), Void),
+    delete: method(z.object({ teamId: IdSchema }), Void),
+    audit: method(z.object({ teamId: IdSchema, before: z.number().int().optional() }), z.object({ entries: z.array(AuditEntryViewSchema), hasMore: z.boolean() })),
+    vaults: method(Empty, z.array(VaultSummarySchema)),
+    /** Moves items between the personal vault and team vaults. */
+    move: method(z.object({ kind: MovableKindSchema, ids: z.array(IdSchema).min(1).max(5000), vaultId: IdSchema }), z.object({ moved: z.number() })),
+  },
+  updates: {
+    status: method(Empty, UpdateStatusSchema),
+    check: method(Empty, UpdateStatusSchema),
+    download: method(Empty, Void),
+    /** Quits and installs a downloaded update. */
+    install: method(Empty, Void),
+  },
   serial: {
     ports: method(
       Empty,
@@ -311,7 +351,7 @@ export const contract = {
     removeMasterPassword: method(z.object({ password: z.string().max(1024) }), LockStateSchema),
   },
   dev: {
-    /** Only available when the app runs with CY_SSH_TEST=1. */
+    /** Only available when the app runs with CHH_TEST=1. */
     seedHosts: method(z.object({ count: z.number().int().min(1).max(20_000) }), z.object({ created: z.number() })),
   },
 } as const;
@@ -327,6 +367,9 @@ export const events = {
   'transfer.update': TransferSchema,
   'forward.update': ForwardStatusSchema,
   'sync.state': SyncStatusSchema,
+  /** Team list, roles or invites changed. */
+  'teams.changed': z.object({}),
+  'update.status': UpdateStatusSchema,
   'lock.changed': LockStateSchema,
   'run.status': RunHostStatusSchema,
   'run.output': RunOutputSchema,
@@ -342,14 +385,14 @@ export type MethodInput<M extends MethodDef> = z.input<M['input']>;
 export type MethodOutput<M extends MethodDef> = z.output<M['output']>;
 
 /** Channel name for `ns.method`. */
-export const channel = (ns: string, m: string) => `cy:${ns}.${m}`;
+export const channel = (ns: string, m: string) => `chh:${ns}.${m}`;
 
 /** All [namespace, method] pairs — used by preload to build the API and by main to verify coverage. */
 export const allMethods = (): Array<[Namespace, string]> =>
   (Object.keys(contract) as Namespace[]).flatMap((ns) => Object.keys(contract[ns]).map((m) => [ns, m] as [Namespace, string]));
 
-export const SESSION_PORT_CHANNEL = 'cy:session.port';
-export const EVENT_CHANNEL_PREFIX = 'cy:event:';
+export const SESSION_PORT_CHANNEL = 'chh:session.port';
+export const EVENT_CHANNEL_PREFIX = 'chh:event:';
 
 /** Result envelope: errors cross IPC as an i18n key + safe details, never stack traces or secrets. */
 export type IpcResult<T> = { ok: true; value: T } | { ok: false; error: IpcError };
@@ -373,8 +416,8 @@ export interface TerminalHandlers {
   onExit(code: number | null): void;
 }
 
-/** The API exposed on `window.cy`. */
-export type CyApi = {
+/** The API exposed on `window.chh`. */
+export type ChhApi = {
   [NS in Namespace]: {
     [M in keyof Contract[NS]]: Contract[NS][M] extends MethodDef
       ? (input: MethodInput<Contract[NS][M]>) => Promise<MethodOutput<Contract[NS][M]>>
@@ -411,9 +454,9 @@ export function decodeIpcError(err: unknown): IpcError | null {
   }
 }
 
-export class CyIpcError extends Error {
+export class ChhIpcError extends Error {
   constructor(public readonly error: IpcError) {
     super(error.code);
-    this.name = 'CyIpcError';
+    this.name = 'ChhIpcError';
   }
 }

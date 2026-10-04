@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { SessionStatus } from '@cy-ssh/shared';
+import type { SessionStatus } from '@chh/shared';
 import { paneIds, removePane, setRatio, splitPane, type LayoutNode, type SplitDir } from './layout';
 
 export const HOSTS_TAB = 'hosts';
@@ -69,10 +69,10 @@ const uid = () => crypto.randomUUID();
 
 async function openSession(source: PaneSource, title: string): Promise<TermPane> {
   if (source.kind === 'host') {
-    const { sessionId } = await window.cy.sessions.openHost({ hostId: source.hostId, ...INITIAL });
+    const { sessionId } = await window.chh.sessions.openHost({ hostId: source.hostId, ...INITIAL });
     return { id: uid(), source, sessionId, title, status: 'connecting' };
   }
-  const res = await window.cy.sessions.openLocal({ shellId: source.shellId, ...INITIAL });
+  const res = await window.chh.sessions.openLocal({ shellId: source.shellId, ...INITIAL });
   return { id: uid(), source, sessionId: res.sessionId, title: res.title, status: 'connecting' };
 }
 
@@ -84,7 +84,7 @@ export const useTabs = create<TabsState>((set, get) => {
   const tabOfPane = (paneId: string) =>
     get().tabs.find((t): t is TerminalTab => t.kind === 'terminal' && paneIds(t.root).includes(paneId));
   const updateTab = (tab: Tab) => set({ tabs: get().tabs.map((t) => (t.id === tab.id ? tab : t)) });
-  const closeSession = (pane: TermPane | undefined) => pane && void window.cy.sessions.close({ sessionId: pane.sessionId });
+  const closeSession = (pane: TermPane | undefined) => pane && void window.chh.sessions.close({ sessionId: pane.sessionId });
 
   return {
     tabs: [],

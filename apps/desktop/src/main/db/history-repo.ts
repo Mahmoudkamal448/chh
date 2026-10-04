@@ -1,4 +1,4 @@
-import type { HistoryEntry } from '@cy-ssh/shared';
+import type { HistoryEntry } from '@chh/shared';
 import type { Db } from './database';
 
 const MAX_ENTRIES = 50_000;

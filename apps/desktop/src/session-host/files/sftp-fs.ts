@@ -1,6 +1,6 @@
 import path from 'node:path/posix';
 import type { Client, SFTPWrapper, Stats } from 'ssh2';
-import type { FileEntry } from '@cy-ssh/shared';
+import type { FileEntry } from '@chh/shared';
 import { sortEntries, toFsError, typeFromMode, type FsProvider } from './provider';
 
 const S_IFDIR = 0o040000;

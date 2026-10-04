@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import type { ConflictPolicy, Transfer } from '@cy-ssh/shared';
+import type { ConflictPolicy, Transfer } from '@chh/shared';
 import { FsError, toFsError, type FsProvider } from './provider';
 
 interface FileJob {

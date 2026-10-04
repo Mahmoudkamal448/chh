@@ -1,7 +1,7 @@
 import { createServer, connect, type Server, type Socket } from 'node:net';
 import type { Duplex } from 'node:stream';
 import type { Client } from 'ssh2';
-import type { ForwardStatus } from '@cy-ssh/shared';
+import type { ForwardStatus } from '@chh/shared';
 import type { SshConnectConfig } from '../protocol';
 import { connectChain, describeSshError, type ConnectCallbacks } from '../ssh/connect';
 

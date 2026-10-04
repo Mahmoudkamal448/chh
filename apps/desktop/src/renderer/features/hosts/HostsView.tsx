@@ -2,13 +2,15 @@ import * as DM from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, FolderPlus, Plus, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Host } from '@cy-ssh/shared';
+import type { Host } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, Input } from '../../components/ui';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
 import { useTabs } from '../../stores/tabs-store';
 import { CloudImportDialog } from '../cloud/CloudImportDialog';
 import { SshImportDialog } from '../ssh-config/SshImportDialog';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { useTeams } from '../../stores/teams-store';
 import { HostList } from './HostList';
 import { Sidebar } from './Sidebar';
 
@@ -27,6 +29,8 @@ export function HostsView() {
   const openHost = useTabs((s) => s.openHost);
   const openSftp = useTabs((s) => s.openSftp);
   const [deleting, setDeleting] = useState<Host | null>(null);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
   const [importing, setImporting] = useState<'default' | 'pick' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [cloud, setCloud] = useState<'aws' | 'do' | null>(null);
@@ -106,7 +110,7 @@ export function HostsView() {
                   className={menuItem}
                   onSelect={async () => {
                     const ids = hosts.map((h) => h.id);
-                    const { saved } = await window.cy.sshConfig.exportFile({ hostIds: ids });
+                    const { saved } = await window.chh.sshConfig.exportFile({ hostIds: ids });
                     if (saved) setNotice(t('sshConfig.exported', { count: ids.length }));
                   }}
                 >
@@ -115,7 +119,7 @@ export function HostsView() {
                 <DM.Item
                   className={menuItem}
                   onSelect={async () => {
-                    await navigator.clipboard.writeText(await window.cy.sshConfig.exportText({ hostIds: hosts.map((h) => h.id) }));
+                    await navigator.clipboard.writeText(await window.chh.sshConfig.exportText({ hostIds: hosts.map((h) => h.id) }));
                     setNotice(t('sshConfig.copied', { count: hosts.length }));
                   }}
                   data-testid="ssh-export-copy"
@@ -158,18 +162,20 @@ export function HostsView() {
             onOpenFiles={(h) => openSftp(h.id, h.label)}
             onEdit={(h) => openEditor({ kind: 'host', id: h.id })}
             onDuplicate={async (h) => {
-              await window.cy.hosts.duplicate({ id: h.id });
+              await window.chh.hosts.duplicate({ id: h.id });
               await refreshAll();
             }}
             onToggleFavorite={async (h) => {
-              await window.cy.hosts.update({ id: h.id, patch: { favorite: !h.favorite } });
+              await window.chh.hosts.update({ id: h.id, patch: { favorite: !h.favorite } });
               await refreshAll();
             }}
             onDelete={(h) => setDeleting(h)}
+            onMove={canMove ? (h) => setMoving({ kind: 'host', ids: [h.id], label: h.label, vaultId: h.vaultId }) : undefined}
           />
         )}
       </main>
 
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refreshAll()} />
       <CloudImportDialog provider={cloud} onClose={() => setCloud(null)} />
       <SshImportDialog open={!!importing} pickFile={importing === 'pick'} onClose={() => setImporting(null)} />
       <ConfirmDialog
@@ -182,7 +188,7 @@ export function HostsView() {
         onConfirm={async () => {
           const h = deleting!;
           setDeleting(null);
-          await window.cy.hosts.remove({ ids: [h.id] });
+          await window.chh.hosts.remove({ ids: [h.id] });
           await refreshAll();
         }}
       />

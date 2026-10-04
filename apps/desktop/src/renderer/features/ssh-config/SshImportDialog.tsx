@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SshImportPreview, SshImportResult } from '@cy-ssh/shared';
+import type { SshImportPreview, SshImportResult } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
@@ -25,7 +25,7 @@ export function SshImportDialog({ open, pickFile, onClose }: { open: boolean; pi
     setPreview(null);
     setResult(null);
     setError(null);
-    void window.cy.sshConfig
+    void window.chh.sshConfig
       .preview({ pickFile })
       .then((p) => {
         if (!p) return onClose();
@@ -41,7 +41,7 @@ export function SshImportDialog({ open, pickFile, onClose }: { open: boolean; pi
     if (!preview) return;
     setBusy(true);
     try {
-      const res = await window.cy.sshConfig.import({ token: preview.token, aliases: [...selected], groupLabel: group.trim() || undefined, importKeys, importForwards });
+      const res = await window.chh.sshConfig.import({ token: preview.token, aliases: [...selected], groupLabel: group.trim() || undefined, importKeys, importForwards });
       setResult(res);
       await Promise.all([refreshAll(), useVault.getState().refresh(), useLibrary.getState().refreshForwards()]);
     } catch (err) {

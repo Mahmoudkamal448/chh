@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { AuthPrompt, HostKeyPrompt } from '@cy-ssh/shared';
+import type { AuthPrompt, HostKeyPrompt } from '@chh/shared';
 
 export type Prompt = { type: 'hostkey'; data: HostKeyPrompt } | { type: 'auth'; data: AuthPrompt };
 

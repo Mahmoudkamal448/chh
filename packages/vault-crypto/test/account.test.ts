@@ -111,3 +111,23 @@ describe('passcodes', () => {
     expect(await verifyPasscode('x', 'garbage')).toBe(false);
   });
 });
+
+describe('team helpers', () => {
+  it('seals a team key to a member, encrypts names and fingerprints keys', async () => {
+    const { createAccountSecrets, sealTeamKey, openTeamKey, encryptTeamName, decryptTeamName, publicKeyFingerprint, randomKey } = await import('../src/index');
+    const member = createAccountSecrets();
+    const key = randomKey();
+    const sealed = sealTeamKey(key, member.publicKey.toString('base64'));
+    expect(openTeamKey(sealed, member.publicKey, member.privateKey).equals(key)).toBe(true);
+    const other = createAccountSecrets();
+    expect(() => openTeamKey(sealed, other.publicKey, other.privateKey)).toThrow();
+
+    const blob = encryptTeamName('Ops', key, 't1');
+    expect(decryptTeamName(blob, key, 't1')).toBe('Ops');
+    expect(() => decryptTeamName(blob, key, 't2')).toThrow();
+
+    const fp = publicKeyFingerprint(member.publicKey.toString('base64'));
+    expect(fp).toMatch(/^([0-9a-f]{4} ){7}[0-9a-f]{4}$/);
+    expect(fp).not.toBe(publicKeyFingerprint(other.publicKey.toString('base64')));
+  });
+});

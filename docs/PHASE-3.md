@@ -14,12 +14,12 @@ session. Typecheck is clean.
 | **Telnet** | RFC 854 client with option negotiation (NAWS window size, TTYPE `XTERM-256COLOR`, ECHO, SGA, BINARY), IAC escaping and CR-NUL handling. Default port 23. The editor warns that Telnet is unencrypted |
 | **Mosh** | Logs in over SSH (all usual auth, host-key checks and prompts), starts `mosh-server new`, then runs the local `mosh-client` in a PTY with `MOSH_KEY`. The server command is configurable per host/group. Clear errors when mosh-client or mosh-server is missing |
 | **ssh_config import** | From `~/.ssh/config` or any file. Real OpenSSH semantics: first value wins, `Host` patterns with wildcards and `!negation`, `Match host/originalhost/user/all` (others skipped and reported), `Include` with globs (relative to `~/.ssh`), `%h %p %r %u %d %n` and `~` expansion. Preview with checkboxes ("already added" unticked). Imports HostName/Port/User, **IdentityFile keys** (unencrypted ones into Keys; encrypted ones are listed), and **Local/Remote/DynamicForward** as rules. ProxyJump, ForwardAgent and other options go into the host's notes |
-| **ssh_config export** | Save to a file (defaults to `~/.ssh/config.cy-ssh`, never silently overwrites your config) or copy to the clipboard. Effective (inherited) user/port, forwards, unique aliases |
+| **ssh_config export** | Save to a file (defaults to `~/.ssh/config.chh`, never silently overwrites your config) or copy to the clipboard. Effective (inherited) user/port, forwards, unique aliases |
 | **Themes** | Settings → Terminal: app-wide default color scheme (swatch picker, 12 schemes), font family/size, cursor style/blink. Groups and hosts still override. Changes apply **live** to open terminals |
 
 ## How history capture works
 
-There's no shell integration to install. When you start typing, cy-ssh remembers where the cursor is (just
+There's no shell integration to install. When you start typing, chh remembers where the cursor is (just
 after the prompt). When you press Enter it waits briefly for the echo, then reads what the terminal **shows**
 from that point to the end of the (possibly wrapped) line. As a result:
 

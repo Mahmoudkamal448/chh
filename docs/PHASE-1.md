@@ -25,7 +25,7 @@ package.json, pnpm-workspace.yaml, tsconfig.base.json, .nvmrc, .gitignore
 packages/shared/src/
   brand.ts                                   product name / app id
   model/{common,settings,host,group,known-host,app-settings,session}.ts   zod models, settings inheritance
-  ipc/contract.ts                            typed IPC contract + events + CyApi type
+  ipc/contract.ts                            typed IPC contract + events + ChhApi type
   i18n/en.json                               all UI strings
 packages/shared/test/settings.test.ts
 
@@ -54,7 +54,7 @@ apps/desktop/
     flow.ts                                  back-pressure
     host-key.ts, ssh-keys.ts                 fingerprints; default keys + agent discovery
     transports/{types,ssh,local-pty}.ts
-  src/preload/{index.ts,api.d.ts}            typed window.cy bridge
+  src/preload/{index.ts,api.d.ts}            typed window.chh bridge
   src/renderer/
     main.tsx, i18n.ts, styles.css, index.html
     app/{App.tsx,commands.ts}                layout, global shortcuts, command dispatch

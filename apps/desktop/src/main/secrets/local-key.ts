@@ -11,7 +11,7 @@ import {
   unwrapKey,
   wrapKey,
   type KdfParams,
-} from '@cy-ssh/vault-crypto';
+} from '@chh/vault-crypto';
 
 export type KeystoreKind = 'os' | 'weak';
 

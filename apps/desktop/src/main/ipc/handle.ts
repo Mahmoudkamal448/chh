@@ -13,7 +13,7 @@ import {
   type MethodInput,
   type MethodOutput,
   type Namespace,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import { errInfo, log } from '../log';
 
 type Impl<NS extends Namespace, M extends keyof Contract[NS]> = Contract[NS][M] extends {
@@ -42,6 +42,7 @@ function toIpcError(err: unknown): IpcError {
   const code = (err as { code?: unknown })?.code;
   if (code === 'not_found') return { code: 'not_found', messageKey: 'errors.notFound' };
   if (code === 'validation') return { code: 'validation', messageKey: 'errors.validation' };
+  if (code === 'read_only') return { code: 'read_only', messageKey: 'errors.readOnly' };
   return { code: 'internal', messageKey: 'errors.internal' };
 }
 

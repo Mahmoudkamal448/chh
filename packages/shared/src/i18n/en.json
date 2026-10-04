@@ -17,7 +17,8 @@
     "validation": "Some fields are invalid. Please check your input.",
     "noShell": "No local shell was found on this system.",
     "fileTooLarge": "That file is too large.",
-    "locked": "cy-ssh is locked."
+    "locked": "chh is locked.",
+    "readOnly": "You have view-only access to this team's items."
   },
   "tabs": {
     "label": "Open tabs",
@@ -149,7 +150,8 @@
       "terminal": "Terminal",
       "shortcuts": "Keyboard shortcuts",
       "security": "Security",
-      "sync": "Sync & account"
+      "sync": "Sync & account",
+      "updates": "Updates"
     },
     "sshAgent": "SSH agent",
     "sshAgentHint": "Used for agent authentication and agent forwarding.",
@@ -176,7 +178,7 @@
     "pane.focusNext": "Next pane",
     "pane.focusPrev": "Previous pane",
     "panel.toggle": "Toggle snippets & history panel",
-    "app.lock": "Lock cy-ssh"
+    "app.lock": "Lock chh"
   },
   "palette": {
     "title": "Command palette",
@@ -269,7 +271,8 @@
     "knownHosts": "Known hosts",
     "snippets": "Snippets",
     "history": "History",
-    "forwards": "Port forwarding"
+    "forwards": "Port forwarding",
+    "teams": "Teams"
   },
   "keys": {
     "title": "Keys",
@@ -511,7 +514,7 @@
     "destRemote": "Destination host (as seen from the server)",
     "destLocal": "Destination host (as seen from this computer)",
     "exposedWarning": "This listens on a non-loopback address, so other machines on the network can use the tunnel.",
-    "autoStart": "Start automatically when cy-ssh opens",
+    "autoStart": "Start automatically when chh opens",
     "auto": "auto-start",
     "start": "Start",
     "stop": "Stop",
@@ -581,7 +584,7 @@
     }
   },
   "lock": {
-    "title": "cy-ssh is locked",
+    "title": "chh is locked",
     "startupTitle": "Unlock your data",
     "startupHint": "Your local data is encrypted with your master password.",
     "passcodeHint": "Enter your passcode to continue.",
@@ -600,7 +603,7 @@
     "useWindowsHello": "Use Windows Hello",
     "forgotMaster": "Forgot it? The data on this device can't be recovered without it. If you use sync, reinstall and sign in to get your synced data back.",
     "screenTitle": "Lock screen",
-    "screenHint": "Hide cy-ssh behind a passcode after inactivity or when your computer sleeps. Connections keep running while locked.",
+    "screenHint": "Hide chh behind a passcode after inactivity or when your computer sleeps. Connections keep running while locked.",
     "enable": "Turn on lock screen",
     "enabled": "Lock screen is on.",
     "disable": "Turn off",
@@ -616,12 +619,12 @@
     "allowWindowsHello": "Allow Windows Hello to unlock",
     "lockNow": "Lock now",
     "masterTitle": "Master password",
-    "masterHint": "Encrypts this device's database key with a password you enter every time cy-ssh starts. Without it, nobody can read your local data, even with full access to your files.",
+    "masterHint": "Encrypts this device's database key with a password you enter every time chh starts. Without it, nobody can read your local data, even with full access to your files.",
     "masterOn": "A master password protects this device.",
     "masterMin": "At least 8 characters.",
     "masterWarning": "If you forget the master password, the data on this device is lost. Synced data can be restored by signing in again.",
     "masterEnable": "Set master password",
-    "masterEnabled": "Master password set. You'll be asked for it next time cy-ssh starts.",
+    "masterEnabled": "Master password set. You'll be asked for it next time chh starts.",
     "masterRemove": "Remove",
     "masterRemoved": "Master password removed.",
     "deriving": "Encrypting…",
@@ -643,7 +646,7 @@
       "recover": "Reset password"
     },
     "serverUrl": "Server URL",
-    "serverHint": "Your self-hosted cy-ssh sync server (HTTPS).",
+    "serverHint": "Your self-hosted chh sync server (HTTPS).",
     "insecureHint": "Plain HTTP is only allowed on local/private networks. Your data stays end-to-end encrypted, but sign-in tokens are not.",
     "email": "Email",
     "password": "Password",
@@ -712,7 +715,20 @@
       "invalid_request": "The server rejected the request: {{detail}}",
       "not_found": "Not found.",
       "http": "Unexpected server response.",
-      "weak_password": "Use a longer password."
+      "weak_password": "Use a longer password.",
+      "stale": "The team changed while this was in progress. Please try again.",
+      "stale_key": "The team key changed. Syncing first; please try again.",
+      "members_changed": "Team members changed while rotating the key. Please try again.",
+      "already_member": "That person is already a member of this team.",
+      "already_invited": "That person has already been invited.",
+      "owner_cannot_leave": "The owner can't leave the team. Transfer ownership to another member first, or delete the team.",
+      "team_owner": "You own a team. Transfer its ownership or delete it before deleting your account.",
+      "read_only": "You have view-only access to this team's items.",
+      "forbidden": "You don't have permission to do that in this team.",
+      "not_confirmed": "An admin has to confirm you before you can do that.",
+      "too_many_teams": "You belong to too many teams.",
+      "too_many_members": "This team has too many members and invites.",
+      "fingerprint_mismatch": "The member's key changed since you compared it. Compare the new fingerprint before confirming."
     }
   },
   "advanced": {
@@ -722,7 +738,7 @@
       "builtin": "Built-in",
       "openssh": "System OpenSSH"
     },
-    "engineBuiltinHint": "Built-in client with cy-ssh's keys, identities, known hosts, proxies and SFTP.",
+    "engineBuiltinHint": "Built-in client with chh's keys, identities, known hosts, proxies and SFTP.",
     "engineOpensshHint": "Runs your installed `ssh` in the terminal: supports FIDO2 security keys and post-quantum key exchange; uses OpenSSH's own known_hosts and ~/.ssh/config. Passwords are typed in the terminal.",
     "identityFile": "Identity file (OpenSSH engine)",
     "identityFileHint": "e.g. a FIDO2 key handle created with ssh-keygen -t ed25519-sk.",
@@ -873,9 +889,166 @@
   },
   "fido": {
     "title": "Security keys (FIDO2 / YubiKey)",
-    "hint": "Hardware security keys keep the private key on the device and need a touch to log in. cy-ssh uses your system OpenSSH (8.2+) for them.",
+    "hint": "Hardware security keys keep the private key on the device and need a touch to log in. chh uses your system OpenSSH (8.2+) for them.",
     "fileName": "Key file name",
     "openTerminal": "Open terminal with this command",
     "useIt": "Then add the .pub file's line to the server's ~/.ssh/authorized_keys, and in the host's Advanced connection settings choose “System OpenSSH” and set the identity file."
+  },
+  "teams": {
+    "title": "Teams",
+    "refresh": "Refresh",
+    "new": "New team",
+    "needSync": "Teams share hosts, identities, keys and snippets with other people through your sync server, end-to-end encrypted. Sign in to sync to create or join a team.",
+    "openSync": "Open sync settings",
+    "empty": "No teams yet. Create one, or ask a team admin to invite your account email.",
+    "invitesTitle": "Invites",
+    "invitedBy": "{{email}} invited you",
+    "inviteRole": "Role: {{role}}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "pendingName": "Team (awaiting confirmation)",
+    "unnamed": "Unnamed team",
+    "personalVault": "Personal (only you)",
+    "sharedWith": "Shared with the team {{name}}",
+    "createTitle": "New team",
+    "createExplain": "A team has its own encrypted vault. Its name and everything in it are encrypted with a team key that only confirmed members hold.",
+    "name": "Team name",
+    "create": "Create team",
+    "awaitingConfirm": "You joined this team. An admin now has to confirm you before you can see its items.",
+    "awaitingConfirmHint": "They will compare your key fingerprint with you. Yours is: {{fingerprint}}",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "tab": {
+      "members": "Members",
+      "audit": "Audit log"
+    },
+    "rotateNeeded": "Key rotation recommended",
+    "rotateNeededHint": "Someone left or was removed without a key rotation, so they may still hold the current team key. Rotate it to protect future changes.",
+    "rotate": "Rotate key",
+    "rotateTitle": "Rotate the team key?",
+    "rotateMessage": "Every item in the team vault is re-encrypted with a new key, which is shared with the current confirmed members only. This can take a moment for large teams.",
+    "keyGen": "Key generation {{gen}}",
+    "leave": "Leave team",
+    "delete": "Delete team",
+    "leaveTitle": "Leave this team?",
+    "leaveMessage": "Items shared in {{name}} are removed from this device. An admin can invite you again later.",
+    "deleteTitle": "Delete this team?",
+    "deleteMessage": "{{name}} and every item in its vault are deleted for all members. This cannot be undone. The audit log is kept on the server.",
+    "you": "(you)",
+    "needsConfirm": "Needs confirmation",
+    "fingerprint": "Key fingerprint",
+    "confirm": "Confirm…",
+    "roleLabel": "Role of {{email}}",
+    "remove": "Remove from team",
+    "removeTitle": "Remove this member?",
+    "removeMessage": "{{email}} is removed from the team.",
+    "removeRotateMessage": "{{email}} is removed and the team key is rotated, so they can no longer decrypt anything that changes from now on. Items they already synced may remain on their devices.",
+    "invited": "Invited as {{role}}",
+    "cancelInvite": "Cancel invite",
+    "inviteEmail": "Invite by email",
+    "inviteHint": "They accept in the Teams screen after signing in to this server with that email. No email is sent: let them know yourself.",
+    "inviteRoleLabel": "Role for the invite",
+    "invite": "Invite",
+    "rolesHelp": "Owner and admins manage members. Editors can change items. Viewers can use shared hosts but not change them.",
+    "role": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "editor": "Editor",
+      "viewer": "Viewer"
+    },
+    "confirmTitle": "Confirm {{email}}",
+    "confirmExplain": "Confirming shares the team key with this member's account.",
+    "confirmWhere": "Ask them to read out the fingerprint shown at the bottom of their Teams screen and check that it matches exactly. A mismatch means the key didn't come from them.",
+    "confirmChecked": "The fingerprint matches what they told me",
+    "confirmShare": "Share team key",
+    "readOnlyHost": "This host belongs to a team where you're a viewer, so you can't change it.",
+    "vaultField": "Save in",
+    "vaultFieldHint": "Hosts in a team vault are shared with its members.",
+    "move": {
+      "menu": "Move to…",
+      "title": "Move “{{label}}”",
+      "explain": "Moving re-encrypts the item for the vault you choose.",
+      "to": "Move to",
+      "confirm": "Move",
+      "noTargets": "There is no other vault you can move this to.",
+      "toTeamHint": "All members of the team will see it. Linked items (its group, identity or key) aren't moved: move them too if teammates need them.",
+      "toPersonalHint": "It is removed from the team for everyone else."
+    },
+    "audit": {
+      "explain": "Everything members do with the team is recorded on the server. Entries marked “reported by app” come from members' apps; a modified app could skip them.",
+      "when": "When",
+      "who": "Who",
+      "what": "Action",
+      "detail": "Details",
+      "more": "Load older entries",
+      "items_one": "{{count}} item",
+      "items_other": "{{count}} items",
+      "unknownItem": "(item not on this device)",
+      "roleChange": "{{email}}: {{from}} → {{to}}",
+      "clientReported": "reported by app",
+      "clientReportedHint": "Reported by the member's app, not observed by the server.",
+      "action": {
+        "team.created": "Created the team",
+        "team.renamed": "Renamed the team",
+        "team.deleted": "Deleted the team",
+        "member.invited": "Invited a member",
+        "invite.canceled": "Canceled an invite",
+        "invite.accepted": "Accepted the invite",
+        "invite.declined": "Declined the invite",
+        "member.confirmed": "Confirmed a member",
+        "member.role_changed": "Changed a role",
+        "member.removed": "Removed a member",
+        "member.left": "Left the team",
+        "vault.rotated": "Rotated the team key",
+        "vault.pulled": "Downloaded items",
+        "item.written": "Changed an item",
+        "host.connected": "Connected to a host",
+        "secret.exported": "Exported a key",
+        "secret.copied": "Copied a secret"
+      }
+    },
+    "error": {
+      "notSignedIn": "Sign in to sync to use teams.",
+      "notConfirmed": "An admin has to confirm you first.",
+      "fingerprintMismatch": "The member's key changed since you compared it. Compare the new fingerprint before confirming."
+    },
+    "myFingerprint": "Your key fingerprint",
+    "myFingerprintHint": "Admins compare this with you before sharing a team key."
+  },
+  "updates": {
+    "version": "chh {{version}}",
+    "check": "Check for updates",
+    "download": "Download",
+    "install": "Restart and update",
+    "ready": "chh {{version}} is ready to install.",
+    "releases": "Download page",
+    "lastChecked": "last checked {{when}}",
+    "auto": "Download and install updates automatically",
+    "channel": "Update channel",
+    "channelHint": "Beta gets new versions earlier.",
+    "channels": {
+      "latest": "Stable",
+      "beta": "Beta"
+    },
+    "privacy": "Update checks fetch release information from the project's release page. No account or usage data is sent.",
+    "state": {
+      "idle": "Updates are checked in the background.",
+      "checking": "Checking for updates…",
+      "available": "Version {{version}} is available.",
+      "not-available": "You're up to date.",
+      "downloading": "Downloading version {{version}}… {{progress}}%",
+      "downloaded": "Version {{version}} is ready. Restart to install it.",
+      "error": "Couldn't check for updates."
+    },
+    "unsupported": {
+      "dev": "This is a development build, which does not update itself.",
+      "package": "This copy was installed in a way that can't update itself (for example from a distribution package or an archive). Update it the way you installed it, or get the AppImage, .deb or .rpm from the",
+      "unsigned": "This macOS build isn't code-signed, and macOS only installs signed updates. Get new versions from the",
+      "disabled": "Automatic updates are turned off for this installation (CHH_DISABLE_UPDATES). Get new versions from the"
+    },
+    "error": {
+      "network": "Check your internet connection.",
+      "generic": "Try again later."
+    }
   }
 }

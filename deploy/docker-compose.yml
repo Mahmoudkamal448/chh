@@ -1,23 +1,23 @@
-# Self-hosted cy-ssh sync server.
+# Self-hosted chh sync server.
 #   cp .env.example .env    # then edit it
 #   docker compose up -d
 # With automatic HTTPS (needs a public DNS name pointing at this machine):
 #   docker compose --profile tls up -d
 
-name: cy-ssh
+name: chh
 
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: cyssh
+      POSTGRES_USER: ${POSTGRES_USER:-chh}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
-      POSTGRES_DB: cyssh
+      POSTGRES_DB: ${POSTGRES_DB:-chh}
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cyssh -d cyssh"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -26,13 +26,13 @@ services:
     build:
       context: ..
       dockerfile: apps/server/Dockerfile
-    image: cy-ssh-server:latest
+    image: chh-server:latest
     restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://cyssh:${POSTGRES_PASSWORD}@db:5432/cyssh
+      DATABASE_URL: postgres://${POSTGRES_USER:-chh}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-chh}
       SERVER_SECRET: ${SERVER_SECRET:?set SERVER_SECRET in .env (openssl rand -base64 32)}
       ALLOW_REGISTRATION: ${ALLOW_REGISTRATION:-true}
       TRUST_PROXY: ${TRUST_PROXY:-false}

@@ -1,5 +1,5 @@
-import { entryMatches, parseKnownHosts, type KnownHostEntry } from '@cy-ssh/key-formats';
-import type { KnownHost, KnownHostFields } from '@cy-ssh/shared';
+import { entryMatches, parseKnownHosts, type KnownHostEntry } from '@chh/key-formats';
+import type { KnownHost, KnownHostFields } from '@chh/shared';
 import { createHash } from 'node:crypto';
 import type { ItemStore, StoredItem } from './item-store';
 

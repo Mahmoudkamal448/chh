@@ -1,7 +1,7 @@
 import { Command } from 'cmdk';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Host } from '@cy-ssh/shared';
+import type { Host } from '@chh/shared';
 import * as RD from '@radix-ui/react-dialog';
 import { Kbd } from '../../components/ui';
 import { displayAccelerator, effectiveKeymap, type CommandId } from '../../lib/keymap';
@@ -24,7 +24,7 @@ export function CommandPalette() {
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    void window.cy.hosts.list({ query: search || undefined, limit: 50 }).then((r) => !cancelled && setHosts(r.items));
+    void window.chh.hosts.list({ query: search || undefined, limit: 50 }).then((r) => !cancelled && setHosts(r.items));
     return () => {
       cancelled = true;
     };

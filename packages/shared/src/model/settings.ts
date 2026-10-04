@@ -80,7 +80,7 @@ export const DEFAULT_HOST_SETTINGS: HostSettings = {
   tryDefaultKeys: true,
   keepAliveSec: 30,
   connectTimeoutSec: 20,
-  terminalTheme: 'cy-dark',
+  terminalTheme: 'chh-dark',
   fontFamily: DEFAULT_FONT_FAMILY,
   fontSize: 14,
   cursorStyle: 'block',

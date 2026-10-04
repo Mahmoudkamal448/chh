@@ -77,4 +77,32 @@ export const MIGRATIONS: Array<{ version: number; sql: string }> = [
       );
     `,
   },
+  {
+    version: 4,
+    sql: `
+      -- Team vaults: key generation of the key we hold (bumped by rotations).
+      ALTER TABLE vaults ADD COLUMN key_gen INTEGER NOT NULL DEFAULT 1;
+
+      -- Items moved to another vault leave a tombstone to upload to their old vault.
+      CREATE TABLE vault_moves (
+        vault_id TEXT NOT NULL,
+        item_id  TEXT NOT NULL,
+        type     TEXT NOT NULL,
+        base_rev INTEGER NOT NULL,
+        vv       TEXT NOT NULL,
+        PRIMARY KEY (vault_id, item_id)
+      );
+
+      -- Team audit events only this app can observe (e.g. connecting to a shared host), queued
+      -- until the next sync.
+      CREATE TABLE audit_outbox (
+        id       INTEGER PRIMARY KEY,
+        vault_id TEXT NOT NULL,
+        action   TEXT NOT NULL,
+        item_id  TEXT,
+        at       INTEGER NOT NULL
+      );
+      CREATE INDEX items_vault ON items (vault_id, type) WHERE deleted = 0;
+    `,
+  },
 ];

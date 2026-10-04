@@ -1,5 +1,5 @@
 import { SerialPort } from 'serialport';
-import type { SerialSettings } from '@cy-ssh/shared';
+import type { SerialSettings } from '@chh/shared';
 import type { Transport, TransportEvents } from './types';
 
 const NEWLINES: Record<SerialSettings['newline'], string> = { cr: '\r', lf: '\n', crlf: '\r\n' };

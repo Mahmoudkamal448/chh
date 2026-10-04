@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { inheritedSettings, type GroupLike, type HostSettingsOverrides } from '@cy-ssh/shared';
+import { inheritedSettings, type GroupLike, type HostSettingsOverrides } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
@@ -50,8 +50,8 @@ export function GroupEditor() {
     if (!label.trim()) return setError(t('groupEditor.errorRequired'));
     try {
       const payload = { label: label.trim(), parentId: parentId || null, settings };
-      if (editingId) await window.cy.groups.update({ id: editingId, patch: payload });
-      else await window.cy.groups.create(payload);
+      if (editingId) await window.chh.groups.update({ id: editingId, patch: payload });
+      else await window.chh.groups.create(payload);
       await refreshAll();
       close();
     } catch (err) {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { CloudCandidate } from '@cy-ssh/shared';
+import type { CloudCandidate } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input, Select } from '../../components/ui';
 import { errorMessage } from '../../lib/errors';
@@ -38,7 +38,7 @@ export function CloudImportDialog({ provider, onClose }: { provider: 'aws' | 'do
     setDone(null);
     setGroup(provider === 'aws' ? 'AWS' : 'DigitalOcean');
     setUsername(provider === 'aws' ? 'ec2-user' : '');
-    if (provider === 'aws') void window.cy.cloud.awsProfiles({}).then((p) => (setProfiles(p), setProfile(p[0] ?? '')));
+    if (provider === 'aws') void window.chh.cloud.awsProfiles({}).then((p) => (setProfiles(p), setProfile(p[0] ?? '')));
   }, [provider]);
 
   const fail = (err: unknown) => {
@@ -52,8 +52,8 @@ export function CloudImportDialog({ provider, onClose }: { provider: 'aws' | 'do
     try {
       const res =
         provider === 'aws'
-          ? await window.cy.cloud.awsList({ regions, ...(keyId ? { accessKeyId: keyId, secretAccessKey: secret } : profile ? { profile } : {}) })
-          : await window.cy.cloud.doList({ apiToken: doToken });
+          ? await window.chh.cloud.awsList({ regions, ...(keyId ? { accessKeyId: keyId, secretAccessKey: secret } : profile ? { profile } : {}) })
+          : await window.chh.cloud.doList({ apiToken: doToken });
       setStaged(res);
       setSelected(new Set(res.candidates.map((c) => c.externalId)));
     } catch (err) {
@@ -67,7 +67,7 @@ export function CloudImportDialog({ provider, onClose }: { provider: 'aws' | 'do
     if (!staged) return;
     setBusy(true);
     try {
-      const r = await window.cy.cloud.import({ token: staged.token, externalIds: [...selected], groupLabel: group || undefined, username: username || undefined, address });
+      const r = await window.chh.cloud.import({ token: staged.token, externalIds: [...selected], groupLabel: group || undefined, username: username || undefined, address });
       setDone(t('cloud.result', { created: r.created, updated: r.updated }));
       await refreshAll();
     } catch (err) {

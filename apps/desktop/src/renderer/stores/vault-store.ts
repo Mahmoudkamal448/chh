@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Identity, Key } from '@cy-ssh/shared';
+import type { Identity, Key } from '@chh/shared';
 
 /** Keys and identities, shared by the keychain screens and host/group editors. */
 interface VaultState {
@@ -12,7 +12,7 @@ export const useVault = create<VaultState>((set) => ({
   keys: [],
   identities: [],
   async refresh() {
-    const [keys, identities] = await Promise.all([window.cy.keys.list({}), window.cy.identities.list({})]);
+    const [keys, identities] = await Promise.all([window.chh.keys.list({}), window.chh.identities.list({})]);
     set({ keys, identities });
   },
 }));

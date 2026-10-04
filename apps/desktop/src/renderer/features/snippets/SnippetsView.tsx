@@ -1,7 +1,11 @@
-import { Code2, Pencil, Play, Plus, Server, Trash2 } from 'lucide-react';
+import { Code2, FolderInput, Pencil, Play, Plus, Server, Trash2 } from 'lucide-react';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { VaultBadge } from '../teams/VaultBadge';
+import { useTeams } from '../../stores/teams-store';
+
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { snippetVariables, type Snippet } from '@cy-ssh/shared';
+import { snippetVariables, type Snippet } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, IconButton, Input } from '../../components/ui';
@@ -10,7 +14,7 @@ import { useLibrary } from '../../stores/library-store';
 import { activePaneId } from '../../app/commands';
 import { paneIds } from '../../stores/layout';
 import { useTabs } from '../../stores/tabs-store';
-import { fillSnippet } from '@cy-ssh/shared';
+import { fillSnippet } from '@chh/shared';
 import { HostMultiPicker } from '../run/HostMultiPicker';
 import { startRun } from '../../stores/runs-store';
 import { needsVariables, runSnippet } from './run-snippet';
@@ -38,8 +42,8 @@ export function SnippetEditor({ editing, initialScript, onClose }: { editing: Sn
     if (!label.trim() || !script.trim()) return setError(t('snippets.errorRequired'));
     const payload = { label: label.trim(), script, description, tags: tags.split(',').map((x) => x.trim()).filter(Boolean) };
     try {
-      if (existing) await window.cy.snippets.update({ id: existing.id, patch: payload });
-      else await window.cy.snippets.create(payload);
+      if (existing) await window.chh.snippets.update({ id: existing.id, patch: payload });
+      else await window.chh.snippets.create(payload);
       await refresh();
       onClose();
     } catch (err) {
@@ -101,6 +105,8 @@ export function SnippetsView() {
   const tabs = useTabs((s) => s.tabs);
   const [editing, setEditing] = useState<Snippet | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Snippet | null>(null);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
   const [asking, setAsking] = useState<Snippet | null>(null);
   const [query, setQuery] = useState('');
   /** Multi-host run: pick hosts first, then (if needed) variables. */
@@ -150,6 +156,7 @@ export function SnippetsView() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="truncate font-medium">{s.label}</span>
+                  <VaultBadge vaultId={s.vaultId} />
                   {s.tags.map((tag) => (
                     <span key={tag} className="rounded bg-surface-2 px-1.5 text-[11px] text-muted">
                       {tag}
@@ -173,6 +180,11 @@ export function SnippetsView() {
               <IconButton label={t('common.edit')} onClick={() => setEditing(s)}>
                 <Pencil size={14} />
               </IconButton>
+              {canMove && (
+                <IconButton label={t('teams.move.menu')} onClick={() => setMoving({ kind: 'snippet', ids: [s.id], label: s.label, vaultId: s.vaultId })}>
+                  <FolderInput size={14} />
+                </IconButton>
+              )}
               <IconButton label={t('common.delete')} onClick={() => setDeleting(s)}>
                 <Trash2 size={14} />
               </IconButton>
@@ -215,6 +227,7 @@ export function SnippetsView() {
           setAsking(null);
         }}
       />
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refresh()} />
       <ConfirmDialog
         open={!!deleting}
         title={t('snippets.deleteTitle')}
@@ -223,7 +236,7 @@ export function SnippetsView() {
         danger
         onCancel={() => setDeleting(null)}
         onConfirm={async () => {
-          await window.cy.snippets.remove({ ids: [deleting!.id] });
+          await window.chh.snippets.remove({ ids: [deleting!.id] });
           setDeleting(null);
           await refresh();
         }}

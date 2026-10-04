@@ -1,8 +1,8 @@
-import type { CyApi } from '@cy-ssh/shared';
+import type { ChhApi } from '@chh/shared';
 
 declare global {
   interface Window {
-    cy: CyApi;
+    chh: ChhApi;
   }
 }
 export {};

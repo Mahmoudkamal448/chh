@@ -1,4 +1,4 @@
-import { SnippetFieldsSchema, SnippetInputSchema, SnippetPatchSchema, type Snippet, type SnippetFields, type SnippetInput, type SnippetPatch } from '@cy-ssh/shared';
+import { SnippetFieldsSchema, SnippetInputSchema, SnippetPatchSchema, type Snippet, type SnippetFields, type SnippetInput, type SnippetPatch } from '@chh/shared';
 import { NotFoundError } from './hosts-repo';
 import type { ItemStore, StoredItem } from './item-store';
 
@@ -10,8 +10,9 @@ export class SnippetsRepo {
   }
 
   create(input: SnippetInput): Snippet {
-    const data = SnippetFieldsSchema.parse(SnippetInputSchema.parse(input));
-    return toSnippet(this.store.insert('snippet', { ...data, tags: [...new Set(data.tags)] }));
+    const parsed = SnippetInputSchema.parse(input);
+    const data = SnippetFieldsSchema.parse(parsed);
+    return toSnippet(this.store.insert('snippet', { ...data, tags: [...new Set(data.tags)] }, undefined, parsed.vaultId ?? this.store.vaultId));
   }
 
   update(id: string, input: SnippetPatch): Snippet {
@@ -29,5 +30,5 @@ export class SnippetsRepo {
 }
 
 function toSnippet(item: StoredItem<SnippetFields>): Snippet {
-  return { ...item.fields, id: item.id, updatedAt: item.updatedAt };
+  return { ...item.fields, id: item.id, vaultId: item.vaultId, updatedAt: item.updatedAt };
 }

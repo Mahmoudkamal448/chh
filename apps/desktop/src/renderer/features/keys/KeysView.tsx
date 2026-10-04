@@ -1,8 +1,12 @@
 import * as DM from '@radix-ui/react-dropdown-menu';
-import { ChevronDown, Copy, Download, KeyRound, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { ChevronDown, Copy, Download, FolderInput, KeyRound, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { MoveToVaultDialog, type MoveRequest } from '../teams/MoveToVaultDialog';
+import { VaultBadge } from '../teams/VaultBadge';
+import { useTeams } from '../../stores/teams-store';
+
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Key } from '@cy-ssh/shared';
+import type { Key } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PromptDialog } from '../../components/PromptDialog';
 import { Button, IconButton, Input } from '../../components/ui';
@@ -56,6 +60,8 @@ export function KeysView() {
   const { t } = useTranslation();
   const keys = useVault((s) => s.keys);
   const refresh = useVault((s) => s.refresh);
+  const [moving, setMoving] = useState<MoveRequest | null>(null);
+  const canMove = useTeams((s) => s.vaults.length > 1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [importMode, setImportMode] = useState<'file' | 'paste' | null>(null);
@@ -72,7 +78,7 @@ export function KeysView() {
   const selected = keys.find((k) => k.id === selectedId) ?? keys[0] ?? null;
 
   useEffect(() => {
-    if (selected) void window.cy.keys.usage({ id: selected.id }).then(setUsage);
+    if (selected) void window.chh.keys.usage({ id: selected.id }).then(setUsage);
     setCopied(false);
   }, [selected?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -134,7 +140,10 @@ export function KeysView() {
                   <KeyRound size={16} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate font-medium">{k.label}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-medium">{k.label}</span>
+                    <VaultBadge vaultId={k.vaultId} />
+                  </div>
                   <div className="truncate font-mono text-[11px] text-muted">{k.fingerprint}</div>
                 </div>
                 <span className="shrink-0 rounded bg-surface-2 px-1.5 py-0.5 text-[11px] text-muted">{keyKind(k.type, k.bits)}</span>
@@ -155,12 +164,17 @@ export function KeysView() {
                   <IconButton label={t('keys.rename')} onClick={() => setRenaming(selected)}>
                     <Pencil size={14} />
                   </IconButton>
+                  {canMove && (
+                    <IconButton label={t('teams.move.menu')} onClick={() => setMoving({ kind: 'key', ids: [selected.id], label: selected.label, vaultId: selected.vaultId })}>
+                      <FolderInput size={14} />
+                    </IconButton>
+                  )}
                   <IconButton label={t('keys.exportPrivate')} onClick={() => setExporting(selected)}>
                     <Download size={14} />
                   </IconButton>
                   <IconButton
                     label={t('common.delete')}
-                    onClick={async () => setDeleting({ key: selected, usage: await window.cy.keys.usage({ id: selected.id }) })}
+                    onClick={async () => setDeleting({ key: selected, usage: await window.chh.keys.usage({ id: selected.id }) })}
                     data-testid="delete-key"
                   >
                     <Trash2 size={14} />
@@ -224,11 +238,12 @@ export function KeysView() {
         confirmLabel={t('common.save')}
         onCancel={() => setRenaming(null)}
         onSubmit={async (label) => {
-          await window.cy.keys.rename({ id: renaming!.id, label });
+          await window.chh.keys.rename({ id: renaming!.id, label });
           setRenaming(null);
           await refresh();
         }}
       />
+      <MoveToVaultDialog request={moving} onClose={() => setMoving(null)} onMoved={() => void refresh()} />
       <ConfirmDialog
         open={!!deleting}
         title={t('keys.deleteTitle')}
@@ -241,7 +256,7 @@ export function KeysView() {
         danger
         onCancel={() => setDeleting(null)}
         onConfirm={async () => {
-          await window.cy.keys.remove({ ids: [deleting!.key.id] });
+          await window.chh.keys.remove({ ids: [deleting!.key.id] });
           setDeleting(null);
           setSelectedId(null);
           await refresh();

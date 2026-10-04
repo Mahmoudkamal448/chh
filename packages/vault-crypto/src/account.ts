@@ -211,3 +211,45 @@ export function verifyPasscode(passcode: string, hash: string): Promise<boolean>
     });
   });
 }
+
+// --- Teams -------------------------------------------------------------------------------------
+
+const teamNameAd = (teamId: string) => `cy/teamname/v1|${teamId}`;
+
+/** Team names are encrypted with the team key so the server never learns them. */
+export function encryptTeamName(name: string, teamKey: Buffer, teamId: string): string {
+  const { nonce, ciphertext } = aeadEncrypt(Buffer.from(name, 'utf8'), teamKey, teamNameAd(teamId));
+  return Buffer.concat([nonce, ciphertext]).toString('base64');
+}
+
+export function decryptTeamName(blob: string, teamKey: Buffer, teamId: string): string {
+  const raw = Buffer.from(blob, 'base64');
+  return aeadDecrypt(raw.subarray(24), raw.subarray(0, 24), teamKey, teamNameAd(teamId)).toString('utf8');
+}
+
+/** Seals a team key to a member's X25519 public key (base64 in, base64 out). */
+export function sealTeamKey(teamKey: Buffer, memberPublicKey: string): string {
+  const pk = Buffer.from(memberPublicKey, 'base64');
+  if (pk.length !== sodium.crypto_box_PUBLICKEYBYTES) throw new CryptoError('invalid public key');
+  return sealTo(pk, teamKey).toString('base64');
+}
+
+export function openTeamKey(sealed: string, publicKey: Buffer, privateKey: Buffer): Buffer {
+  const plain = openSealed(publicKey, privateKey, Buffer.from(sealed, 'base64'));
+  if (plain.length !== 32) throw new CryptoError('invalid team key');
+  const k = Buffer.alloc(32);
+  plain.copy(k);
+  memzero(plain);
+  return k;
+}
+
+/**
+ * Human-comparable fingerprint of an account public key: 128 bits of BLAKE2b as 8 groups of 4
+ * hex digits. Admins compare it with the member (out of band) before sharing the team key, so a
+ * server can't substitute its own key.
+ */
+export function publicKeyFingerprint(publicKeyB64: string): string {
+  const out = Buffer.alloc(16);
+  sodium.crypto_generichash(out, Buffer.concat([Buffer.from('cy/pkfp/v1|'), Buffer.from(publicKeyB64, 'base64')]));
+  return out.toString('hex').match(/.{4}/g)!.join(' ');
+}

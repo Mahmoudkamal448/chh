@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ConflictPolicy, Host, Transfer } from '@cy-ssh/shared';
+import type { ConflictPolicy, Host, Transfer } from '@chh/shared';
 import { Button, IconButton } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatBytes } from '../../lib/format';
@@ -34,7 +34,7 @@ function TransferRow({ t }: { t: Transfer }) {
         {t.state === 'error' && tr(err?.[0] ?? 'errors.internal', { defaultValue: tr('errors.internal'), detail: err?.[1] ?? '' })}
       </span>
       {!finished(t) ? (
-        <IconButton label={tr('files.cancelTransfer')} className="h-6 w-6" onClick={() => void window.cy.sftp.cancelTransfer({ id: t.id })}>
+        <IconButton label={tr('files.cancelTransfer')} className="h-6 w-6" onClick={() => void window.chh.sftp.cancelTransfer({ id: t.id })}>
           <X size={12} />
         </IconButton>
       ) : (
@@ -84,13 +84,13 @@ export function SftpView({ hostId, hostLabel }: { hostId: string; hostLabel: str
     const names = paths.map((p) => p.split(/[\\/]/).filter(Boolean).pop() ?? p);
     let policy: ConflictPolicy = 'overwrite';
     try {
-      const existing = await window.cy.sftp.existing({ endpoint: dst.endpoint, dir, names });
+      const existing = await window.chh.sftp.existing({ endpoint: dst.endpoint, dir, names });
       if (existing.length) {
         const choice = await askConflict(existing);
         if (!choice) return;
         policy = choice;
       }
-      await window.cy.sftp.transfer({ src: { endpoint: srcEndpoint, paths }, dst: { endpoint: dst.endpoint, dir }, conflict: policy });
+      await window.chh.sftp.transfer({ src: { endpoint: srcEndpoint, paths }, dst: { endpoint: dst.endpoint, dir }, conflict: policy });
     } catch (err) {
       void dst.run(() => Promise.reject(err));
     }
@@ -119,7 +119,7 @@ export function SftpView({ hostId, hostLabel }: { hostId: string; hostLabel: str
             void pane.run(async (endpoint) => {
               for (const p of drop.paths) {
                 const name = p.split(/[\\/]/).filter(Boolean).pop()!;
-                await window.cy.sftp.rename({ endpoint, from: p, to: pane.join(name, targetDir) });
+                await window.chh.sftp.rename({ endpoint, from: p, to: pane.join(name, targetDir) });
               }
             });
           } else {

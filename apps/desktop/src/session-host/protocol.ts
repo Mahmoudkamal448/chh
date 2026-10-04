@@ -3,7 +3,7 @@
  * Terminal bytes never travel on this channel — they use a per-session MessagePort that goes
  * straight to the renderer.
  */
-import type { ForwardStatus, HostKeyDecision, ProxyConfig, RunHostStatus, RunOutput, SerialSettings, Transfer } from '@cy-ssh/shared';
+import type { ForwardStatus, HostKeyDecision, ProxyConfig, RunHostStatus, RunOutput, SerialSettings, Transfer } from '@chh/shared';
 
 export interface SshConnectConfig {
   host: string;

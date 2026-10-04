@@ -31,7 +31,7 @@ export function GenerateKeyDialog({ open, onClose }: { open: boolean; onClose():
     try {
       const [algo, bits] = choice.split('-') as ['ed25519' | 'ecdsa' | 'rsa', string | undefined];
       const base = { label: label.trim(), comment: comment.trim() };
-      await window.cy.keys.generate(
+      await window.chh.keys.generate(
         algo === 'ed25519' ? { ...base, algorithm: 'ed25519' } : algo === 'ecdsa' ? { ...base, algorithm: 'ecdsa', bits: Number(bits) as 256 } : { ...base, algorithm: 'rsa', bits: Number(bits) as 2048 },
       );
       await refresh();

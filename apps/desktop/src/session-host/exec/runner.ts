@@ -1,5 +1,5 @@
 import type { Client, ClientChannel } from 'ssh2';
-import type { RunHostStatus, RunOutput } from '@cy-ssh/shared';
+import type { RunHostStatus, RunOutput } from '@chh/shared';
 import type { SshConnectConfig } from '../protocol';
 import { connectChain, describeSshError, type ConnectCallbacks } from '../ssh/connect';
 

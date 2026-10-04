@@ -1,6 +1,6 @@
 import { connect, createServer, type AddressInfo, type Server, type Socket } from 'node:net';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { ForwardStatus } from '@cy-ssh/shared';
+import type { ForwardStatus } from '@chh/shared';
 import { ForwardManager, type ForwardRule } from '../../src/session-host/forwards/manager';
 import type { SshConnectConfig } from '../../src/session-host/protocol';
 import { sshConfig } from '../support/config';

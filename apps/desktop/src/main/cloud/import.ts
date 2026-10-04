@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { CloudCandidate } from '@cy-ssh/shared';
+import type { CloudCandidate } from '@chh/shared';
 import type { GroupsRepo } from '../db/groups-repo';
 import type { HostsRepo } from '../db/hosts-repo';
 import { AppError } from '../ipc/handle';

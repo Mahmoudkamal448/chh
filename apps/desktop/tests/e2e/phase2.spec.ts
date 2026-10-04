@@ -47,7 +47,7 @@ test('generates a key and logs in with it — no password prompt', async () => {
     await createHost(page, { label: 'Key host', port: server.port, username: 'tester', key: 'E2E key (ED25519)' });
     await page.getByTestId('host-row').filter({ hasText: 'Key host' }).dblclick();
     await page.getByTestId('hostkey-accept').click();
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
     await expect(page.getByTestId('auth-dialog')).toHaveCount(0);
 
     // The key is now listed as used by the host.
@@ -94,7 +94,7 @@ test('identities supply username and password; known hosts can be managed', asyn
     await createHost(page, { label: 'Via identity', port: server.port, identity: 'Tester (tester)' });
     await page.getByTestId('host-row').filter({ hasText: 'Via identity' }).dblclick();
     await page.getByTestId('hostkey-accept').click();
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
     await expect(page.getByTestId('auth-dialog')).toHaveCount(0);
 
     // The trusted key shows up in Known hosts; removing it brings the prompt back.
@@ -116,8 +116,8 @@ test('identities supply username and password; known hosts can be managed', asyn
 });
 
 test('SFTP browser: upload, download, mkdir, permissions, delete', async () => {
-  const remote = mkdtempSync(join(tmpdir(), 'cy-e2e-remote-'));
-  const local = mkdtempSync(join(tmpdir(), 'cy-e2e-local-'));
+  const remote = mkdtempSync(join(tmpdir(), 'chh-e2e-remote-'));
+  const local = mkdtempSync(join(tmpdir(), 'chh-e2e-local-'));
   writeFileSync(join(local, 'upload-me.txt'), 'from local');
   mkdirSync(join(remote, 'docs'));
   writeFileSync(join(remote, 'docs', 'report.txt'), 'remote report');
@@ -169,7 +169,8 @@ test('SFTP browser: upload, download, mkdir, permissions, delete', async () => {
     await page.getByRole('menuitem', { name: /Permissions/ }).click();
     await page.getByTestId('perm-octal').fill('600');
     await page.getByTestId('permissions-apply').click();
-    await expect.poll(() => statSync(join(remote, 'upload-me.txt')).mode & 0o777).toBe(0o600);
+    // Windows keeps only a read-only flag: a writable file reads back as 0o666 there.
+    await expect.poll(() => statSync(join(remote, 'upload-me.txt')).mode & 0o777).toBe(process.platform === 'win32' ? 0o666 : 0o600);
 
     // Delete.
     await right.getByTestId('file-row').filter({ hasText: 'new-dir' }).click();

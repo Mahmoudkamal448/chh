@@ -3,13 +3,13 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { DescribeInstancesCommand, EC2Client, type Instance } from '@aws-sdk/client-ec2';
 import { fromIni } from '@aws-sdk/credential-providers';
-import type { CloudCandidate } from '@cy-ssh/shared';
+import type { CloudCandidate } from '@chh/shared';
 
 type Candidate = Omit<CloudCandidate, 'exists'>;
 
 /** Test hooks: point the SDKs at local fake APIs. */
-const AWS_ENDPOINT = process.env.CY_SSH_TEST === '1' ? process.env.CY_SSH_AWS_ENDPOINT : undefined;
-const DO_ENDPOINT = (process.env.CY_SSH_TEST === '1' && process.env.CY_SSH_DO_ENDPOINT) || 'https://api.digitalocean.com';
+const AWS_ENDPOINT = process.env.CHH_TEST === '1' ? process.env.CHH_AWS_ENDPOINT : undefined;
+const DO_ENDPOINT = (process.env.CHH_TEST === '1' && process.env.CHH_DO_ENDPOINT) || 'https://api.digitalocean.com';
 
 /** Profile names from ~/.aws/credentials and ~/.aws/config. */
 export function awsProfiles(): string[] {

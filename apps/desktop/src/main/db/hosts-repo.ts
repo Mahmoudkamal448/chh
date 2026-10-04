@@ -8,7 +8,7 @@ import {
   type HostInput,
   type HostPatch,
   type HostQuery,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import type { LocalVault } from '../vault/local-vault';
 import type { GroupsRepo } from './groups-repo';
 import { uuidv7, type ItemStore, type StoredItem } from './item-store';
@@ -39,6 +39,10 @@ export class HostsRepo {
       params.push(...ids);
     }
     if (query.favoritesOnly) where.push('favorite = 1');
+    if (query.vaultId) {
+      where.push('vault_id = ?');
+      params.push(query.vaultId);
+    }
     if (query.tag) {
       where.push(`EXISTS (SELECT 1 FROM json_each(items.fields, '$.tags') WHERE value = ?)`);
       params.push(query.tag);
@@ -70,6 +74,7 @@ export class HostsRepo {
     const data = HostInputSchema.parse(input);
     if (data.groupId) this.groups.assertExists(data.groupId);
     const id = uuidv7();
+    const vaultId = data.vaultId ?? this.store.vaultId;
     const fields: HostFields = HostFieldsSchema.parse({
       label: data.label,
       address: data.address,
@@ -80,10 +85,10 @@ export class HostsRepo {
       notes: data.notes,
       osHint: null,
       settings: data.settings,
-      password: data.password ? this.vault.seal(data.password, { itemId: id, field: PASSWORD_FIELD }) : null,
+      password: data.password ? this.vault.seal(data.password, { itemId: id, field: PASSWORD_FIELD, vaultId }) : null,
       externalId: data.externalId ?? null,
     });
-    return toHost(this.store.insert('host', fields, id));
+    return toHost(this.store.insert('host', fields, id, vaultId));
   }
 
   update(id: string, input: HostPatch): Host {
@@ -93,14 +98,15 @@ export class HostsRepo {
     const next: Partial<HostFields> = { ...rest };
     if (rest.tags) next.tags = dedupe(rest.tags);
     if (password === null) next.password = null;
-    else if (typeof password === 'string') next.password = this.vault.seal(password, { itemId: id, field: PASSWORD_FIELD });
+    else if (typeof password === 'string') next.password = this.vault.seal(password, { itemId: id, field: PASSWORD_FIELD, vaultId: this.getStored(id).vaultId });
     const updated = this.store.update<HostFields>(id, 'host', next);
     if (!updated) throw new NotFoundError();
     return toHost(updated);
   }
 
   duplicate(id: string): Host {
-    const src = this.getStored(id).fields;
+    const stored = this.getStored(id);
+    const src = stored.fields;
     const password = this.getPassword(id);
     return this.create({
       label: `${src.label} (copy)`.slice(0, 200),
@@ -112,6 +118,7 @@ export class HostsRepo {
       notes: src.notes,
       settings: src.settings,
       password,
+      vaultId: this.vault.canWrite(stored.vaultId) ? stored.vaultId : undefined,
     });
   }
 
@@ -132,8 +139,8 @@ export class HostsRepo {
 
   /** Main-process only: decrypts the saved password for connecting. */
   getPassword(id: string): string | null {
-    const f = this.getStored(id).fields;
-    return f.password ? this.vault.open(f.password, { itemId: id, field: PASSWORD_FIELD }) : null;
+    const item = this.getStored(id);
+    return item.fields.password ? this.vault.open(item.fields.password, { itemId: id, field: PASSWORD_FIELD, vaultId: item.vaultId }) : null;
   }
 
   setPassword(id: string, password: string | null): void {
@@ -156,6 +163,9 @@ export class HostsRepo {
 
   /** Records the detected operating system (shown as an icon in the host list). */
   setOsHint(id: string, os: string): void {
+    const item = this.store.get<HostFields>(id, 'host');
+    // Team viewers can't change shared hosts; the hint is cosmetic, so skip it.
+    if (!item || item.fields.osHint === os.slice(0, 32) || !this.vault.canWrite(item.vaultId)) return;
     this.store.update<HostFields>(id, 'host', { osHint: os.slice(0, 32) });
   }
 
@@ -199,5 +209,5 @@ function dedupe(tags: string[]): string[] {
 
 function toHost(item: StoredItem<HostFields>): Host {
   const { password, ...rest } = item.fields;
-  return { ...rest, id: item.id, hasPassword: !!password, updatedAt: item.updatedAt };
+  return { ...rest, id: item.id, vaultId: item.vaultId, hasPassword: !!password, updatedAt: item.updatedAt };
 }

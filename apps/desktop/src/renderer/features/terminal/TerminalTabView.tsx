@@ -44,8 +44,8 @@ export function TerminalTabView({ tab, visible }: { tab: TerminalTab; visible: b
   useEffect(() => {
     if (!visible) return;
     const toggle = () => setPanelOpen((o) => !o);
-    window.addEventListener('cy:toggle-panel', toggle);
-    return () => window.removeEventListener('cy:toggle-panel', toggle);
+    window.addEventListener('chh:toggle-panel', toggle);
+    return () => window.removeEventListener('chh:toggle-panel', toggle);
   }, [visible]);
 
   return (

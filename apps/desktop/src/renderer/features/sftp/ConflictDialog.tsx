@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { ConflictPolicy } from '@cy-ssh/shared';
+import type { ConflictPolicy } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button } from '../../components/ui';
 

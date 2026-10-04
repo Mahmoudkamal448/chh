@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_HOST_SETTINGS, type LocalShell, type UiTheme } from '@cy-ssh/shared';
+import { DEFAULT_HOST_SETTINGS, type LocalShell, type UiTheme } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Kbd, Select } from '../../components/ui';
 import { ThemePicker } from './ThemePicker';
 import { AiSettings } from './AiSettings';
+import { UpdateSettings } from './UpdateSettings';
 import { COMMAND_IDS, defaultKeymap, displayAccelerator, effectiveKeymap, eventToAccelerator, type CommandId } from '../../lib/keymap';
 import { cn } from '../../lib/cn';
 import { useApp, type SettingsSection } from '../../stores/app-store';
 import { SyncSettings } from '../sync/SyncSettings';
 import { SecuritySettings } from './SecuritySettings';
 
-const SECTIONS: SettingsSection[] = ['general', 'terminal', 'shortcuts', 'security', 'sync'];
+const SECTIONS: SettingsSection[] = ['general', 'terminal', 'shortcuts', 'security', 'sync', 'updates'];
 
 export function SettingsDialog() {
   const { t } = useTranslation();
@@ -26,7 +27,7 @@ export function SettingsDialog() {
   const setSection = useApp((s) => s.setSettingsSection);
 
   useEffect(() => {
-    if (open) void window.cy.sessions.localShells({}).then(setShells);
+    if (open) void window.chh.sessions.localShells({}).then(setShells);
     else setRecording(null);
   }, [open]);
 
@@ -220,6 +221,7 @@ export function SettingsDialog() {
           )}
           {section === 'security' && <SecuritySettings />}
           {section === 'sync' && <SyncSettings />}
+          {section === 'updates' && <UpdateSettings />}
         </div>
       </div>
     </Dialog>

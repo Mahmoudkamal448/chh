@@ -26,7 +26,7 @@ function fmtListen(host: string, port: number): string {
 }
 
 /** Serializes hosts to ssh_config text. Aliases are made unique. */
-export function writeSshConfig(hosts: ExportHost[], header = 'Exported by cy-ssh'): string {
+export function writeSshConfig(hosts: ExportHost[], header = 'Exported by chh'): string {
   const used = new Map<string, number>();
   const out: string[] = [`# ${header}`, ''];
   for (const h of hosts) {

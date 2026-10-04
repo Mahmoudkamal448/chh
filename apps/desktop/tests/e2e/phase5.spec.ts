@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { cleanup, expectTerminalToContain, launchApp, startSshServer, terminalText, type AppHandle } from './fixtures';
+import { cleanup, expectTerminalToContain, launchApp, recordedCommands, startSshServer, terminalText, waitForOutput, waitForPrompt, type AppHandle } from './fixtures';
 
 const has = (cmd: string) => {
   try {
@@ -67,7 +67,7 @@ test('jump host chain, env variables and OS detection', async () => {
     // Two hops → two host keys to verify.
     await page.getByTestId('hostkey-accept').click();
     await page.getByTestId('hostkey-accept').click();
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
     expect(target.env.APP_ENV).toBe('staging');
     await page.getByTestId('tab-hosts').click();
     await expect(page.getByTestId('host-row').filter({ hasText: 'Inner' }).getByTestId('os-badge')).toHaveAttribute('data-os', 'debian');
@@ -91,7 +91,7 @@ test('run a snippet on several hosts in parallel with per-host results', async (
     for (const label of ['node-a', 'node-b']) {
       await page.getByTestId('host-row').filter({ hasText: label }).dblclick();
       await page.getByTestId('hostkey-accept').click();
-      await expectTerminalToContain(page, 'Welcome to cy-test');
+      await expectTerminalToContain(page, 'Welcome to chh-test');
       await page.getByTestId('tab-hosts').click();
     }
     await page.getByTestId('nav-snippets').click();
@@ -118,7 +118,7 @@ test('run a snippet on several hosts in parallel with per-host results', async (
 
 test('serial port terminal (virtual port pair)', async () => {
   test.skip(!has('socat'), 'socat not installed');
-  const dir = mkdtempSync(join(tmpdir(), 'cy-serial-'));
+  const dir = mkdtempSync(join(tmpdir(), 'chh-serial-'));
   const socat: ChildProcess = spawn('socat', ['-d', '-d', `pty,raw,echo=0,link=${dir}/ttyA`, `pty,raw,echo=0,link=${dir}/ttyB`], { stdio: 'ignore' });
   try {
     await expect.poll(() => existsSync(`${dir}/ttyA`) && existsSync(`${dir}/ttyB`)).toBe(true);
@@ -154,7 +154,7 @@ test('serial port terminal (virtual port pair)', async () => {
 test('System OpenSSH engine runs the installed ssh client', async () => {
   test.skip(!has('ssh'), 'OpenSSH client not installed');
   const server = await startSshServer();
-  const home = mkdtempSync(join(tmpdir(), 'cy-home-'));
+  const home = mkdtempSync(join(tmpdir(), 'chh-home-'));
   mkdirSync(join(home, '.ssh'));
   try {
     h = await launchApp(undefined, { HOME: home });
@@ -168,7 +168,7 @@ test('System OpenSSH engine runs the installed ssh client', async () => {
     await typeLine(page, 'yes');
     await expectTerminalToContain(page, 'password:');
     await typeLine(page, 'secret');
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
   } finally {
     await server.close();
     rmSync(home, { recursive: true, force: true });
@@ -179,10 +179,15 @@ test('autocomplete: ghost suggestion from history, accepted with →; Ctrl+Space
   h = await launchApp();
   const { page } = h;
   await page.getByTestId('new-local').click();
-  await page.waitForTimeout(600);
+  await waitForPrompt(page);
+  if (process.platform === 'win32') {
+    // PowerShell draws its own grey prediction after the cursor, and chh doesn't draw over a shell's.
+    await typeLine(page, 'Set-PSReadLineOption -PredictionSource None; echo predictions-off');
+    await waitForOutput(page, 'predictions-off');
+  }
   await typeLine(page, 'echo ghost-test-123');
-  await expectTerminalToContain(page, 'ghost-test-123');
-  await page.waitForTimeout(400); // history is recorded shortly after Enter
+  await waitForOutput(page, 'ghost-test-123');
+  await expect.poll(() => recordedCommands(page)).toContain('echo ghost-test-123');
   await page.keyboard.type('echo gho');
   await expect(page.getByTestId('ghost-suggestion')).toHaveText('st-test-123');
   await page.keyboard.press('ArrowRight');
@@ -190,6 +195,8 @@ test('autocomplete: ghost suggestion from history, accepted with →; Ctrl+Space
   await expect.poll(async () => (await terminalText(page)).match(/ghost-test-123/g)?.length ?? 0).toBeGreaterThanOrEqual(4);
 
   await page.keyboard.type('echo g');
+  // Suggestions read the input line from the screen: wait until the shell has echoed it.
+  await expect(page.getByTestId('ghost-suggestion')).toHaveText('host-test-123');
   await page.keyboard.press('Control+Space');
   const list = page.getByTestId('suggestion-list');
   await expect(list).toContainText('echo ghost-test-123');
@@ -213,7 +220,7 @@ test('import droplets from DigitalOcean (fake API)', async () => {
   });
   await new Promise<void>((r) => api.listen(0, '127.0.0.1', () => r()));
   try {
-    h = await launchApp(undefined, { CY_SSH_DO_ENDPOINT: `http://127.0.0.1:${(api.address() as AddressInfo).port}` });
+    h = await launchApp(undefined, { CHH_DO_ENDPOINT: `http://127.0.0.1:${(api.address() as AddressInfo).port}` });
     const { page } = h;
     await page.getByTestId('ssh-config-menu').click();
     await page.getByTestId('import-do').click();

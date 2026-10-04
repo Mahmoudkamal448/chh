@@ -38,7 +38,7 @@ export function SecuritySettings() {
     try {
       await fn();
       if (ok) setMsg({ kind: 'ok', text: ok });
-      setLock(await window.cy.lock.state({}));
+      setLock(await window.chh.lock.state({}));
     } catch (err) {
       setMsg({ kind: 'error', text: t(errorKey(err)) });
     } finally {
@@ -51,7 +51,7 @@ export function SecuritySettings() {
       if (passcode.length < 4) return setMsg({ kind: 'error', text: t('lock.passcodeTooShort') });
       if (passcode !== confirm) return setMsg({ kind: 'error', text: t('lock.passcodeMismatch') });
     }
-    void run(() => window.cy.lock.configure({ passcode: state.masterPassword ? undefined : passcode, settings: { enabled: true } }), t('lock.enabled'));
+    void run(() => window.chh.lock.configure({ passcode: state.masterPassword ? undefined : passcode, settings: { enabled: true } }), t('lock.enabled'));
     setPasscode('');
     setConfirm('');
   };
@@ -81,7 +81,7 @@ export function SecuritySettings() {
             <div className="grid grid-cols-2 gap-3">
               <Field label={t('lock.autoLock')}>
                 {(id) => (
-                  <Select id={id} value={s.autoLockMinutes} onChange={(e) => void run(() => window.cy.lock.configure({ settings: { autoLockMinutes: Number(e.target.value) } }))}>
+                  <Select id={id} value={s.autoLockMinutes} onChange={(e) => void run(() => window.chh.lock.configure({ settings: { autoLockMinutes: Number(e.target.value) } }))}>
                     {AUTO_LOCK.map((m) => (
                       <option key={m} value={m}>
                         {m === 0 ? t('lock.never') : t('lock.afterMinutes', { count: m })}
@@ -91,16 +91,16 @@ export function SecuritySettings() {
                 )}
               </Field>
             </div>
-            <Checkbox label={t('lock.lockOnSleep')} checked={s.lockOnSleep} onChange={(v) => void run(() => window.cy.lock.configure({ settings: { lockOnSleep: v } }))} />
+            <Checkbox label={t('lock.lockOnSleep')} checked={s.lockOnSleep} onChange={(v) => void run(() => window.chh.lock.configure({ settings: { lockOnSleep: v } }))} />
             {state.biometricAvailable !== 'none' && (
               <Checkbox
                 label={state.biometricAvailable === 'touchid' ? t('lock.allowTouchId') : t('lock.allowWindowsHello')}
                 checked={s.biometric}
-                onChange={(v) => void run(() => window.cy.lock.configure({ settings: { biometric: v } }))}
+                onChange={(v) => void run(() => window.chh.lock.configure({ settings: { biometric: v } }))}
               />
             )}
             <div className="flex items-end gap-2">
-              <Button onClick={() => void window.cy.lock.lockNow({})} data-testid="lock-now">
+              <Button onClick={() => void window.chh.lock.lockNow({})} data-testid="lock-now">
                 {t('lock.lockNow')}
               </Button>
               <div className="ml-auto w-56">
@@ -108,7 +108,7 @@ export function SecuritySettings() {
                   {(id) => <Input id={id} type="password" value={secret} onChange={(e) => setSecret(e.target.value)} />}
                 </Field>
               </div>
-              <Button disabled={!secret || busy} onClick={() => void run(() => window.cy.lock.disable({ secret }), t('lock.disabled')).then(() => setSecret(''))}>
+              <Button disabled={!secret || busy} onClick={() => void run(() => window.chh.lock.disable({ secret }), t('lock.disabled')).then(() => setSecret(''))}>
                 {t('lock.disable')}
               </Button>
             </div>
@@ -124,7 +124,7 @@ export function SecuritySettings() {
             <div className="ml-auto w-56">
               <Field label={t('lock.masterPassword')}>{(id) => <Input id={id} type="password" value={master} onChange={(e) => setMaster(e.target.value)} />}</Field>
             </div>
-            <Button disabled={!master || busy} onClick={() => void run(() => window.cy.lock.removeMasterPassword({ password: master }), t('lock.masterRemoved')).then(() => setMaster(''))}>
+            <Button disabled={!master || busy} onClick={() => void run(() => window.chh.lock.removeMasterPassword({ password: master }), t('lock.masterRemoved')).then(() => setMaster(''))}>
               {t('lock.masterRemove')}
             </Button>
           </div>
@@ -143,7 +143,7 @@ export function SecuritySettings() {
               variant="primary"
               className="self-start"
               disabled={busy || master.length < 8 || master !== masterConfirm}
-              onClick={() => void run(() => window.cy.lock.setMasterPassword({ password: master }), t('lock.masterEnabled')).then(() => (setMaster(''), setMasterConfirm('')))}
+              onClick={() => void run(() => window.chh.lock.setMasterPassword({ password: master }), t('lock.masterEnabled')).then(() => (setMaster(''), setMasterConfirm('')))}
               data-testid="master-enable"
             >
               {busy ? t('lock.deriving') : t('lock.masterEnable')}

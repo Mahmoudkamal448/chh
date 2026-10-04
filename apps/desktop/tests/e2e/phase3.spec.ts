@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import { startTelnetServer } from '../support/telnet-server';
-import { accel, cleanup, expectTerminalToContain, launchApp, paneCount, startSshServer, terminalText, type AppHandle } from './fixtures';
+import { accel, cleanup, expectTerminalToContain, launchApp, paneCount, recordedCommands, startSshServer, terminalText, waitForOutput, waitForPrompt, type AppHandle } from './fixtures';
 
 const FIX = join(__dirname, '../../../../packages/key-formats/test/fixtures');
 const hasMosh = (() => {
@@ -85,15 +85,17 @@ test('snippets with variables run from the side panel; typed commands land in Hi
   await expect(page.getByTestId('snippet-row')).toHaveCount(1);
 
   await page.getByTestId('new-local').click();
-  await page.waitForTimeout(500);
-  await page.keyboard.press(accel('S'));
+  await waitForPrompt(page);
+  // The panel shortcut is ⌘⇧S on macOS (⌘S is left to the shell) and Ctrl+Shift+S elsewhere.
+  await page.keyboard.press(process.platform === 'darwin' ? 'Meta+Shift+S' : accel('S'));
   await page.getByTestId('side-panel').getByTestId('panel-snippet-run').click();
   await page.getByTestId('var-name').fill('cy');
   await page.getByTestId('snippet-variables-run').click();
-  await expectTerminalToContain(page, 'hello-cy');
+  await waitForOutput(page, 'hello-cy');
 
   await typeInFocused(page, 'echo typed-history-$((3*3))');
   await expectTerminalToContain(page, 'typed-history-9');
+  await expect.poll(() => recordedCommands(page)).toContain('echo typed-history-$((3*3))');
   await page.getByTestId('panel-history').click();
   await expect(page.getByTestId('side-panel').getByText('echo typed-history-$((3*3))')).toBeVisible();
 
@@ -111,7 +113,7 @@ test('telnet host', async () => {
     const { page } = h;
     await createHost(page, { label: 'Router', port: server.port, protocol: 'telnet' });
     await page.getByTestId('host-row').filter({ hasText: 'Router' }).dblclick();
-    await expectTerminalToContain(page, 'Welcome to cy-telnet');
+    await expectTerminalToContain(page, 'Welcome to chh-telnet');
     await typeInFocused(page, 'admin');
     await expectTerminalToContain(page, 'you typed: admin');
     await expect.poll(() => server.terminalType()).toBe('XTERM-256COLOR');
@@ -182,7 +184,7 @@ test('port forwarding rule: create, start, tunnel traffic, stop', async () => {
 });
 
 test('imports hosts, keys and forwards from ~/.ssh/config and exports back', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'cy-e2e-home-'));
+  const home = mkdtempSync(join(tmpdir(), 'chh-e2e-home-'));
   mkdirSync(join(home, '.ssh'));
   copyFileSync(join(FIX, 'openssh-ed25519'), join(home, '.ssh', 'id_test'));
   writeFileSync(

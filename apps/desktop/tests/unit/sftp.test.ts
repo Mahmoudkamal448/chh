@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Transfer } from '@cy-ssh/shared';
-import { generateKey, publicKeyLine, writeOpenSshPrivate } from '@cy-ssh/key-formats';
+import type { Transfer } from '@chh/shared';
+import { generateKey, publicKeyLine, writeOpenSshPrivate } from '@chh/key-formats';
 import { LocalFs } from '../../src/session-host/files/local-fs';
 import type { FsProvider } from '../../src/session-host/files/provider';
 import { SftpFs } from '../../src/session-host/files/sftp-fs';
@@ -30,6 +30,16 @@ const callbacks = (answers: string[][] = []): ConnectCallbacks => ({
 
 const config = (over: Partial<SshConnectConfig> = {}): SshConnectConfig => sshConfig(server.port, over);
 
+/**
+ * Like connectChain does in the app, handle errors after login: closing the test server can reset
+ * a connection that is still shutting down, which would otherwise be an uncaught exception.
+ */
+const connect = async (cfg: SshConnectConfig, cb: ConnectCallbacks) => {
+  const client = await connectSsh(cfg, cb);
+  client.on('error', () => client.end());
+  return client;
+};
+
 beforeAll(async () => {
   remoteRoot = mkdtempSync(join(tmpdir(), 'cy-remote-'));
   server = await startSshServer({ sftpRoot: remoteRoot, authorizedKeys: [publicKeyLine(key)] });
@@ -48,7 +58,7 @@ beforeEach(() => {
 describe('connectSsh auth', () => {
   it('authenticates with a vault key (no prompts)', async () => {
     const prompts: string[] = [];
-    const client = await connectSsh(config({ privateKey: writeOpenSshPrivate(key) }), {
+    const client = await connect(config({ privateKey: writeOpenSshPrivate(key) }), {
       ...callbacks(),
       requestAuth: async (r) => {
         prompts.push(r.kind);
@@ -63,7 +73,7 @@ describe('connectSsh auth', () => {
     const seen: boolean[] = [];
     let remembered: string | null = null;
     const answers = [['wrong'], ['secret']];
-    const client = await connectSsh(config(), {
+    const client = await connect(config(), {
       ...callbacks(),
       requestAuth: async (r) => {
         seen.push(r.retry);
@@ -76,6 +86,13 @@ describe('connectSsh auth', () => {
     client.end();
   });
 
+  it('falls back to the password when the configured agent is unreachable', async () => {
+    // e.g. Windows without the OpenSSH agent service running, or a stale SSH_AUTH_SOCK.
+    const missing = process.platform === 'win32' ? '\\\\.\\pipe\\chh-no-such-agent' : join(tmpdir(), 'chh-no-such-agent.sock');
+    const client = await connect(config({ useAgent: true, agent: missing, password: 'secret' }), callbacks());
+    client.end();
+  });
+
   it('fails cleanly when the user cancels', async () => {
     await expect(connectSsh(config(), callbacks([]))).rejects.toMatchObject({ level: 'client-authentication' });
   });
@@ -83,7 +100,7 @@ describe('connectSsh auth', () => {
 
 describe('SftpFs + TransferManager', () => {
   beforeAll(async () => {
-    sftp = await SftpFs.open(await connectSsh(config({ password: 'secret' }), callbacks()));
+    sftp = await SftpFs.open(await connect(config({ password: 'secret' }), callbacks()));
   });
 
   const run = (src: FsProvider, srcPaths: string[], dst: FsProvider, dir: string, conflict: 'overwrite' | 'skip' | 'rename' = 'overwrite') =>
@@ -112,8 +129,13 @@ describe('SftpFs + TransferManager', () => {
     expect(listing.parent).toBe('/');
     expect(listing.entries.map((e) => [e.name, e.type, e.size])).toEqual([['a.txt', 'file', 5]]);
     await sftp.rename('/ops/a.txt', '/ops/b.txt');
+    // Windows keeps only a read-only flag, so modes read back as 0o444 / 0o666 there.
+    const mode = () => statSync(join(remoteRoot, 'ops', 'b.txt')).mode & 0o777;
+    const win = process.platform === 'win32';
+    await sftp.chmod('/ops/b.txt', 0o400);
+    expect(mode()).toBe(win ? 0o444 : 0o400);
     await sftp.chmod('/ops/b.txt', 0o600);
-    expect(statSync(join(remoteRoot, 'ops', 'b.txt')).mode & 0o777).toBe(0o600);
+    expect(mode()).toBe(win ? 0o666 : 0o600);
     await sftp.remove('/ops');
     expect(await sftp.stat('/ops')).toBeNull();
     await expect(sftp.list('/missing')).rejects.toMatchObject({ code: 'not_found' });

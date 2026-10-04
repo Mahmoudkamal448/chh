@@ -12,6 +12,8 @@ import { TerminalTabView } from '../features/terminal/TerminalTabView';
 import { useLibrary } from '../stores/library-store';
 import { useSecurity } from '../stores/lock-store';
 import { useVault } from '../stores/vault-store';
+import { useTeams } from '../stores/teams-store';
+import { UpdateBanner } from '../features/settings/UpdateSettings';
 import { cn } from '../lib/cn';
 import { useApp } from '../stores/app-store';
 import { refreshAll } from '../stores/hosts-store';
@@ -30,17 +32,22 @@ export function App() {
 
   useEffect(() => {
     void useApp.getState().load();
-    void window.cy.sync.status({}).then((s) => useSecurity.getState().setSync(s));
+    void window.chh.sync.status({}).then((s) => {
+      useSecurity.getState().setSync(s);
+      if (s.signedIn) void useTeams.getState().refresh();
+      else void useTeams.getState().refreshVaults();
+    });
     void refreshAll();
     void useVault.getState().refresh();
     void useLibrary.getState().refreshSnippets();
     void useLibrary.getState().refreshForwards();
     const offs = [
-      window.cy.on('hostkey.prompt', (data) => usePrompts.getState().push({ type: 'hostkey', data })),
-      window.cy.on('auth.prompt', (data) => usePrompts.getState().push({ type: 'auth', data })),
-      window.cy.on('prompt.dismiss', ({ promptId }) => usePrompts.getState().remove(promptId)),
-      window.cy.on('session.status', ({ sessionId, status, message }) => useTabs.getState().setStatus(sessionId, status, message)),
-      window.cy.on('data.changed', ({ kinds }) => {
+      window.chh.on('hostkey.prompt', (data) => usePrompts.getState().push({ type: 'hostkey', data })),
+      window.chh.on('auth.prompt', (data) => usePrompts.getState().push({ type: 'auth', data })),
+      window.chh.on('prompt.dismiss', ({ promptId }) => usePrompts.getState().remove(promptId)),
+      window.chh.on('session.status', ({ sessionId, status, message }) => useTabs.getState().setStatus(sessionId, status, message)),
+      window.chh.on('teams.changed', () => void useTeams.getState().refresh()),
+      window.chh.on('data.changed', ({ kinds }) => {
         // Local edits elsewhere and changes pulled from other devices.
         if (kinds.includes('hosts') || kinds.includes('groups')) void refreshAll();
         if (kinds.includes('keys') || kinds.includes('identities')) void useVault.getState().refresh();
@@ -57,6 +64,7 @@ export function App() {
 
   return (
     <div className="flex h-full flex-col">
+      <UpdateBanner />
       <TabBar />
       <div className="relative min-h-0 flex-1">
         <div className={cn('absolute inset-0', activeId !== HOSTS_TAB && 'hidden')}>

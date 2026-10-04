@@ -27,7 +27,7 @@ export async function startTelnetServer(): Promise<TestTelnetServer> {
     sock.on('close', () => sockets.delete(sock));
     sock.write(Buffer.from([IAC, DO, NAWS, IAC, DO, TTYPE, IAC, WILL, 1, IAC, WILL, 3]));
     sock.write(Buffer.from([IAC, SB, TTYPE, 1, IAC, SE]));
-    sock.write('Welcome to cy-telnet\r\nlogin: ');
+    sock.write('Welcome to chh-telnet\r\nlogin: ');
     let buf = Buffer.alloc(0);
     let line = '';
     sock.on('data', (d: Buffer) => {

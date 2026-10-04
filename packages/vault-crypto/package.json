@@ -1,5 +1,5 @@
 {
-  "name": "@cy-ssh/vault-crypto",
+  "name": "@chh/vault-crypto",
   "version": "0.1.0",
   "private": true,
   "type": "module",

@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowUp, File, Folder, FolderPlus, HardDrive, Link2, RefreshCw, Server } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { FileEntry } from '@cy-ssh/shared';
+import type { FileEntry } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { PromptDialog } from '../../components/PromptDialog';
 import { Button, IconButton, Input } from '../../components/ui';
@@ -12,7 +12,7 @@ import { formatBytes, formatDate, modeString } from '../../lib/format';
 import { PermissionsDialog } from './PermissionsDialog';
 import type { Pane } from './use-pane';
 
-export const DRAG_TYPE = 'application/x-cy-files';
+export const DRAG_TYPE = 'application/x-chh-files';
 const ROW = 30;
 
 const isDirLike = (e: FileEntry) => e.type === 'dir' || (e.type === 'symlink' && e.targetIsDir);
@@ -179,7 +179,7 @@ export function FilePane({
       onDrop(drop, targetDir);
       return;
     }
-    const files = [...e.dataTransfer.files].map((f) => window.cy.pathForFile(f)).filter(Boolean);
+    const files = [...e.dataTransfer.files].map((f) => window.chh.pathForFile(f)).filter(Boolean);
     if (files.length) onDropOsFiles(files, targetDir);
   };
 
@@ -365,7 +365,7 @@ export function FilePane({
         onSubmit={(name) => {
           const from = renaming!.path;
           setRenaming(null);
-          if (name !== renaming!.name) void pane.run((endpoint) => window.cy.sftp.rename({ endpoint, from, to: pane.join(name) }));
+          if (name !== renaming!.name) void pane.run((endpoint) => window.chh.sftp.rename({ endpoint, from, to: pane.join(name) }));
         }}
       />
       <PromptDialog
@@ -377,7 +377,7 @@ export function FilePane({
         onCancel={() => setCreating(false)}
         onSubmit={(name) => {
           setCreating(false);
-          void pane.run((endpoint) => window.cy.sftp.mkdir({ endpoint, path: pane.join(name) }));
+          void pane.run((endpoint) => window.chh.sftp.mkdir({ endpoint, path: pane.join(name) }));
         }}
       />
       <ConfirmDialog
@@ -390,7 +390,7 @@ export function FilePane({
         onConfirm={() => {
           const paths = deleting!;
           setDeleting(null);
-          void pane.run((endpoint) => window.cy.sftp.remove({ endpoint, paths }));
+          void pane.run((endpoint) => window.chh.sftp.remove({ endpoint, paths }));
         }}
       />
       <PermissionsDialog
@@ -399,7 +399,7 @@ export function FilePane({
         onSubmit={(mode, recursive) => {
           const paths = perms!.paths;
           setPerms(null);
-          void pane.run((endpoint) => window.cy.sftp.chmod({ endpoint, paths, mode, recursive }));
+          void pane.run((endpoint) => window.chh.sftp.chmod({ endpoint, paths, mode, recursive }));
         }}
       />
     </section>
