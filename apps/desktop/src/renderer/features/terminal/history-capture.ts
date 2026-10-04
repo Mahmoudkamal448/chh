@@ -61,11 +61,11 @@ export class HistoryCapture {
     const buf = this.term.buffer.active;
     if (!this.start || buf.type === 'alternate') return null;
     const line = buf.baseY + buf.cursorY;
-    if (line !== this.start.line) return null;
     const text = buf.getLine(line)?.translateToString(true) ?? '';
-    // Plain typing that the terminal has echoed: no need to trust the cursor column (see read()).
+    // Plain typing that the terminal has echoed: no need to trust the cursor position (see read()).
     const keys = this.start.keys;
-    if (keys && text.trimEnd().endsWith(keys.trimEnd())) return keys;
+    if (keys) return text.trimEnd().endsWith(keys.trimEnd()) ? keys : null; // null: not echoed yet
+    if (line !== this.start.line) return null;
     if (text.length > buf.cursorX) return null; // cursor is mid-line
     return text.slice(inputColumn(this.start, text), buf.cursorX);
   }

@@ -25,7 +25,7 @@ describe('HistoryCapture', () => {
     const cursor = { x: 12, y: 0 };
     const seen: string[] = [];
     const cap = new HistoryCapture(fakeTerm(lines, cursor), (c) => seen.push(c));
-    cap.input('l');
+    for (const ch of 'ls -la') cap.input(ch);
     lines[0] = 'user@box:~$ ls -la';
     cursor.x = 18;
     expect(cap.typed()).toBe('ls -la');
@@ -41,7 +41,7 @@ describe('HistoryCapture', () => {
     const cursor = { x: 0, y: 0 };
     const seen: string[] = [];
     const cap = new HistoryCapture(fakeTerm(lines, cursor), (c) => seen.push(c));
-    cap.input('e');
+    for (const ch of 'echo hi') cap.input(ch);
     lines[0] = 'PS C:\\Users\\me> echo hi';
     cursor.x = lines[0].length;
     expect(cap.typed()).toBe('echo hi');
@@ -118,5 +118,17 @@ describe('HistoryCapture', () => {
     vi.runAllTimers();
     expect(seen).toEqual(['echo hello']);
     vi.useRealTimers();
+  });
+
+  it('reports plain typing as unknown until the terminal has echoed it', () => {
+    const lines = ['PS C:\\Users\\me> '];
+    const cursor = { x: 0, y: 0 };
+    const cap = new HistoryCapture(fakeTerm(lines, cursor), () => undefined);
+    cap.input('echo gho');
+    expect(cap.typed()).toBeNull();
+    lines[0] = 'PS C:\\Users\\me> echo gho';
+    cursor.y = 5; // ConPTY may report a different row
+    lines[5] = lines[0];
+    expect(cap.typed()).toBe('echo gho');
   });
 });

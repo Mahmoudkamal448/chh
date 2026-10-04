@@ -225,7 +225,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       setGhost(null);
       // Look for a completion once the echo has landed.
       if (ghostTimer.current) clearTimeout(ghostTimer.current);
-      if (useApp.getState().settings.autocomplete.enabled && !/[\r\n\x03\x04]/.test(d)) ghostTimer.current = setTimeout(updateGhost, 150);
+      if (useApp.getState().settings.autocomplete.enabled && !/[\r\n\x03\x04]/.test(d)) ghostTimer.current = setTimeout(() => void updateGhost(), 150);
     });
     const d2 = term.onBinary((d) => stream.write(d));
     const d3 = term.onResize(({ cols, rows }) => stream.resize(cols, rows));
@@ -267,10 +267,16 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
 
   const hostIdOf = () => (paneRef.current.source.kind === 'host' ? paneRef.current.source.hostId : null);
 
-  async function updateGhost() {
+  async function updateGhost(attempt = 0) {
     const term = termRef.current;
     const input = captureRef.current?.typed();
-    if (!term || !containerRef.current || !input || input.trim().length < 2) return;
+    if (!term || !containerRef.current) return;
+    // The echo may not be on screen yet (slow links, Windows ConPTY): look again a few times.
+    if (input == null && attempt < 5) {
+      ghostTimer.current = setTimeout(() => void updateGhost(attempt + 1), 150);
+      return;
+    }
+    if (!input || input.trim().length < 2) return;
     const [best] = await window.chh.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 1 });
     if (!best || captureRef.current?.typed() !== input) return; // user kept typing
     const pos = cursorPosition(term, containerRef.current);
