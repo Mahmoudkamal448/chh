@@ -11,7 +11,8 @@ const MAX_WRAPPED_LINES = 20;
  * history, and naturally skips input that isn't echoed, such as passwords.
  */
 export class HistoryCapture {
-  private start: { line: number; x: number } | null = null;
+  /** Where input started: line, cursor column, and the text already there (the prompt). */
+  private start: { line: number; x: number; prompt: string } | null = null;
 
   constructor(
     private readonly term: Terminal,
@@ -29,7 +30,10 @@ export class HistoryCapture {
       this.start = null; // Ctrl+C / Ctrl+D abandon the line
       return;
     }
-    if (!this.start) this.start = { line: buf.baseY + buf.cursorY, x: buf.cursorX };
+    if (!this.start) {
+      const line = buf.baseY + buf.cursorY;
+      this.start = { line, x: buf.cursorX, prompt: buf.getLine(line)?.translateToString(true) ?? '' };
+    }
     if (/[\r\n]/.test(data)) {
       const start = this.start;
       this.start = null;
@@ -48,13 +52,14 @@ export class HistoryCapture {
     if (line !== this.start.line) return null;
     const text = buf.getLine(line)?.translateToString(true) ?? '';
     if (text.length > buf.cursorX) return null; // cursor is mid-line
-    return text.slice(this.start.x, buf.cursorX);
+    return text.slice(inputColumn(this.start, text), buf.cursorX);
   }
 
-  private read(start: { line: number; x: number }): void {
+  private read(start: { line: number; x: number; prompt: string }): void {
     const buf = this.term.buffer.active;
     if (buf.type === 'alternate') return;
-    let text = buf.getLine(start.line)?.translateToString(true).slice(start.x) ?? '';
+    const first = buf.getLine(start.line)?.translateToString(true) ?? '';
+    let text = first.slice(inputColumn(start, first));
     for (let i = 1; i <= MAX_WRAPPED_LINES; i++) {
       const next = buf.getLine(start.line + i);
       if (!next?.isWrapped) break;
@@ -63,4 +68,15 @@ export class HistoryCapture {
     const command = text.trim();
     if (command) this.onCommand(command);
   }
+}
+
+/**
+ * Column where the typed input begins. Normally the cursor column when typing started, but a
+ * terminal can report the cursor at the start of the line while the prompt is already drawn there
+ * (Windows ConPTY with PowerShell does): then the input begins after that prompt text.
+ */
+function inputColumn(start: { x: number; prompt: string }, line: string): number {
+  if (!start.prompt || !line.startsWith(start.prompt) || start.x >= start.prompt.length) return start.x;
+  // The saved prompt has trailing blanks trimmed: skip the separator space after it too.
+  return line[start.prompt.length] === ' ' ? start.prompt.length + 1 : start.prompt.length;
 }

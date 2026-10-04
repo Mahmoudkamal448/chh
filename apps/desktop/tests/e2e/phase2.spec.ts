@@ -169,7 +169,8 @@ test('SFTP browser: upload, download, mkdir, permissions, delete', async () => {
     await page.getByRole('menuitem', { name: /Permissions/ }).click();
     await page.getByTestId('perm-octal').fill('600');
     await page.getByTestId('permissions-apply').click();
-    await expect.poll(() => statSync(join(remote, 'upload-me.txt')).mode & 0o777).toBe(0o600);
+    // Windows keeps only a read-only flag: a writable file reads back as 0o666 there.
+    await expect.poll(() => statSync(join(remote, 'upload-me.txt')).mode & 0o777).toBe(process.platform === 'win32' ? 0o666 : 0o600);
 
     // Delete.
     await right.getByTestId('file-row').filter({ hasText: 'new-dir' }).click();

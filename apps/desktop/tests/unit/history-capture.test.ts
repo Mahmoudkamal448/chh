@@ -1,0 +1,53 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { Terminal } from '@xterm/xterm';
+import { HistoryCapture } from '../../src/renderer/features/terminal/history-capture';
+
+/** Just enough of xterm's buffer API: one screen of lines and a cursor. */
+function fakeTerm(lines: string[], cursor: { x: number; y: number }) {
+  const buffer = {
+    type: 'normal',
+    baseY: 0,
+    get cursorX() {
+      return cursor.x;
+    },
+    get cursorY() {
+      return cursor.y;
+    },
+    getLine: (i: number) => (lines[i] === undefined ? undefined : { translateToString: () => lines[i]!.replace(/\s+$/, ''), isWrapped: false }),
+  };
+  return { buffer: { active: buffer } } as unknown as Terminal;
+}
+
+describe('HistoryCapture', () => {
+  it('records what the terminal shows after the prompt', () => {
+    vi.useFakeTimers();
+    const lines = ['user@box:~$ '];
+    const cursor = { x: 12, y: 0 };
+    const seen: string[] = [];
+    const cap = new HistoryCapture(fakeTerm(lines, cursor), (c) => seen.push(c));
+    cap.input('l');
+    lines[0] = 'user@box:~$ ls -la';
+    cursor.x = 18;
+    expect(cap.typed()).toBe('ls -la');
+    cap.input('\r');
+    vi.runAllTimers();
+    expect(seen).toEqual(['ls -la']);
+    vi.useRealTimers();
+  });
+
+  it('skips the prompt when the cursor is reported at column 0 (Windows ConPTY + PowerShell)', () => {
+    vi.useFakeTimers();
+    const lines = ['PS C:\\Users\\me> '];
+    const cursor = { x: 0, y: 0 };
+    const seen: string[] = [];
+    const cap = new HistoryCapture(fakeTerm(lines, cursor), (c) => seen.push(c));
+    cap.input('e');
+    lines[0] = 'PS C:\\Users\\me> echo hi';
+    cursor.x = lines[0].length;
+    expect(cap.typed()).toBe('echo hi');
+    cap.input('\r');
+    vi.runAllTimers();
+    expect(seen).toEqual(['echo hi']);
+    vi.useRealTimers();
+  });
+});
