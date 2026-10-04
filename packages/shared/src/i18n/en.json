@@ -1,0 +1,192 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "undo": "Undo",
+    "on": "On",
+    "off": "Off"
+  },
+  "errors": {
+    "internal": "Something went wrong. See the log for details.",
+    "notFound": "That item no longer exists.",
+    "validation": "Some fields are invalid. Please check your input.",
+    "noShell": "No local shell was found on this system."
+  },
+  "tabs": {
+    "label": "Open tabs",
+    "hosts": "Hosts",
+    "close": "Close tab",
+    "newLocal": "New local terminal",
+    "newLocalHint": "New local terminal (right-click to choose a shell)"
+  },
+  "sidebar": {
+    "label": "Host navigation",
+    "allHosts": "All hosts",
+    "favorites": "Favorites",
+    "groups": "Groups",
+    "tags": "Tags",
+    "ungrouped": "Ungrouped",
+    "newGroup": "New group",
+    "newSubgroup": "New subgroup",
+    "noGroups": "No groups yet",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "hosts": {
+    "listLabel": "Hosts",
+    "count_one": "{{count}} host",
+    "count_other": "{{count}} hosts",
+    "new": "New host",
+    "searchPlaceholder": "Search hosts, addresses, tags…",
+    "empty": "No hosts yet. Add your first host to get started.",
+    "noMatches": "No hosts match this view.",
+    "connect": "Connect",
+    "duplicate": "Duplicate",
+    "favorite": "Favorite",
+    "makeFavorite": "Add to favorites",
+    "unfavorite": "Remove from favorites",
+    "passwordSaved": "Password saved",
+    "deleteTitle": "Delete host?",
+    "deleteMessage": "“{{label}}” will be deleted. This can't be undone."
+  },
+  "groups": {
+    "deleteTitle": "Delete group?",
+    "deleteMessage": "“{{label}}” will be deleted. Its hosts and subgroups move up to the parent group."
+  },
+  "hostEditor": {
+    "newTitle": "New host",
+    "editTitle": "Edit host",
+    "address": "Address",
+    "addressHint": "Hostname or IP address",
+    "label": "Label",
+    "username": "Username",
+    "askOnConnect": "Ask when connecting",
+    "port": "Port",
+    "password": "Password",
+    "passwordHint": "Optional. Stored encrypted on this device.",
+    "passwordSaved": "A password is saved.",
+    "passwordChange": "Change",
+    "passwordRemove": "Remove",
+    "passwordWillRemove": "The saved password will be removed.",
+    "group": "Group",
+    "noGroup": "No group",
+    "tags": "Tags",
+    "tagsHint": "Comma-separated, e.g. prod, web",
+    "notes": "Notes",
+    "terminalTheme": "Terminal theme",
+    "fontSize": "Font size",
+    "fontFamily": "Font family",
+    "useAgent": "Use SSH agent",
+    "tryDefaultKeys": "Try ~/.ssh default keys",
+    "keepAlive": "Keep-alive (seconds)",
+    "connectTimeout": "Connect timeout (seconds)",
+    "errorRequired": "Enter an address."
+  },
+  "groupEditor": {
+    "newTitle": "New group",
+    "editTitle": "Edit group",
+    "description": "Settings set here are inherited by every host and subgroup inside this group.",
+    "name": "Name",
+    "parent": "Parent group",
+    "noParent": "None (top level)",
+    "inherited": "Inherited settings",
+    "errorRequired": "Enter a name."
+  },
+  "settings": {
+    "title": "Settings",
+    "appearance": "Appearance",
+    "themeSystem": "Match system",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "defaultShell": "Default local shell",
+    "shellAuto": "Automatic ({{name}})",
+    "shortcuts": "Keyboard shortcuts",
+    "resetShortcuts": "Reset to defaults",
+    "pressKeys": "Press keys… (Esc to cancel)",
+    "changeShortcut": "Change shortcut for {{command}}",
+    "customized": "custom",
+    "inherit": "Inherit ({{value}})",
+    "version": "Version {{version}}",
+    "keystoreOs": "Local data is encrypted with a key protected by your system keychain.",
+    "keystoreWeak": "No system keychain is available: local data is encrypted, but the key is only obfuscated on disk."
+  },
+  "commands": {
+    "palette.open": "Open command palette",
+    "tab.newLocal": "New local terminal",
+    "tab.close": "Close tab",
+    "tab.next": "Next tab",
+    "tab.prev": "Previous tab",
+    "tab.hosts": "Go to hosts",
+    "host.new": "New host",
+    "hosts.search": "Search hosts",
+    "terminal.find": "Find in terminal",
+    "terminal.copy": "Copy (terminal)",
+    "terminal.paste": "Paste (terminal)",
+    "settings.open": "Open settings"
+  },
+  "palette": {
+    "title": "Command palette",
+    "placeholder": "Type a host name or command…",
+    "empty": "No results",
+    "hosts": "Hosts",
+    "commands": "Commands",
+    "connectTo": "Connect to {{label}}"
+  },
+  "terminal": {
+    "find": "Find",
+    "findNext": "Next match",
+    "findPrev": "Previous match"
+  },
+  "session": {
+    "connecting": "Connecting…",
+    "authenticating": "Authenticating…",
+    "closed": "Session closed.",
+    "exited": "Session ended (exit code {{code}}).",
+    "reconnect": "Reconnect",
+    "closeTab": "Close tab",
+    "status": {
+      "connecting": "Connecting",
+      "authenticating": "Authenticating",
+      "ready": "Connected",
+      "closed": "Closed",
+      "error": "Error"
+    },
+    "error": {
+      "auth": "Authentication failed.",
+      "timeout": "Connection timed out.",
+      "dns": "Host not found. Check the address.",
+      "refused": "Connection refused. Is SSH running on that port?",
+      "unreachable": "Host unreachable.",
+      "reset": "Connection was reset by the server.",
+      "hostCrashed": "The session process stopped unexpectedly.",
+      "internal": "Could not start the session.",
+      "spawn": "Could not start the shell: {{detail}}",
+      "generic": "Connection error: {{detail}}"
+    }
+  },
+  "hostKey": {
+    "newTitle": "Verify host identity",
+    "changedTitle": "Warning: host key has changed",
+    "newExplain": "This is the first time connecting to {{host}}. Check that the fingerprint below matches the server's before trusting it.",
+    "changedWarning": "The key presented by {{host}} does not match the one you trusted before. Someone could be intercepting your connection (man-in-the-middle), or the server was reinstalled. Only continue if you have verified the new fingerprint with the server's administrator.",
+    "host": "Host",
+    "keyType": "Key type",
+    "fingerprint": "Fingerprint",
+    "previous": "Previously trusted",
+    "otherTypeKnown": "You already trust a {{type}} key for this host; the server now offers a different key type.",
+    "trustAndConnect": "Trust and connect",
+    "connectOnce": "Connect once",
+    "disconnect": "Disconnect",
+    "replaceAndConnect": "Trust new key and connect"
+  },
+  "auth": {
+    "title": "Sign in to {{target}}",
+    "usernameTitle": "Username for {{host}}",
+    "continue": "Continue",
+    "remember": "Remember password on this device",
+    "retry": "That didn't work. Please try again."
+  }
+}

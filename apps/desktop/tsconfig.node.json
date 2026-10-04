@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2023"
+    ]
+  },
+  "include": [
+    "src/main",
+    "src/session-host",
+    "electron.vite.config.ts",
+    "*.config.ts",
+    "../../packages/vault-crypto/src/sodium-native.d.ts",
+    "src/types"
+  ]
+}

@@ -1,0 +1,20 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+# Native modules allowed to run install scripts
+allowBuilds:
+  better-sqlite3-multiple-ciphers: true
+  cpu-features: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  node-pty: true
+  sodium-native: true
+  ssh2: true
+
+minimumReleaseAgeExclude:
+  - lucide-react@1.52.0
+
+# electron-builder and native modules work best with a flat node_modules
+nodeLinker: hoisted

@@ -1,0 +1,19 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ES2023",
+      "DOM",
+      "DOM.Iterable"
+    ]
+  },
+  "include": [
+    "tests",
+    "src/preload/api.d.ts",
+    "src/types",
+    "../../packages/vault-crypto/src/sodium-native.d.ts"
+  ]
+}

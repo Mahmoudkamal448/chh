@@ -1,0 +1,57 @@
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, join } from 'node:path';
+import type { LocalShell } from '@cy-ssh/shared';
+
+function which(cmd: string): string | null {
+  const dirs = (process.env.PATH ?? '').split(process.platform === 'win32' ? ';' : ':');
+  const exts = process.platform === 'win32' ? ['.exe', '.cmd', ''] : [''];
+  for (const d of dirs) {
+    for (const e of exts) {
+      const p = join(d, cmd + e);
+      if (d && existsSync(p)) return p;
+    }
+  }
+  return null;
+}
+
+/** Shells available on this machine, default first. */
+export function detectShells(): LocalShell[] {
+  if (process.platform === 'win32') {
+    const out: LocalShell[] = [];
+    const pwsh = which('pwsh');
+    if (pwsh) out.push({ id: 'pwsh', label: 'PowerShell 7', path: pwsh, args: ['-NoLogo'] });
+    const sysRoot = process.env.SystemRoot ?? 'C:\\Windows';
+    const winps = join(sysRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+    if (existsSync(winps)) out.push({ id: 'powershell', label: 'Windows PowerShell', path: winps, args: ['-NoLogo'] });
+    const cmd = process.env.ComSpec ?? join(sysRoot, 'System32', 'cmd.exe');
+    out.push({ id: 'cmd', label: 'Command Prompt', path: cmd, args: [] });
+    const wsl = join(sysRoot, 'System32', 'wsl.exe');
+    if (existsSync(wsl)) out.push({ id: 'wsl', label: 'WSL', path: wsl, args: [] });
+    const gitBash = join(process.env.ProgramFiles ?? 'C:\\Program Files', 'Git', 'bin', 'bash.exe');
+    if (existsSync(gitBash)) out.push({ id: 'git-bash', label: 'Git Bash', path: gitBash, args: ['--login', '-i'] });
+    return out;
+  }
+
+  const candidates = new Set<string>();
+  if (process.env.SHELL) candidates.add(process.env.SHELL);
+  try {
+    for (const line of readFileSync('/etc/shells', 'utf8').split('\n')) {
+      const p = line.trim();
+      if (p && !p.startsWith('#')) candidates.add(p);
+    }
+  } catch {
+    // no /etc/shells
+  }
+  for (const p of ['/bin/zsh', '/bin/bash', '/usr/bin/fish', '/bin/sh']) candidates.add(p);
+
+  const out: LocalShell[] = [];
+  const seenNames = new Set<string>();
+  for (const p of candidates) {
+    const name = basename(p);
+    if (!existsSync(p) || seenNames.has(name) || ['nologin', 'false', 'git-shell', 'rbash'].includes(name)) continue;
+    seenNames.add(name);
+    // macOS terminals start login shells so /etc/zprofile (path_helper) runs.
+    out.push({ id: name, label: name, path: p, args: process.platform === 'darwin' ? ['-l'] : [] });
+  }
+  return out;
+}

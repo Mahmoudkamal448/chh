@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+@import '@xterm/xterm/css/xterm.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/* Semantic UI tokens; components only use these, never raw palette colors. Contrast targets WCAG AA. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #eef0f3;
+  --fg: #16181d;
+  --muted: #5b6270;
+  --border: #d9dde3;
+  --accent: #2459d6;
+  --accent-fg: #ffffff;
+  --danger: #b4232c;
+  --warning-bg: #fff4d6;
+  --warning-fg: #6b4a00;
+  --focus: #2459d6;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --bg: #0f1115;
+  --surface: #171a20;
+  --surface-2: #1f232b;
+  --fg: #e6e8ec;
+  --muted: #9aa2b1;
+  --border: #2c313b;
+  --accent: #6c9bff;
+  --accent-fg: #0b1020;
+  --danger: #ff6b72;
+  --warning-bg: #3a2e0b;
+  --warning-fg: #ffd77a;
+  --focus: #6c9bff;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-focus: var(--focus);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  user-select: none;
+}
+
+input,
+textarea,
+.selectable {
+  user-select: text;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.xterm {
+  height: 100%;
+  padding: 6px 0 0 8px;
+}
+
+/* cmdk */
+[cmdk-item][data-selected='true'] {
+  background: var(--surface-2);
+}
