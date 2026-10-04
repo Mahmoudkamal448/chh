@@ -18,11 +18,35 @@ export const KeyFieldsSchema = z.object({
   privateKey: SealedSchema,
   origin: z.enum(['generated', 'openssh', 'pem', 'pkcs8', 'ppk2', 'ppk3']),
   createdAt: z.number(),
+  /** OpenSSH certificate for this key pair ("…-cert.pub" line), presented when authenticating. */
+  certificate: z.string().max(16_384).nullable().default(null),
 });
 export type KeyFields = z.infer<typeof KeyFieldsSchema>;
 
+/** What the UI shows about a key's certificate. */
+export const CertificateSummarySchema = z.object({
+  certType: z.string(),
+  kind: z.enum(['user', 'host']),
+  serial: z.string(),
+  keyId: z.string(),
+  /** Empty: valid for any user name. */
+  principals: z.array(z.string()),
+  validAfter: z.number(),
+  /** Null: never expires. */
+  validBefore: z.number().nullable(),
+  extensions: z.array(z.string()),
+  criticalOptions: z.array(z.string()),
+  caFingerprint: z.string(),
+});
+export type CertificateSummary = z.infer<typeof CertificateSummarySchema>;
+
 /** Renderer view: no private material. */
-export const KeySchema = KeyFieldsSchema.omit({ privateKey: true }).extend({ id: IdSchema, vaultId: IdSchema, updatedAt: z.number() });
+export const KeySchema = KeyFieldsSchema.omit({ privateKey: true, certificate: true }).extend({
+  id: IdSchema,
+  vaultId: IdSchema,
+  updatedAt: z.number(),
+  certificate: CertificateSummarySchema.nullable(),
+});
 export type Key = z.infer<typeof KeySchema>;
 
 export const GenerateKeyInputSchema = z.discriminatedUnion('algorithm', [

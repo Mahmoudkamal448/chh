@@ -135,6 +135,8 @@ export const contract = {
       ImportKeyResultSchema,
     ),
     rename: method(z.object({ id: IdSchema, label: z.string().trim().min(1).max(200) }), KeySchema),
+    /** Attaches an OpenSSH certificate (the "…-cert.pub" text) to a key, or removes it with null. */
+    setCertificate: method(z.object({ id: IdSchema, certificate: z.string().max(16_384).nullable() }), KeySchema),
     remove: method(z.object({ ids: z.array(IdSchema).min(1) }), Void),
     /** Save-file dialog; optionally re-encrypts the exported OpenSSH key with a passphrase. */
     exportPrivate: method(z.object({ id: IdSchema, passphrase: z.string().max(1024).optional() }), z.object({ saved: z.boolean() })),

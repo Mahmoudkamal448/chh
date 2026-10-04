@@ -197,9 +197,11 @@ export class SessionManager {
 
     const keyId = settings.keyId ?? identity?.keyId ?? null;
     let privateKey: string | null = null;
+    let certificate: string | null = null;
     if (keyId) {
       try {
         privateKey = this.deps.keys.getPrivate(keyId);
+        certificate = this.deps.keys.getCertificate(keyId);
       } catch {
         log.warn({ hostId }, 'configured key no longer exists');
       }
@@ -210,6 +212,7 @@ export class SessionManager {
       username,
       password: this.deps.hosts.getPassword(hostId) ?? identity?.password ?? null,
       privateKey,
+      certificate,
       useAgent: settings.useAgent,
       tryDefaultKeys: settings.tryDefaultKeys,
       keepAliveSec: settings.keepAliveSec,

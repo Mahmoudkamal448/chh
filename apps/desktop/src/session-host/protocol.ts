@@ -13,6 +13,8 @@ export interface SshConnectConfig {
   password: string | null;
   /** Unencrypted OpenSSH private key from the vault, tried first. */
   privateKey: string | null;
+  /** OpenSSH certificate for `privateKey` ("…-cert.pub" line): tried before the plain key. */
+  certificate?: string | null;
   useAgent: boolean;
   tryDefaultKeys: boolean;
   keepAliveSec: number;

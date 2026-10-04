@@ -8,6 +8,7 @@ export { writeOpenSshPrivate } from './openssh';
 export { fingerprint, publicKeyLine, parsePublicKeyLine, describeKey, type PublicKeyInfo } from './public';
 export { generateKey, type GenerateSpec } from './generate';
 export * from './known-hosts';
+export { parseCertificate, isCertificateType, type CertificateInfo } from './certificate';
 
 export type DetectedFormat = 'openssh' | 'pem' | 'ppk' | 'unknown';
 

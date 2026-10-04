@@ -1,8 +1,9 @@
 import type { Duplex } from 'node:stream';
-import { Client, type AuthenticationType, type ConnectConfig } from 'ssh2';
+import { Client, type AuthenticationType, type ConnectConfig, type ParsedKey } from 'ssh2';
 import type { SshConnectConfig } from '../protocol';
 import { fingerprintSha256, keyTypeOf } from '../host-key';
 import { keyAcceptsPassphrase, loadDefaultKeys, systemAgentPath } from './keys';
+import { withCertificate } from './certificate';
 import { ProxyError, connectViaProxy } from './proxy';
 
 export interface HostKeyInfo {
@@ -57,7 +58,7 @@ export function describeSshError(err: Error & { level?: string; code?: string; h
 }
 
 type Step =
-  | { type: 'key'; key: string | Buffer; passphrase?: string }
+  | { type: 'key'; key: string | Buffer | ParsedKey; passphrase?: string }
   | { type: 'default-key'; name: string; data: Buffer; encrypted: boolean }
   | { type: 'agent'; agent: string }
   | { type: 'saved-password' }
@@ -129,7 +130,13 @@ export async function connectChain(config: SshConnectConfig, cb: ConnectCallback
 export async function connectSsh(config: SshConnectConfig, cb: ConnectCallbacks, sock?: Duplex): Promise<Client> {
   cb.status('connecting');
   const steps: Step[] = [];
-  if (config.privateKey) steps.push({ type: 'key', key: config.privateKey });
+  if (config.privateKey) {
+    // A certificate first: servers that trust its CA accept it without an authorized_keys entry. The plain
+    // key follows for servers that don't.
+    const cert = config.certificate ? withCertificate(config.privateKey, config.certificate) : null;
+    if (cert) steps.push({ type: 'key', key: cert });
+    steps.push({ type: 'key', key: config.privateKey });
+  }
   const agent = config.useAgent ? resolveAgent(config.agent) : null;
   if (agent) steps.push({ type: 'agent', agent });
   if (config.tryDefaultKeys) for (const k of await loadDefaultKeys()) steps.push({ type: 'default-key', ...k });

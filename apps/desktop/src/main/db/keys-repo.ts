@@ -6,6 +6,7 @@ import {
   type HostFields,
   type IdentityFields,
   type ImportKeyResult,
+  type CertificateSummary,
   type Key,
   type KeyFields,
 } from '@chh/shared';
@@ -13,7 +14,9 @@ import {
   KeyFormatError,
   fingerprint,
   generateKey,
+  parseCertificate,
   parsePrivateKey,
+  parsePublicKeyLine,
   publicKeyLine,
   writeOpenSshPrivate,
   type PrivateKey,
@@ -45,8 +48,11 @@ export class KeysRepo {
     return this.save(key, data.label, 'generated');
   }
 
-  /** Parses, decrypts and stores a key. Passphrase problems are returned, not thrown. */
-  async importText(text: string, label?: string, passphrase?: string): Promise<ImportKeyResult> {
+  /**
+   * Parses, decrypts and stores a key. Passphrase problems are returned, not thrown. A certificate found
+   * next to the key file is attached if it belongs to it (and to an existing key without one).
+   */
+  async importText(text: string, label?: string, passphrase?: string, certificate?: string): Promise<ImportKeyResult> {
     let key: PrivateKey;
     try {
       key = await parsePrivateKey(text, passphrase || undefined);
@@ -57,10 +63,37 @@ export class KeysRepo {
       throw err;
     }
     const fp = fingerprint(key.publicBlob);
+    const cert = certificate && certificateFor(certificate, key.publicBlob) ? certificate.trim() : null;
     const existing = this.list().find((k) => k.fingerprint === fp);
-    if (existing) return { status: 'duplicate', existing };
+    if (existing) {
+      if (cert && !existing.certificate) return { status: 'duplicate', existing: this.setCertificate(existing.id, cert) };
+      return { status: 'duplicate', existing };
+    }
     const name = label?.trim() || key.comment || fp.slice(7, 19);
-    return { status: 'imported', key: this.save(key, name, key.sourceFormat) };
+    return { status: 'imported', key: this.save(key, name, key.sourceFormat, cert) };
+  }
+
+  /**
+   * Attaches an OpenSSH user certificate to a key (null removes it). Throws KeyFormatError when it isn't a
+   * certificate, is a host certificate, or certifies a different key.
+   */
+  setCertificate(id: string, certificate: string | null): Key {
+    const item = this.getStored(id);
+    let value: string | null = null;
+    if (certificate !== null && certificate.trim()) {
+      const info = parseCertificate(certificate);
+      if (info.kind !== 'user') throw new KeyFormatError('cert_host');
+      if (!info.publicBlob.equals(parsePublicKeyLine(item.fields.publicKey).publicBlob)) throw new KeyFormatError('cert_mismatch');
+      value = certificate.trim();
+    }
+    const updated = this.store.update<KeyFields>(id, 'key', { certificate: value });
+    if (!updated) throw new NotFoundError();
+    return toKey(updated);
+  }
+
+  /** The key's certificate line, if any (for connecting). */
+  getCertificate(id: string): string | null {
+    return this.getStored(id).fields.certificate ?? null;
   }
 
   rename(id: string, label: string): Key {
@@ -111,7 +144,7 @@ export class KeysRepo {
     return writeOpenSshPrivate(key, passphrase);
   }
 
-  private save(key: PrivateKey, label: string, origin: KeyFields['origin']): Key {
+  private save(key: PrivateKey, label: string, origin: KeyFields['origin'], certificate: string | null = null): Key {
     const id = uuidv7();
     const fields = KeyFieldsSchema.parse({
       label: label.slice(0, 200),
@@ -123,6 +156,7 @@ export class KeysRepo {
       privateKey: this.vault.seal(writeOpenSshPrivate(key), { itemId: id, field: PRIVATE_FIELD }),
       origin,
       createdAt: Date.now(),
+      certificate,
     });
     return toKey(this.store.insert('key', fields, id));
   }
@@ -135,6 +169,26 @@ export class KeysRepo {
 }
 
 function toKey(item: StoredItem<KeyFields>): Key {
-  const { privateKey: _secret, ...rest } = item.fields;
-  return { ...rest, id: item.id, vaultId: item.vaultId, updatedAt: item.updatedAt };
+  const { privateKey: _secret, certificate, ...rest } = item.fields;
+  return { ...rest, id: item.id, vaultId: item.vaultId, updatedAt: item.updatedAt, certificate: summarize(certificate ?? null) };
+}
+
+function summarize(certificate: string | null): CertificateSummary | null {
+  if (!certificate) return null;
+  try {
+    const { certType, kind, serial, keyId, principals, validAfter, validBefore, extensions, criticalOptions, caFingerprint } = parseCertificate(certificate);
+    return { certType, kind, serial, keyId, principals, validAfter, validBefore, extensions, criticalOptions, caFingerprint };
+  } catch {
+    return null; // stored by a newer version in a format this one can't read
+  }
+}
+
+/** True if `certificate` is a user certificate for the key with this public blob. */
+function certificateFor(certificate: string, publicBlob: Buffer): boolean {
+  try {
+    const info = parseCertificate(certificate);
+    return info.kind === 'user' && info.publicBlob.equals(publicBlob);
+  } catch {
+    return false;
+  }
 }
