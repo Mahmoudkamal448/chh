@@ -100,7 +100,8 @@ test('a failed connection explains itself and offers Try again / Edit host; conn
 
   // A server that accepts but never answers: the connecting card, with Cancel.
   const { createServer } = await import('node:net');
-  const silent = createServer(() => undefined).listen(0, '127.0.0.1');
+  // Cancelling resets the connection (abruptly on Windows): ignore that on our side.
+  const silent = createServer((sock) => sock.on('error', () => undefined)).listen(0, '127.0.0.1');
   await new Promise((r) => silent.once('listening', r));
   try {
     await page.getByTestId('tab-hosts').click();
