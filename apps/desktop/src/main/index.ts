@@ -211,9 +211,24 @@ if (!app.requestSingleInstanceLock()) {
     if (process.platform !== 'darwin') app.quit();
   });
 
-  app.on('before-quit', () => {
-    updates?.stop();
-    ctx?.close();
-    ctx = null;
+  // Cleanup runs in a task of its own, then the quit continues. Called straight from before-quit it
+  // could close the database underneath a running query: a quit requested over the inspector (as the
+  // E2E tests do) can interrupt synchronous code, and the resulting exception shows a modal error
+  // dialog that blocks the quit forever.
+  let cleanedUp = false;
+  app.on('before-quit', (e) => {
+    if (cleanedUp) return;
+    e.preventDefault();
+    setImmediate(() => {
+      cleanedUp = true;
+      try {
+        updates?.stop();
+        ctx?.close();
+      } catch (err) {
+        log.error({ err: errInfo(err) }, 'cleanup on quit failed');
+      }
+      ctx = null;
+      app.quit();
+    });
   });
 }
