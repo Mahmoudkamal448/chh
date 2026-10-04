@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import { randomKey } from '@cy-ssh/vault-crypto';
+import { randomKey } from '@chh/vault-crypto';
 import { AiProvider, parseSuggestions } from '../../../src/main/ai';
 import { CloudImporter } from '../../../src/main/cloud/import';
 import { openDatabase, type Db } from '../../../src/main/db/database';
@@ -127,9 +127,9 @@ describe('cloud import', () => {
         <privateIpAddress>172.31.0.10</privateIpAddress><ipAddress>198.51.100.7</ipAddress><dnsName>ec2-198-51-100-7.compute.amazonaws.com</dnsName>
         <tagSet><item><key>Name</key><value>bastion</value></item></tagSet></item></instancesSet></item></reservationSet></DescribeInstancesResponse>`,
     }));
-    process.env.CY_SSH_TEST = '1';
-    process.env.CY_SSH_DO_ENDPOINT = doApi.url;
-    process.env.CY_SSH_AWS_ENDPOINT = ec2.url;
+    process.env.CHH_TEST = '1';
+    process.env.CHH_DO_ENDPOINT = doApi.url;
+    process.env.CHH_AWS_ENDPOINT = ec2.url;
     providers = await import('../../../src/main/cloud/providers');
   });
 

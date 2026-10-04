@@ -8,7 +8,7 @@ import {
   type IdentityFields,
   type IdentityInput,
   type IdentityPatch,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import type { LocalVault } from '../vault/local-vault';
 import { ValidationError } from './groups-repo';
 import { NotFoundError } from './hosts-repo';

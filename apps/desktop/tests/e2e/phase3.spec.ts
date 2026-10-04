@@ -111,7 +111,7 @@ test('telnet host', async () => {
     const { page } = h;
     await createHost(page, { label: 'Router', port: server.port, protocol: 'telnet' });
     await page.getByTestId('host-row').filter({ hasText: 'Router' }).dblclick();
-    await expectTerminalToContain(page, 'Welcome to cy-telnet');
+    await expectTerminalToContain(page, 'Welcome to chh-telnet');
     await typeInFocused(page, 'admin');
     await expectTerminalToContain(page, 'you typed: admin');
     await expect.poll(() => server.terminalType()).toBe('XTERM-256COLOR');
@@ -182,7 +182,7 @@ test('port forwarding rule: create, start, tunnel traffic, stop', async () => {
 });
 
 test('imports hosts, keys and forwards from ~/.ssh/config and exports back', async () => {
-  const home = mkdtempSync(join(tmpdir(), 'cy-e2e-home-'));
+  const home = mkdtempSync(join(tmpdir(), 'chh-e2e-home-'));
   mkdirSync(join(home, '.ssh'));
   copyFileSync(join(FIX, 'openssh-ed25519'), join(home, '.ssh', 'id_test'));
   writeFileSync(

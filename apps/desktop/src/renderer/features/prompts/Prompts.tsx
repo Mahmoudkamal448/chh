@@ -1,7 +1,7 @@
 import { ShieldAlert, ShieldQuestion } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { AuthPrompt, HostKeyPrompt } from '@cy-ssh/shared';
+import type { AuthPrompt, HostKeyPrompt } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input } from '../../components/ui';
 import { usePrompts } from '../../stores/prompts-store';
@@ -12,7 +12,7 @@ function HostKeyDialog({ p }: { p: HostKeyPrompt }) {
   const changed = !!p.previousFingerprint;
   const respond = (decision: 'accept-save' | 'accept-once' | 'reject') => {
     remove(p.promptId);
-    void window.cy.sessions.respondHostKey({ promptId: p.promptId, decision });
+    void window.chh.sessions.respondHostKey({ promptId: p.promptId, decision });
   };
   return (
     <Dialog
@@ -86,7 +86,7 @@ function AuthDialog({ p }: { p: AuthPrompt }) {
 
   const respond = (responses: string[] | null) => {
     remove(p.promptId);
-    void window.cy.sessions.respondAuth({ promptId: p.promptId, responses, save: save && !!responses });
+    void window.chh.sessions.respondAuth({ promptId: p.promptId, responses, save: save && !!responses });
   };
   const title =
     p.kind === 'username'

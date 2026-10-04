@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Host } from '@cy-ssh/shared';
+import type { Host } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Input } from '../../components/ui';
 
@@ -11,7 +11,7 @@ export function HostPicker({ open, onPick, onCancel }: { open: boolean; onPick(c
   const [hosts, setHosts] = useState<Host[]>([]);
   useEffect(() => {
     if (!open) return;
-    void window.cy.hosts.list({ query: query || undefined, limit: 200 }).then((r) => setHosts(r.items));
+    void window.chh.hosts.list({ query: query || undefined, limit: 200 }).then((r) => setHosts(r.items));
   }, [open, query]);
   useEffect(() => {
     if (!open) setQuery('');

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { inheritedSettings, type GroupLike, type HostSettingsOverrides, type Protocol } from '@cy-ssh/shared';
+import { inheritedSettings, type GroupLike, type HostSettingsOverrides, type Protocol } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Select } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
@@ -35,7 +35,7 @@ export function HostEditor() {
   const [saving, setSaving] = useState(false);
   const [ports, setPorts] = useState<Array<{ path: string; manufacturer: string | null; serialNumber: string | null }>>([]);
   useEffect(() => {
-    if (open && form.protocol === 'serial') void window.cy.serial.ports({}).then(setPorts, () => setPorts([]));
+    if (open && form.protocol === 'serial') void window.chh.serial.ports({}).then(setPorts, () => setPorts([]));
   }, [open, form.protocol]);
 
   useEffect(() => {
@@ -46,7 +46,7 @@ export function HostEditor() {
       setHasPassword(false);
       return;
     }
-    void window.cy.hosts.get({ id: editingId }).then((h) => {
+    void window.chh.hosts.get({ id: editingId }).then((h) => {
       setForm({
         protocol: h.protocol,
         label: h.label,
@@ -89,8 +89,8 @@ export function HostEditor() {
       password: form.password === '' ? undefined : form.password,
     };
     try {
-      if (editingId) await window.cy.hosts.update({ id: editingId, patch: payload });
-      else await window.cy.hosts.create(payload);
+      if (editingId) await window.chh.hosts.update({ id: editingId, patch: payload });
+      else await window.chh.hosts.create(payload);
       await refreshAll();
       close();
     } catch (err) {

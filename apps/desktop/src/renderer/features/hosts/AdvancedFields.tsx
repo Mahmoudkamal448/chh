@@ -1,7 +1,7 @@
 import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_HOST_SETTINGS, type Host, type HostSettings, type HostSettingsOverrides, type Protocol } from '@cy-ssh/shared';
+import { DEFAULT_HOST_SETTINGS, type Host, type HostSettings, type HostSettingsOverrides, type Protocol } from '@chh/shared';
 import { Button, Field, IconButton, Input, Select } from '../../components/ui';
 
 type SetFn = <K extends keyof HostSettings>(k: K, v: HostSettings[K] | undefined) => void;
@@ -25,7 +25,7 @@ export function AdvancedFields({
   const [hosts, setHosts] = useState<Host[]>([]);
   const [pick, setPick] = useState('');
   useEffect(() => {
-    void window.cy.hosts.list({}).then((r) => setHosts(r.items.filter((h) => h.protocol === 'ssh' && h.id !== selfId)));
+    void window.chh.hosts.list({}).then((r) => setHosts(r.items.filter((h) => h.protocol === 'ssh' && h.id !== selfId)));
   }, [selfId]);
 
   const ssh = !protocol || protocol === 'ssh' || protocol === 'mosh';

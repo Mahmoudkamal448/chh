@@ -1,4 +1,4 @@
-import { ForwardFieldsSchema, ForwardInputSchema, ForwardPatchSchema, type Forward, type ForwardFields, type ForwardInput, type ForwardPatch } from '@cy-ssh/shared';
+import { ForwardFieldsSchema, ForwardInputSchema, ForwardPatchSchema, type Forward, type ForwardFields, type ForwardInput, type ForwardPatch } from '@chh/shared';
 import { ValidationError } from './groups-repo';
 import { NotFoundError } from './hosts-repo';
 import type { ItemStore, StoredItem } from './item-store';

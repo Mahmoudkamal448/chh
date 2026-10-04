@@ -30,17 +30,17 @@ export function App() {
 
   useEffect(() => {
     void useApp.getState().load();
-    void window.cy.sync.status({}).then((s) => useSecurity.getState().setSync(s));
+    void window.chh.sync.status({}).then((s) => useSecurity.getState().setSync(s));
     void refreshAll();
     void useVault.getState().refresh();
     void useLibrary.getState().refreshSnippets();
     void useLibrary.getState().refreshForwards();
     const offs = [
-      window.cy.on('hostkey.prompt', (data) => usePrompts.getState().push({ type: 'hostkey', data })),
-      window.cy.on('auth.prompt', (data) => usePrompts.getState().push({ type: 'auth', data })),
-      window.cy.on('prompt.dismiss', ({ promptId }) => usePrompts.getState().remove(promptId)),
-      window.cy.on('session.status', ({ sessionId, status, message }) => useTabs.getState().setStatus(sessionId, status, message)),
-      window.cy.on('data.changed', ({ kinds }) => {
+      window.chh.on('hostkey.prompt', (data) => usePrompts.getState().push({ type: 'hostkey', data })),
+      window.chh.on('auth.prompt', (data) => usePrompts.getState().push({ type: 'auth', data })),
+      window.chh.on('prompt.dismiss', ({ promptId }) => usePrompts.getState().remove(promptId)),
+      window.chh.on('session.status', ({ sessionId, status, message }) => useTabs.getState().setStatus(sessionId, status, message)),
+      window.chh.on('data.changed', ({ kinds }) => {
         // Local edits elsewhere and changes pulled from other devices.
         if (kinds.includes('hosts') || kinds.includes('groups')) void refreshAll();
         if (kinds.includes('keys') || kinds.includes('identities')) void useVault.getState().refresh();

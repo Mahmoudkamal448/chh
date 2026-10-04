@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { powerMonitor, systemPreferences } from 'electron';
-import { DEFAULT_LOCK_SETTINGS, LockSettingsSchema, type LockSettings, type LockState } from '@cy-ssh/shared';
-import { hashPasscode, verifyPasscode } from '@cy-ssh/vault-crypto';
+import { DEFAULT_LOCK_SETTINGS, LockSettingsSchema, type LockSettings, type LockState } from '@chh/shared';
+import { hashPasscode, verifyPasscode } from '@chh/vault-crypto';
 import type { SettingsRepo } from './db/settings-repo';
 import { errInfo, log } from './log';
 import { readKeyFile, unlockPasswordKey, writeOsKey, writePasswordKey } from './secrets/local-key';
@@ -216,10 +216,10 @@ export class LockManager {
   private async promptBiometric(): Promise<boolean> {
     try {
       if (this.biometric === 'touchid') {
-        await systemPreferences.promptTouchID('unlock cy-ssh');
+        await systemPreferences.promptTouchID('unlock chh');
         return true;
       }
-      if (this.biometric === 'windows-hello') return (await runWindowsHello('verify', 'Unlock cy-ssh')) === 'Verified';
+      if (this.biometric === 'windows-hello') return (await runWindowsHello('verify', 'Unlock chh')) === 'Verified';
     } catch {
       // cancelled or failed
     }

@@ -174,19 +174,19 @@ importers:
       '@aws-sdk/credential-providers':
         specifier: ^3.1146.0
         version: 3.1146.0
-      '@cy-ssh/key-formats':
+      '@chh/key-formats':
         specifier: workspace:*
         version: link:../../packages/key-formats
-      '@cy-ssh/shared':
+      '@chh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
-      '@cy-ssh/ssh-config':
+      '@chh/ssh-config':
         specifier: workspace:*
         version: link:../../packages/ssh-config
-      '@cy-ssh/sync-core':
+      '@chh/sync-core':
         specifier: workspace:*
         version: link:../../packages/sync-core
-      '@cy-ssh/vault-crypto':
+      '@chh/vault-crypto':
         specifier: workspace:*
         version: link:../../packages/vault-crypto
       better-sqlite3-multiple-ciphers:
@@ -319,7 +319,7 @@ importers:
 
   apps/server:
     dependencies:
-      '@cy-ssh/shared':
+      '@chh/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       '@fastify/rate-limit':

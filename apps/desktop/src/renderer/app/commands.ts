@@ -1,4 +1,4 @@
-import type { Host, Snippet } from '@cy-ssh/shared';
+import type { Host, Snippet } from '@chh/shared';
 import { needsVariables, runSnippet } from '../features/snippets/run-snippet';
 import { COMMAND_IDS, effectiveKeymap, matches, type CommandId } from '../lib/keymap';
 import { useApp } from '../stores/app-store';
@@ -71,10 +71,10 @@ export function runCommand(a: Action): void {
       tabs.focusNeighbor(-1);
       break;
     case 'app.lock':
-      void window.cy.lock.lockNow({});
+      void window.chh.lock.lockNow({});
       break;
     case 'panel.toggle':
-      window.dispatchEvent(new Event('cy:toggle-panel'));
+      window.dispatchEvent(new Event('chh:toggle-panel'));
       break;
     case 'tab.next':
       tabs.cycle(1);
@@ -96,7 +96,7 @@ export function runCommand(a: Action): void {
       requestAnimationFrame(() => document.getElementById(HOST_SEARCH_ID)?.focus());
       break;
     case 'terminal.find':
-      window.dispatchEvent(new Event('cy:terminal-find'));
+      window.dispatchEvent(new Event('chh:terminal-find'));
       break;
     case 'settings.open':
       useApp.getState().setSettingsOpen(true);

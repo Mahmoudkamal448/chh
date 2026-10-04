@@ -1,7 +1,7 @@
 import { Pencil, Plus, Trash2, UserRound } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Identity } from '@cy-ssh/shared';
+import type { Identity } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, IconButton, Input, Select } from '../../components/ui';
@@ -32,8 +32,8 @@ function IdentityEditor({ editing, onClose }: { editing: Identity | 'new' | null
     if (!label.trim()) return setError(t('identities.errorLabel'));
     const payload = { label: label.trim(), username: username.trim(), keyId: keyId || null, password: password === '' ? undefined : password };
     try {
-      if (existing) await window.cy.identities.update({ id: existing.id, patch: payload });
-      else await window.cy.identities.create(payload);
+      if (existing) await window.chh.identities.update({ id: existing.id, patch: payload });
+      else await window.chh.identities.create(payload);
       await refresh();
       onClose();
     } catch (err) {
@@ -173,7 +173,7 @@ export function IdentitiesView() {
         danger
         onCancel={() => setDeleting(null)}
         onConfirm={async () => {
-          await window.cy.identities.remove({ ids: [deleting!.id] });
+          await window.chh.identities.remove({ ids: [deleting!.id] });
           setDeleting(null);
           await refresh();
         }}

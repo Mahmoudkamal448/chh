@@ -46,11 +46,11 @@ jobs:
 
       - name: E2E tests (Linux, virtual display)
         if: runner.os == 'Linux'
-        run: xvfb-run --auto-servernum -- pnpm --filter @cy-ssh/desktop exec playwright test
+        run: xvfb-run --auto-servernum -- pnpm --filter @chh/desktop exec playwright test
 
       - name: E2E tests
         if: runner.os != 'Linux'
-        run: pnpm --filter @cy-ssh/desktop exec playwright test
+        run: pnpm --filter @chh/desktop exec playwright test
 
       - name: Upload Playwright traces
         if: failure()
@@ -69,7 +69,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_PASSWORD: test
-          POSTGRES_DB: cyssh
+          POSTGRES_DB: chh
         ports: ["5432:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 20
@@ -80,10 +80,10 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile --filter @cy-ssh/server...
+      - run: pnpm install --frozen-lockfile --filter @chh/server...
       - name: Server tests (memory + Postgres stores)
-        run: pnpm --filter @cy-ssh/server test
+        run: pnpm --filter @chh/server test
         env:
-          TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/cyssh
+          TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/chh
       - name: Build Docker image
-        run: docker build -f apps/server/Dockerfile -t cy-ssh-server:ci .
+        run: docker build -f apps/server/Dockerfile -t chh-server:ci .

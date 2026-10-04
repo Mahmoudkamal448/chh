@@ -1,4 +1,4 @@
-# cy-ssh
+# chh
 
 A free, open, cross-platform SSH client and terminal manager for **Windows, macOS and Linux**, built from a single
 Electron + TypeScript codebase.
@@ -72,7 +72,7 @@ Other commands:
 | `pnpm typecheck` | Type-check every package |
 | `pnpm test` | Unit tests (crypto, sync primitives, data layer, IPC contract, …) |
 | `pnpm test:e2e` | Build, then run Playwright end-to-end tests against the real app |
-| `pnpm --filter @cy-ssh/desktop package` | Build an installer for the current OS (unsigned until Phase 6) |
+| `pnpm --filter @chh/desktop package` | Build an installer for the current OS (unsigned until Phase 6) |
 
 ## Keyboard shortcuts (defaults)
 
@@ -90,7 +90,7 @@ Other commands:
 | Split right / down | ⌘D / ⌘⇧D | Ctrl+Shift+D / Ctrl+Shift+E |
 | Next / previous pane | ⌘] / ⌘[ | Ctrl+Shift+] / Ctrl+Shift+[ |
 | Snippets & history panel | ⌘⇧S | Ctrl+Shift+S |
-| Lock cy-ssh | ⌘⇧L | Ctrl+Shift+L |
+| Lock chh | ⌘⇧L | Ctrl+Shift+L |
 
 Shortcuts that would clash with shell keys (Ctrl+W, Ctrl+T, Ctrl+C…) use Ctrl+Shift on Windows and Linux, so the
 terminal still gets the plain key. You can rebind everything in **Settings → Keyboard shortcuts**.

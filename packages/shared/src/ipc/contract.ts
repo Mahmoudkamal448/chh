@@ -54,7 +54,7 @@ const ById = z.object({ id: IdSchema });
 const Dims = { cols: z.number().int().min(1).max(2000), rows: z.number().int().min(1).max(1000) };
 
 /**
- * THE typed IPC contract. Preload exposes it as `window.cy.<ns>.<method>()`; main registers
+ * THE typed IPC contract. Preload exposes it as `window.chh.<ns>.<method>()`; main registers
  * a handler for every entry. Inputs are validated with zod in main before reaching handlers.
  */
 export const contract = {
@@ -311,7 +311,7 @@ export const contract = {
     removeMasterPassword: method(z.object({ password: z.string().max(1024) }), LockStateSchema),
   },
   dev: {
-    /** Only available when the app runs with CY_SSH_TEST=1. */
+    /** Only available when the app runs with CHH_TEST=1. */
     seedHosts: method(z.object({ count: z.number().int().min(1).max(20_000) }), z.object({ created: z.number() })),
   },
 } as const;
@@ -342,14 +342,14 @@ export type MethodInput<M extends MethodDef> = z.input<M['input']>;
 export type MethodOutput<M extends MethodDef> = z.output<M['output']>;
 
 /** Channel name for `ns.method`. */
-export const channel = (ns: string, m: string) => `cy:${ns}.${m}`;
+export const channel = (ns: string, m: string) => `chh:${ns}.${m}`;
 
 /** All [namespace, method] pairs — used by preload to build the API and by main to verify coverage. */
 export const allMethods = (): Array<[Namespace, string]> =>
   (Object.keys(contract) as Namespace[]).flatMap((ns) => Object.keys(contract[ns]).map((m) => [ns, m] as [Namespace, string]));
 
-export const SESSION_PORT_CHANNEL = 'cy:session.port';
-export const EVENT_CHANNEL_PREFIX = 'cy:event:';
+export const SESSION_PORT_CHANNEL = 'chh:session.port';
+export const EVENT_CHANNEL_PREFIX = 'chh:event:';
 
 /** Result envelope: errors cross IPC as an i18n key + safe details, never stack traces or secrets. */
 export type IpcResult<T> = { ok: true; value: T } | { ok: false; error: IpcError };
@@ -373,8 +373,8 @@ export interface TerminalHandlers {
   onExit(code: number | null): void;
 }
 
-/** The API exposed on `window.cy`. */
-export type CyApi = {
+/** The API exposed on `window.chh`. */
+export type ChhApi = {
   [NS in Namespace]: {
     [M in keyof Contract[NS]]: Contract[NS][M] extends MethodDef
       ? (input: MethodInput<Contract[NS][M]>) => Promise<MethodOutput<Contract[NS][M]>>
@@ -411,9 +411,9 @@ export function decodeIpcError(err: unknown): IpcError | null {
   }
 }
 
-export class CyIpcError extends Error {
+export class ChhIpcError extends Error {
   constructor(public readonly error: IpcError) {
     super(error.code);
-    this.name = 'CyIpcError';
+    this.name = 'ChhIpcError';
   }
 }

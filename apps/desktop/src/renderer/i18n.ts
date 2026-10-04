@@ -1,6 +1,6 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import en from '@cy-ssh/shared/i18n/en.json';
+import en from '@chh/shared/i18n/en.json';
 
 /** All user-facing strings live in packages/shared/src/i18n/<lang>.json. */
 export async function initI18n(language: string): Promise<void> {

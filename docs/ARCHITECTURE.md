@@ -1,10 +1,10 @@
-# cy-ssh — Architecture
+# chh — Architecture
 
 > **Status:** approved. Phases 1–5 are implemented (risk R1 outcome: FIDO2 via the System OpenSSH engine, see PHASE-5.md); see the deviation notes in [PHASE-1.md](PHASE-1.md#deviations-from-the-architecture-draft),
 > [PHASE-2.md](PHASE-2.md#design-notes-and-deviations), [PHASE-3.md](PHASE-3.md#design-notes-and-deviations) and
 > [PHASE-4.md](PHASE-4.md#design-notes-and-deviations) and [PHASE-5.md](PHASE-5.md#design-notes-and-deviations).
 
-> **Product name:** `cy-ssh` (npm scope `@cy-ssh/*`, bundle ID `dev.cyssh.app`). Name, icon and
+> **Product name:** `chh` (npm scope `@chh/*`, bundle ID `dev.chh.app`). Name, icon and
 > colors live in `packages/shared/src/brand.ts` + `apps/desktop/build/`. All branding/UI is original.
 
 ---
@@ -28,7 +28,7 @@
 ## 1. Repository layout
 
 ```
-cy-ssh/
+chh/
 ├─ package.json                 # pnpm workspace root, scripts, engines
 ├─ pnpm-workspace.yaml
 ├─ tsconfig.base.json
@@ -83,7 +83,7 @@ cy-ssh/
    │  │  │  ├─ broadcast.ts     # multi-host snippet runner
    │  │  │  └─ shell-integration/ # OSC 133 prompt marks for history/autocomplete
    │  │  ├─ preload/
-   │  │  │  └─ index.ts         # contextBridge: exposes typed `window.cy`
+   │  │  │  └─ index.ts         # contextBridge: exposes typed `window.chh`
    │  │  └─ renderer/           # React app
    │  │     ├─ main.tsx
    │  │     ├─ app/             # layout, routing, theme provider, i18n init
@@ -120,7 +120,7 @@ cy-ssh/
 │  Renderer (sandboxed, no Node)          Main process (Node)               │
 │  ┌──────────────────────────┐  invoke   ┌──────────────────────────────┐  │
 │  │ React UI, xterm.js       │──────────▶│ IPC handlers (zod-validated) │  │
-│  │ window.cy (typed API)    │◀──events──│ DB (SQLCipher), vault crypto │  │
+│  │ window.chh (typed API)    │◀──events──│ DB (SQLCipher), vault crypto │  │
 │  └──────────┬───────────────┘           │ sync engine, importers       │  │
 │             │ MessagePort per session   │ safeStorage, app lock        │  │
 │             │ (raw bytes, no JSON)      └──────────────┬───────────────┘  │
@@ -180,7 +180,7 @@ export const events = {
 
 type In<T>  = T extends { input: infer I extends z.ZodTypeAny } ? z.input<I> : never;
 type Out<T> = T extends { output: infer O extends z.ZodTypeAny } ? z.output<O> : never;
-export type CyApi = {
+export type ChhApi = {
   [NS in keyof typeof contract]: {
     [M in keyof (typeof contract)[NS]]: (input: In<(typeof contract)[NS][M]>) =>
       Promise<Out<(typeof contract)[NS][M]>>
@@ -188,7 +188,7 @@ export type CyApi = {
 } & { on<E extends keyof typeof events>(e: E, cb: (p: z.infer<(typeof events)[E]>) => void): () => void };
 ```
 
-* **Preload** builds `window.cy` by walking `contract` and mapping each `ns.method` to `ipcRenderer.invoke('ns.method', input)`. Event subscriptions use an allow-list of names. Session ports arrive through `ipcRenderer.on('session.port', e => e.ports[0])` and are re-exposed as a small `TerminalStream` wrapper, because a `MessagePort` can't cross contextBridge directly. The preload holds the port and passes `Uint8Array` chunks to a callback.
+* **Preload** builds `window.chh` by walking `contract` and mapping each `ns.method` to `ipcRenderer.invoke('ns.method', input)`. Event subscriptions use an allow-list of names. Session ports arrive through `ipcRenderer.on('session.port', e => e.ports[0])` and are re-exposed as a small `TerminalStream` wrapper, because a `MessagePort` can't cross contextBridge directly. The preload holds the port and passes `Uint8Array` chunks to a callback.
 * **Main** registers handlers with `handle(contract.hosts.list, impl)`. The helper parses input with zod, runs the implementation, validates the output in dev builds, and turns errors into `{ code, messageKey }` (an i18n key, never stack traces or secrets).
 * Both sides are type-checked against the same object, so renaming a method breaks the build instead of failing at runtime.
 

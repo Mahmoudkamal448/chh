@@ -8,7 +8,7 @@ import {
   type HostInput,
   type HostPatch,
   type HostQuery,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import type { LocalVault } from '../vault/local-vault';
 import type { GroupsRepo } from './groups-repo';
 import { uuidv7, type ItemStore, type StoredItem } from './item-store';

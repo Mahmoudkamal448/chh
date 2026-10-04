@@ -2,7 +2,7 @@ import * as DM from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, FolderPlus, Plus, Search } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Host } from '@cy-ssh/shared';
+import type { Host } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, Input } from '../../components/ui';
 import { refreshAll, useHosts } from '../../stores/hosts-store';
@@ -106,7 +106,7 @@ export function HostsView() {
                   className={menuItem}
                   onSelect={async () => {
                     const ids = hosts.map((h) => h.id);
-                    const { saved } = await window.cy.sshConfig.exportFile({ hostIds: ids });
+                    const { saved } = await window.chh.sshConfig.exportFile({ hostIds: ids });
                     if (saved) setNotice(t('sshConfig.exported', { count: ids.length }));
                   }}
                 >
@@ -115,7 +115,7 @@ export function HostsView() {
                 <DM.Item
                   className={menuItem}
                   onSelect={async () => {
-                    await navigator.clipboard.writeText(await window.cy.sshConfig.exportText({ hostIds: hosts.map((h) => h.id) }));
+                    await navigator.clipboard.writeText(await window.chh.sshConfig.exportText({ hostIds: hosts.map((h) => h.id) }));
                     setNotice(t('sshConfig.copied', { count: hosts.length }));
                   }}
                   data-testid="ssh-export-copy"
@@ -158,11 +158,11 @@ export function HostsView() {
             onOpenFiles={(h) => openSftp(h.id, h.label)}
             onEdit={(h) => openEditor({ kind: 'host', id: h.id })}
             onDuplicate={async (h) => {
-              await window.cy.hosts.duplicate({ id: h.id });
+              await window.chh.hosts.duplicate({ id: h.id });
               await refreshAll();
             }}
             onToggleFavorite={async (h) => {
-              await window.cy.hosts.update({ id: h.id, patch: { favorite: !h.favorite } });
+              await window.chh.hosts.update({ id: h.id, patch: { favorite: !h.favorite } });
               await refreshAll();
             }}
             onDelete={(h) => setDeleting(h)}
@@ -182,7 +182,7 @@ export function HostsView() {
         onConfirm={async () => {
           const h = deleting!;
           setDeleting(null);
-          await window.cy.hosts.remove({ ids: [h.id] });
+          await window.chh.hosts.remove({ ids: [h.id] });
           await refreshAll();
         }}
       />

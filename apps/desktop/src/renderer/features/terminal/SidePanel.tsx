@@ -1,7 +1,7 @@
 import { Play, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { HistoryEntry, Snippet } from '@cy-ssh/shared';
+import type { HistoryEntry, Snippet } from '@chh/shared';
 import { IconButton, Input } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { formatDate } from '../../lib/format';
@@ -26,10 +26,10 @@ export function SidePanel({ focusedPaneId, onClose }: { focusedPaneId: string; o
 
   useEffect(() => {
     if (tab !== 'history') return;
-    const load = () => void window.cy.history.search({ query: query || undefined, limit: 300 }).then(setHistory);
+    const load = () => void window.chh.history.search({ query: query || undefined, limit: 300 }).then(setHistory);
     const h = setTimeout(load, 100);
     // Live-update as new commands are recorded.
-    const off = window.cy.on('data.changed', ({ kinds }) => kinds.includes('history') && load());
+    const off = window.chh.on('data.changed', ({ kinds }) => kinds.includes('history') && load());
     return () => {
       clearTimeout(h);
       off();

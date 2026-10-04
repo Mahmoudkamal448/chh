@@ -1,4 +1,4 @@
-import type { Change, KdfParamsWire } from '@cy-ssh/shared/sync';
+import type { Change, KdfParamsWire } from '@chh/shared/sync';
 
 export interface UserRecord {
   id: string;

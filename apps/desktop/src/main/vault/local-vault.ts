@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import type { Sealed } from '@cy-ssh/shared';
-import { deriveSubkey, memzero, openString, randomKey, sealString, unwrapKey, wrapKey } from '@cy-ssh/vault-crypto';
+import type { Sealed } from '@chh/shared';
+import { deriveSubkey, memzero, openString, randomKey, sealString, unwrapKey, wrapKey } from '@chh/vault-crypto';
 import type { Db } from '../db/database';
 
 const WRAP_CONTEXT = 'cylocal_';

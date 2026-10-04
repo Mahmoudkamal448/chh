@@ -4,7 +4,7 @@ import websocket from '@fastify/websocket';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
 import type { WebSocket } from 'ws';
 import type { z } from 'zod';
-import * as P from '@cy-ssh/shared/sync';
+import * as P from '@chh/shared/sync';
 import type { Config } from './config';
 import {
   burnAuthTime,
@@ -161,7 +161,7 @@ export async function buildApp({ config, store }: { config: Config; store: Store
   // --- public ----------------------------------------------------------------------------------
 
   app.get('/healthz', async () => ({ ok: true }));
-  app.get('/v1/info', async () => ({ name: 'cy-ssh sync', version: 1, registration: config.allowRegistration }));
+  app.get('/v1/info', async () => ({ name: 'chh sync', version: 1, registration: config.allowRegistration }));
 
   app.post('/v1/auth/prelogin', authLimit, async (req) => {
     const { email } = parse(P.PreloginRequest, req.body);
@@ -315,7 +315,7 @@ export async function buildApp({ config, store }: { config: Config; store: Store
       if (u.totpSecretEnc) throw new HttpError(409, 'totp_already_enabled');
       const secret = newTotpSecret();
       await store.updateUser(u.id, { totpPendingEnc: sealSecret(config.serverSecret, secret) });
-      const uri = `otpauth://totp/${encodeURIComponent(`cy-ssh:${u.email}`)}?secret=${secret}&issuer=cy-ssh&algorithm=SHA1&digits=6&period=30`;
+      const uri = `otpauth://totp/${encodeURIComponent(`chh:${u.email}`)}?secret=${secret}&issuer=chh&algorithm=SHA1&digits=6&period=30`;
       return { secret, uri };
     });
 

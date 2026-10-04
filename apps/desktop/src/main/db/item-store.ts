@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { DELETED_FIELD, Hlc, applyLocalPatch, incrementVv, type Replica, type VersionVector } from '@cy-ssh/sync-core';
+import { DELETED_FIELD, Hlc, applyLocalPatch, incrementVv, type Replica, type VersionVector } from '@chh/sync-core';
 import type { Db } from './database';
 
 export type ItemType = 'host' | 'group' | 'known_host' | 'key' | 'identity' | 'forward' | 'snippet';

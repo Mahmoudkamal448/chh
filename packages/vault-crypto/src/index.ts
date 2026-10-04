@@ -90,7 +90,7 @@ export function unwrapKey(wrapped: Buffer, wrappingKey: Buffer, ad: string): Buf
   return k;
 }
 
-/** Sealed string format stored inside item fields (matches `SealedSchema` in @cy-ssh/shared). */
+/** Sealed string format stored inside item fields (matches `SealedSchema` in @chh/shared). */
 export interface SealedString {
   v: 1;
   n: string;

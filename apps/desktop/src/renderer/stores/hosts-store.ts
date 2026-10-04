@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Group, Host } from '@cy-ssh/shared';
+import type { Group, Host } from '@chh/shared';
 
 /** Which slice of hosts the list shows. groupId: undefined = all, null = ungrouped. */
 export interface HostFilter {
@@ -46,7 +46,7 @@ export const useHosts = create<HostsState>((set, get) => ({
     const my = ++seq;
     const f = get().filter;
     set({ loading: true });
-    const res = await window.cy.hosts.list({
+    const res = await window.chh.hosts.list({
       query: f.query || undefined,
       groupId: f.groupId,
       tag: f.tag,
@@ -56,7 +56,7 @@ export const useHosts = create<HostsState>((set, get) => ({
     if (my === seq) set({ hosts: res.items, total: res.total, loading: false });
   },
   async refreshMeta() {
-    const [groups, tags] = await Promise.all([window.cy.groups.list({}), window.cy.hosts.tags({})]);
+    const [groups, tags] = await Promise.all([window.chh.groups.list({}), window.chh.hosts.tags({})]);
     set({ groups, tags });
   },
   openEditor: (editor) => set({ editor }),

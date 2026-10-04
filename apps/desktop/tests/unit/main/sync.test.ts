@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { randomKey } from '@cy-ssh/vault-crypto';
+import { randomKey } from '@chh/vault-crypto';
 import { buildApp } from '../../../../server/src/app';
 import { base32Decode, hotp, totpStep } from '../../../../server/src/crypto';
 import { MemoryStore } from '../../../../server/src/store/memory';

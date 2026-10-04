@@ -5,7 +5,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { MessagePortMain } from 'electron';
-import type { HostKeyDecision, PortToHost, PortToRenderer } from '@cy-ssh/shared';
+import type { HostKeyDecision, PortToHost, PortToRenderer } from '@chh/shared';
 import { FsError, toFsError, type FsProvider } from './files/provider';
 import { ForwardManager, type ForwardRule } from './forwards/manager';
 import { LocalFs } from './files/local-fs';

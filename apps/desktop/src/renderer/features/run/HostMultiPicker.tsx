@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Group, Host } from '@cy-ssh/shared';
+import type { Group, Host } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Input, Select } from '../../components/ui';
 
@@ -18,8 +18,8 @@ export function HostMultiPicker({ open, title, confirmLabel, onConfirm, onCancel
     if (!open) return;
     setSelected(new Set());
     setQuery('');
-    void window.cy.hosts.list({}).then((r) => setHosts(r.items.filter((h) => h.protocol === 'ssh' || h.protocol === 'mosh')));
-    void window.cy.groups.list({}).then(setGroups);
+    void window.chh.hosts.list({}).then((r) => setHosts(r.items.filter((h) => h.protocol === 'ssh' || h.protocol === 'mosh')));
+    void window.chh.groups.list({}).then(setGroups);
   }, [open]);
 
   const tags = useMemo(() => [...new Set(hosts.flatMap((h) => h.tags))].sort(), [hosts]);

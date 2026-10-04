@@ -28,7 +28,7 @@ code.
 **Decision (the planned fallback):** a per-host **System OpenSSH engine**. OpenSSH ≥ 8.2 handles security keys
 natively (touch and PIN, resident keys), and it also brings post-quantum key exchange (risk R6). The trade-off is
 that hosts on this engine use OpenSSH's own `known_hosts` and `~/.ssh/config`, take passwords in the terminal, and
-don't support SFTP or cy-ssh vault keys (use the agent or an identity file). The E2E test drives a real `ssh`
+don't support SFTP or chh vault keys (use the agent or an identity file). The E2E test drives a real `ssh`
 binary through host-key confirmation and password login against the test server. Only the hardware touch itself
 can't be tested here.
 

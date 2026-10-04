@@ -1,4 +1,4 @@
-import { SnippetFieldsSchema, SnippetInputSchema, SnippetPatchSchema, type Snippet, type SnippetFields, type SnippetInput, type SnippetPatch } from '@cy-ssh/shared';
+import { SnippetFieldsSchema, SnippetInputSchema, SnippetPatchSchema, type Snippet, type SnippetFields, type SnippetInput, type SnippetPatch } from '@chh/shared';
 import { NotFoundError } from './hosts-repo';
 import type { ItemStore, StoredItem } from './item-store';
 

@@ -1,4 +1,4 @@
-import { fillSnippet, snippetVariables, type Snippet } from '@cy-ssh/shared';
+import { fillSnippet, snippetVariables, type Snippet } from '@chh/shared';
 import { writeToPane } from '../terminal/registry';
 
 /** Normalizes line endings and sends the script to a pane, ending with Enter. */

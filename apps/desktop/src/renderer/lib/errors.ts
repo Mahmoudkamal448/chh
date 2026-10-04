@@ -1,4 +1,4 @@
-import { decodeIpcError, type IpcError } from '@cy-ssh/shared';
+import { decodeIpcError, type IpcError } from '@chh/shared';
 
 /** The structured error from an IPC rejection (see preload), or null for other errors. */
 export function ipcError(err: unknown): IpcError | null {

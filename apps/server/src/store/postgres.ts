@@ -1,5 +1,5 @@
 import postgres from 'postgres';
-import type { Change } from '@cy-ssh/shared/sync';
+import type { Change } from '@chh/shared/sync';
 import type { DeviceRecord, PushOutcome, Store, TokenRecord, UserRecord, VaultRecord } from './types';
 
 /** Ordered migrations; applied once each, inside a transaction. Never edit a shipped one. */

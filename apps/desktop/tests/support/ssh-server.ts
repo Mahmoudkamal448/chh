@@ -248,7 +248,7 @@ export async function startSshServer(opts: TestSshOptions = {}): Promise<TestSsh
         });
         session.on('shell', (acc) => {
           const stream = acc();
-          stream.write('Welcome to cy-test\r\n$ ');
+          stream.write('Welcome to chh-test\r\n$ ');
           let line = '';
           stream.on('data', (d: Buffer) => {
             for (const ch of d.toString('utf8')) {

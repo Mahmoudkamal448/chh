@@ -52,7 +52,7 @@ test('connects over SSH, verifies the host key, and remembers it', async () => {
     await expect(dlg.getByTestId('hostkey-fingerprint')).toHaveText(server.fingerprint);
     await dlg.getByTestId('hostkey-accept').click();
 
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
     await typeInTerminal(page, 'echo hello-cy');
     await expectTerminalToContain(page, 'hello-cy\n');
 
@@ -62,7 +62,7 @@ test('connects over SSH, verifies the host key, and remembers it', async () => {
     await page.keyboard.press(accel('K'));
     await page.getByTestId('palette-input').fill('Test');
     await page.keyboard.press('Enter');
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
     await expect(page.getByTestId('hostkey-dialog')).toHaveCount(0);
 
     // Shell exit shows the reconnect bar.
@@ -80,7 +80,7 @@ test('warns loudly when a known host key changes', async () => {
   await createHost(page, { label: 'Rekeyed', port, username: 'tester', password: 'secret' });
   await page.getByTestId('host-row').filter({ hasText: 'Rekeyed' }).dblclick();
   await page.getByTestId('hostkey-accept').click();
-  await expectTerminalToContain(page, 'Welcome to cy-test');
+  await expectTerminalToContain(page, 'Welcome to chh-test');
   await page.keyboard.press(accel('W'));
   await first.close();
 
@@ -113,7 +113,7 @@ test('prompts for a password, retries, and can remember it', async () => {
     await auth.getByTestId('auth-input-0').fill('secret');
     await auth.getByLabel('Remember password on this device').check();
     await auth.getByTestId('auth-submit').click();
-    await expectTerminalToContain(page, 'Welcome to cy-test');
+    await expectTerminalToContain(page, 'Welcome to chh-test');
 
     await page.getByTestId('tab-hosts').click();
     await expect(page.getByTestId('host-row').filter({ hasText: 'No password' }).getByRole('img', { name: 'Password saved' })).toBeVisible();
@@ -124,7 +124,7 @@ test('prompts for a password, retries, and can remember it', async () => {
 
 test('stays responsive with thousands of hosts', async () => {
   const { page } = h;
-  await page.evaluate(() => window.cy.dev.seedHosts({ count: 5000 }));
+  await page.evaluate(() => window.chh.dev.seedHosts({ count: 5000 }));
   const search = page.getByTestId('host-search');
   await search.fill('seed-');
   await expect(page.getByText('5000 hosts')).toBeVisible();

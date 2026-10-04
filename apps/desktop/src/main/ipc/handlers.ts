@@ -3,13 +3,13 @@ import { readFile, stat, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app, BrowserWindow, dialog, nativeTheme, shell, type WebContents } from 'electron';
-import { KeyFormatError, isEncrypted } from '@cy-ssh/key-formats';
-import { resolveSettings } from '@cy-ssh/shared';
+import { KeyFormatError, isEncrypted } from '@chh/key-formats';
+import { resolveSettings } from '@chh/shared';
 import type { ForwardsRepo } from '../db/forwards-repo';
 import type { HistoryRepo } from '../db/history-repo';
 import type { SnippetsRepo } from '../db/snippets-repo';
 import { defaultSshConfigPath, type SshConfigIO } from '../ssh-config-io';
-import { CryptoError } from '@cy-ssh/vault-crypto';
+import { CryptoError } from '@chh/vault-crypto';
 import type { LockManager } from '../lock';
 import type { SyncEngine } from '../sync/engine';
 import type { AiProvider } from '../ai';
@@ -316,7 +316,7 @@ export function createHandlers(getCtx: () => HandlerDeps | null, extras: { keyst
       exportFile: async ({ hostIds }, e) => {
         const res = await dialog.showSaveDialog(windowOf(e.sender)!, {
           title: 'Export SSH config',
-          defaultPath: join(homedir(), '.ssh', 'config.cy-ssh'),
+          defaultPath: join(homedir(), '.ssh', 'config.chh'),
           showsTagField: false,
         });
         if (res.canceled || !res.filePath) return { saved: false };

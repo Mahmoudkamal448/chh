@@ -1,7 +1,7 @@
 import { Search, ShieldCheck, Trash2, Upload } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { KnownHost } from '@cy-ssh/shared';
+import type { KnownHost } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Button, Input } from '../../components/ui';
 import { cn } from '../../lib/cn';
@@ -16,7 +16,7 @@ export function KnownHostsView() {
   const [confirming, setConfirming] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
-  const load = async (q = query) => setItems(await window.cy.knownHosts.list({ query: q || undefined }));
+  const load = async (q = query) => setItems(await window.chh.knownHosts.list({ query: q || undefined }));
 
   useEffect(() => {
     void load();
@@ -31,7 +31,7 @@ export function KnownHostsView() {
 
   const importFile = async () => {
     try {
-      const res = await window.cy.knownHosts.importFile({});
+      const res = await window.chh.knownHosts.importFile({});
       if (!res) return;
       setNotice(t('knownHosts.imported', { imported: res.imported, skipped: res.skipped }));
       await load();
@@ -119,7 +119,7 @@ export function KnownHostsView() {
         danger
         onCancel={() => setConfirming(false)}
         onConfirm={async () => {
-          await window.cy.knownHosts.remove({ ids: [...selected] });
+          await window.chh.knownHosts.remove({ ids: [...selected] });
           setSelected(new Set());
           setConfirming(false);
           await load();

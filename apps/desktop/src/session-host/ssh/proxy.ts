@@ -1,5 +1,5 @@
 import { connect, isIPv4, type Socket } from 'node:net';
-import type { ProxyConfig } from '@cy-ssh/shared';
+import type { ProxyConfig } from '@chh/shared';
 
 export class ProxyError extends Error {
   constructor(

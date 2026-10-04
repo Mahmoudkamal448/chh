@@ -48,11 +48,11 @@ function scheme(
 
 /** Built-in color schemes (original palettes). */
 export const TERMINAL_SCHEMES: TerminalScheme[] = [
-  scheme('cy-dark', 'Cy Dark', true, { bg: '#0f1115', fg: '#d8dee9', cursor: '#6c9bff', selection: '#2a3550' }, [
+  scheme('chh-dark', 'chh Dark', true, { bg: '#0f1115', fg: '#d8dee9', cursor: '#6c9bff', selection: '#2a3550' }, [
     '#1c1f26', '#f0717a', '#7fd17f', '#e8c46a', '#6c9bff', '#c792ea', '#5fd3d3', '#c9ced8',
     '#4b5263', '#ff8f96', '#9be89b', '#ffd98a', '#93b6ff', '#dcb0ff', '#86e8e8', '#ffffff',
   ]),
-  scheme('cy-light', 'Cy Light', false, { bg: '#fbfbfc', fg: '#1f2329', cursor: '#2459d6', selection: '#cdd9f5' }, [
+  scheme('chh-light', 'chh Light', false, { bg: '#fbfbfc', fg: '#1f2329', cursor: '#2459d6', selection: '#cdd9f5' }, [
     '#1f2329', '#c4313b', '#2f8a3a', '#a06a00', '#2459d6', '#8a3fb8', '#0f7f86', '#d5d8de',
     '#6b7280', '#e0454f', '#3aa648', '#c18400', '#3c70ee', '#a557d4', '#14999f', '#ffffff',
   ]),
@@ -98,6 +98,10 @@ export const TERMINAL_SCHEMES: TerminalScheme[] = [
   ]),
 ];
 
+/** Scheme ids saved by builds from before the rename to chh. */
+const LEGACY_IDS: Record<string, string> = { 'cy-dark': 'chh-dark', 'cy-light': 'chh-light' };
+
 export function schemeById(id: string): TerminalScheme {
-  return TERMINAL_SCHEMES.find((s) => s.id === id) ?? TERMINAL_SCHEMES[0]!;
+  const wanted = LEGACY_IDS[id] ?? id;
+  return TERMINAL_SCHEMES.find((s) => s.id === wanted) ?? TERMINAL_SCHEMES[0]!;
 }

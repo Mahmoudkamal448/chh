@@ -1,8 +1,8 @@
 {
-  "name": "@cy-ssh/server",
+  "name": "@chh/server",
   "version": "0.1.0",
   "private": true,
-  "description": "cy-ssh self-hostable sync server (zero-knowledge)",
+  "description": "chh self-hostable sync server (zero-knowledge)",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@cy-ssh/shared": "workspace:*",
+    "@chh/shared": "workspace:*",
     "@fastify/rate-limit": "^11.2.0",
     "@fastify/websocket": "^11.3.3",
     "fastify": "^5.12.5",

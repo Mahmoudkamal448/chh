@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { randomKey } from '@cy-ssh/vault-crypto';
+import { randomKey } from '@chh/vault-crypto';
 import { openDatabase, type Db } from '../../../src/main/db/database';
 import { GroupsRepo } from '../../../src/main/db/groups-repo';
 import { HostsRepo } from '../../../src/main/db/hosts-repo';
@@ -29,7 +29,7 @@ function open() {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'cy-ssh-test-'));
+  dir = mkdtempSync(join(tmpdir(), 'chh-test-'));
   dbPath = join(dir, 'test.db');
   key = randomKey();
   open();

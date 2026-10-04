@@ -7,8 +7,8 @@ import {
   type SshImportCandidate,
   type SshImportPreview,
   type SshImportResult,
-} from '@cy-ssh/shared';
-import { importCandidates, parseSshConfig, writeSshConfig, type ExportHost, type ImportCandidate } from '@cy-ssh/ssh-config';
+} from '@chh/shared';
+import { importCandidates, parseSshConfig, writeSshConfig, type ExportHost, type ImportCandidate } from '@chh/ssh-config';
 import type { ForwardsRepo } from './db/forwards-repo';
 import type { GroupsRepo } from './db/groups-repo';
 import type { HostsRepo } from './db/hosts-repo';
@@ -201,10 +201,10 @@ export class SshConfigIO {
         port: s.port,
         user: s.username || identity?.username || undefined,
         forwards: forwards.filter((f) => f.hostId === h.id),
-        comment: key ? `Key "${key}" is stored in cy-ssh (export it from Keys to use with OpenSSH)` : undefined,
+        comment: key ? `Key "${key}" is stored in chh (export it from Keys to use with OpenSSH)` : undefined,
       });
     }
-    return writeSshConfig(out, `Exported by cy-ssh on ${new Date().toISOString().slice(0, 10)}`);
+    return writeSshConfig(out, `Exported by chh on ${new Date().toISOString().slice(0, 10)}`);
   }
 }
 

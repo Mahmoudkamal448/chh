@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { LockState, SyncStatus } from '@cy-ssh/shared';
+import type { LockState, SyncStatus } from '@chh/shared';
 
 interface SecurityState {
   lock: LockState | null;
@@ -15,5 +15,5 @@ export const useSecurity = create<SecurityState>((set) => ({
   setSync: (sync) => set({ sync }),
 }));
 
-window.cy.on('lock.changed', (l) => useSecurity.getState().setLock(l));
-window.cy.on('sync.state', (s) => useSecurity.getState().setSync(s));
+window.chh.on('lock.changed', (l) => useSecurity.getState().setLock(l));
+window.chh.on('sync.state', (s) => useSecurity.getState().setSync(s));

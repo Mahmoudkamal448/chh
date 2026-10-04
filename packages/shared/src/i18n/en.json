@@ -17,7 +17,7 @@
     "validation": "Some fields are invalid. Please check your input.",
     "noShell": "No local shell was found on this system.",
     "fileTooLarge": "That file is too large.",
-    "locked": "cy-ssh is locked."
+    "locked": "chh is locked."
   },
   "tabs": {
     "label": "Open tabs",
@@ -176,7 +176,7 @@
     "pane.focusNext": "Next pane",
     "pane.focusPrev": "Previous pane",
     "panel.toggle": "Toggle snippets & history panel",
-    "app.lock": "Lock cy-ssh"
+    "app.lock": "Lock chh"
   },
   "palette": {
     "title": "Command palette",
@@ -511,7 +511,7 @@
     "destRemote": "Destination host (as seen from the server)",
     "destLocal": "Destination host (as seen from this computer)",
     "exposedWarning": "This listens on a non-loopback address, so other machines on the network can use the tunnel.",
-    "autoStart": "Start automatically when cy-ssh opens",
+    "autoStart": "Start automatically when chh opens",
     "auto": "auto-start",
     "start": "Start",
     "stop": "Stop",
@@ -581,7 +581,7 @@
     }
   },
   "lock": {
-    "title": "cy-ssh is locked",
+    "title": "chh is locked",
     "startupTitle": "Unlock your data",
     "startupHint": "Your local data is encrypted with your master password.",
     "passcodeHint": "Enter your passcode to continue.",
@@ -600,7 +600,7 @@
     "useWindowsHello": "Use Windows Hello",
     "forgotMaster": "Forgot it? The data on this device can't be recovered without it. If you use sync, reinstall and sign in to get your synced data back.",
     "screenTitle": "Lock screen",
-    "screenHint": "Hide cy-ssh behind a passcode after inactivity or when your computer sleeps. Connections keep running while locked.",
+    "screenHint": "Hide chh behind a passcode after inactivity or when your computer sleeps. Connections keep running while locked.",
     "enable": "Turn on lock screen",
     "enabled": "Lock screen is on.",
     "disable": "Turn off",
@@ -616,12 +616,12 @@
     "allowWindowsHello": "Allow Windows Hello to unlock",
     "lockNow": "Lock now",
     "masterTitle": "Master password",
-    "masterHint": "Encrypts this device's database key with a password you enter every time cy-ssh starts. Without it, nobody can read your local data, even with full access to your files.",
+    "masterHint": "Encrypts this device's database key with a password you enter every time chh starts. Without it, nobody can read your local data, even with full access to your files.",
     "masterOn": "A master password protects this device.",
     "masterMin": "At least 8 characters.",
     "masterWarning": "If you forget the master password, the data on this device is lost. Synced data can be restored by signing in again.",
     "masterEnable": "Set master password",
-    "masterEnabled": "Master password set. You'll be asked for it next time cy-ssh starts.",
+    "masterEnabled": "Master password set. You'll be asked for it next time chh starts.",
     "masterRemove": "Remove",
     "masterRemoved": "Master password removed.",
     "deriving": "Encrypting…",
@@ -643,7 +643,7 @@
       "recover": "Reset password"
     },
     "serverUrl": "Server URL",
-    "serverHint": "Your self-hosted cy-ssh sync server (HTTPS).",
+    "serverHint": "Your self-hosted chh sync server (HTTPS).",
     "insecureHint": "Plain HTTP is only allowed on local/private networks. Your data stays end-to-end encrypted, but sign-in tokens are not.",
     "email": "Email",
     "password": "Password",
@@ -722,7 +722,7 @@
       "builtin": "Built-in",
       "openssh": "System OpenSSH"
     },
-    "engineBuiltinHint": "Built-in client with cy-ssh's keys, identities, known hosts, proxies and SFTP.",
+    "engineBuiltinHint": "Built-in client with chh's keys, identities, known hosts, proxies and SFTP.",
     "engineOpensshHint": "Runs your installed `ssh` in the terminal: supports FIDO2 security keys and post-quantum key exchange; uses OpenSSH's own known_hosts and ~/.ssh/config. Passwords are typed in the terminal.",
     "identityFile": "Identity file (OpenSSH engine)",
     "identityFileHint": "e.g. a FIDO2 key handle created with ssh-keygen -t ed25519-sk.",
@@ -873,7 +873,7 @@
   },
   "fido": {
     "title": "Security keys (FIDO2 / YubiKey)",
-    "hint": "Hardware security keys keep the private key on the device and need a touch to log in. cy-ssh uses your system OpenSSH (8.2+) for them.",
+    "hint": "Hardware security keys keep the private key on the device and need a touch to log in. chh uses your system OpenSSH (8.2+) for them.",
     "fileName": "Key file name",
     "openTerminal": "Open terminal with this command",
     "useIt": "Then add the .pub file's line to the server's ~/.ssh/authorized_keys, and in the host's Advanced connection settings choose “System OpenSSH” and set the identity file."

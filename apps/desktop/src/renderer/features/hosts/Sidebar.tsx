@@ -1,7 +1,7 @@
 import { ChevronRight, Folder, FolderPlus, Hash, Layers, Pencil, Star, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Group } from '@cy-ssh/shared';
+import type { Group } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { IconButton } from '../../components/ui';
 import { cn } from '../../lib/cn';
@@ -167,7 +167,7 @@ export function Sidebar() {
         onConfirm={async () => {
           const g = deleting!;
           setDeleting(null);
-          await window.cy.groups.remove({ id: g.id });
+          await window.chh.groups.remove({ id: g.id });
           if (filter.groupId === g.id) setFilter({ groupId: undefined });
           await refreshAll();
         }}

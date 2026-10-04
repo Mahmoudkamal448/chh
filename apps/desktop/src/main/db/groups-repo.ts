@@ -8,7 +8,7 @@ import {
   type GroupLike,
   type GroupPatch,
   type HostFields,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import type { ItemStore, StoredItem } from './item-store';
 
 export class ValidationError extends Error {

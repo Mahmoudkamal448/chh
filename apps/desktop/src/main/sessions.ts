@@ -12,7 +12,7 @@ import {
   type ForwardStatus,
   type HostKeyDecision,
   type LocalShell,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import type { GroupsRepo } from './db/groups-repo';
 import type { HostsRepo } from './db/hosts-repo';
 import type { IdentitiesRepo } from './db/identities-repo';
@@ -76,7 +76,7 @@ export class SessionManager {
   private host(): UtilityProcess {
     if (this.child) return this.child;
     const child = utilityProcess.fork(this.deps.hostScript, [], {
-      serviceName: 'cy-ssh session host',
+      serviceName: 'chh session host',
       stdio: 'ignore',
     });
     child.on('message', (msg: HostToMain) => this.onHostMessage(msg));

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { Transfer } from '@cy-ssh/shared';
+import type { Transfer } from '@chh/shared';
 
 interface TransfersState {
   transfers: Transfer[];
@@ -21,4 +21,4 @@ export const useTransfers = create<TransfersState>((set, get) => ({
   },
 }));
 
-window.cy.on('transfer.update', (t) => useTransfers.getState().upsert(t));
+window.chh.on('transfer.update', (t) => useTransfers.getState().upsert(t));

@@ -52,7 +52,7 @@ export function RunView({ runId }: { runId: string }) {
           {t('run.onlyFailed')}
         </Button>
         {running ? (
-          <Button onClick={() => void window.cy.run.cancel({ runId })} data-testid="run-cancel">
+          <Button onClick={() => void window.chh.run.cancel({ runId })} data-testid="run-cancel">
             <Square size={13} /> {t('run.cancel')}
           </Button>
         ) : (

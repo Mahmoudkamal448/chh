@@ -8,7 +8,7 @@ import { errorMessage } from '../../lib/errors';
 import { formatDate } from '../../lib/format';
 import { useSecurity } from '../../stores/lock-store';
 
-type Devices = Awaited<ReturnType<typeof window.cy.sync.devices>>;
+type Devices = Awaited<ReturnType<typeof window.chh.sync.devices>>;
 
 function useErr() {
   const { t } = useTranslation();
@@ -81,14 +81,14 @@ function SignedOut({ onRecoveryKey }: { onRecoveryKey(key: string): void }) {
     setBusy(true);
     try {
       if (mode === 'register') {
-        const { recoveryKey: k } = await window.cy.sync.register({ serverUrl, email, password });
+        const { recoveryKey: k } = await window.chh.sync.register({ serverUrl, email, password });
         onRecoveryKey(k);
       } else {
         const second = totp ? (/^\d{6}$/.test(totp) ? { totp } : { recoveryCode: totp }) : {};
         const res =
           mode === 'login'
-            ? await window.cy.sync.login({ serverUrl, email, password, ...second })
-            : await window.cy.sync.recover({ serverUrl, email, recoveryKey, newPassword: password, ...second });
+            ? await window.chh.sync.login({ serverUrl, email, password, ...second })
+            : await window.chh.sync.recover({ serverUrl, email, recoveryKey, newPassword: password, ...second });
         if (res.status === 'totp_required') {
           setNeedTotp(true);
           setError(totp ? t('sync.error.invalid_totp') : null);
@@ -177,7 +177,7 @@ function TwoFactor({ enabled }: { enabled: boolean }) {
   const start = async () => {
     setError(null);
     try {
-      const s = await window.cy.sync.totpSetup({});
+      const s = await window.chh.sync.totpSetup({});
       setSetup({ ...s, svg: await QRCode.toString(s.uri, { type: 'svg', margin: 1, width: 168 }) });
     } catch (e) {
       setError(err(e));
@@ -197,7 +197,7 @@ function TwoFactor({ enabled }: { enabled: boolean }) {
             disabled={!code}
             onClick={async () => {
               try {
-                await window.cy.sync.totpDisable(/^\d{6}$/.test(code) ? { code } : { recoveryCode: code });
+                await window.chh.sync.totpDisable(/^\d{6}$/.test(code) ? { code } : { recoveryCode: code });
                 setCode('');
               } catch (e) {
                 setError(err(e));
@@ -234,7 +234,7 @@ function TwoFactor({ enabled }: { enabled: boolean }) {
               disabled={!/^\d{6}$/.test(code)}
               onClick={async () => {
                 try {
-                  const r = await window.cy.sync.totpEnable({ code });
+                  const r = await window.chh.sync.totpEnable({ code });
                   setCodes(r.recoveryCodes);
                   setSetup(null);
                   setCode('');
@@ -273,7 +273,7 @@ function SignedIn() {
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [deletePw, setDeletePw] = useState('');
 
-  const loadDevices = () => window.cy.sync.devices({}).then(setDevices, () => undefined);
+  const loadDevices = () => window.chh.sync.devices({}).then(setDevices, () => undefined);
   useEffect(() => {
     void loadDevices();
   }, []);
@@ -302,7 +302,7 @@ function SignedIn() {
             </p>
             {status.error && <p className="text-[12px] text-danger">{t(status.error, { defaultValue: t('sync.error.generic'), detail: '' })}</p>}
           </div>
-          <Button onClick={() => void act(() => window.cy.sync.syncNow({}))} data-testid="sync-now">
+          <Button onClick={() => void act(() => window.chh.sync.syncNow({}))} data-testid="sync-now">
             {t('sync.syncNow')}
           </Button>
         </div>
@@ -322,7 +322,7 @@ function SignedIn() {
                 <IconButton
                   label={t('sync.removeDevice')}
                   className="ml-auto"
-                  onClick={() => void act(async () => (await window.cy.sync.removeDevice({ id: d.id }), await loadDevices()))}
+                  onClick={() => void act(async () => (await window.chh.sync.removeDevice({ id: d.id }), await loadDevices()))}
                 >
                   ×
                 </IconButton>
@@ -344,7 +344,7 @@ function SignedIn() {
         <Button
           className="self-start"
           disabled={!current || next.length < 10}
-          onClick={() => void act(async () => (await window.cy.sync.changePassword({ current, next }), setCurrent(''), setNext('')), t('sync.passwordChanged'))}
+          onClick={() => void act(async () => (await window.chh.sync.changePassword({ current, next }), setCurrent(''), setNext('')), t('sync.passwordChanged'))}
         >
           {t('sync.changePassword')}
         </Button>
@@ -352,14 +352,14 @@ function SignedIn() {
 
       <section className="flex flex-wrap items-end gap-3 rounded-lg border border-border p-4">
         <Checkbox label={t('sync.keepData')} checked={keepData} onChange={setKeepData} />
-        <Button onClick={() => void act(() => window.cy.sync.logout({ keepData }))} data-testid="sync-logout">
+        <Button onClick={() => void act(() => window.chh.sync.logout({ keepData }))} data-testid="sync-logout">
           {t('sync.signOut')}
         </Button>
         <div className="ml-auto flex items-end gap-2">
           <div className="w-44">
             <Field label={t('sync.password')}>{(id) => <Input id={id} type="password" value={deletePw} onChange={(e) => setDeletePw(e.target.value)} />}</Field>
           </div>
-          <Button variant="danger" disabled={!deletePw} onClick={() => void act(() => window.cy.sync.deleteAccount({ password: deletePw }))}>
+          <Button variant="danger" disabled={!deletePw} onClick={() => void act(() => window.chh.sync.deleteAccount({ password: deletePw }))}>
             {t('sync.deleteAccount')}
           </Button>
         </div>
@@ -379,7 +379,7 @@ export function SyncSettings() {
   // view; the recovery key must stay on screen until the user confirms they saved it.
   const [recoveryKey, setRecoveryKey] = useState<string | null>(null);
   useEffect(() => {
-    void window.cy.sync.status({}).then((s) => useSecurity.getState().setSync(s));
+    void window.chh.sync.status({}).then((s) => useSecurity.getState().setSync(s));
   }, []);
   if (!status) return null;
   return (

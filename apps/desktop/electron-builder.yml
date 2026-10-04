@@ -1,6 +1,6 @@
 # Packaging config. Phase 6 adds signing, notarization and auto-update publishing.
-appId: dev.cyssh.app
-productName: cy-ssh
+appId: dev.chh.app
+productName: chh
 directories:
   buildResources: build
   output: release/${version}
@@ -22,4 +22,4 @@ mac:
 linux:
   target: [AppImage, deb, rpm]
   category: Development
-  maintainer: cy-ssh contributors
+  maintainer: chh contributors

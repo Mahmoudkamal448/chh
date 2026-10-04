@@ -1,6 +1,6 @@
 # Self-hosting the sync server
 
-Sync is optional: cy-ssh works fully offline. If you want your hosts, keys, identities, snippets and
+Sync is optional: chh works fully offline. If you want your hosts, keys, identities, snippets and
 forwarding rules on several devices, run your own sync server. It's a small Node.js service with PostgreSQL.
 
 **The server never sees your data.** Everything is encrypted on your devices with a key derived from your
@@ -13,7 +13,7 @@ Requirements: Docker with the Compose plugin, a machine reachable from your devi
 a DNS name pointing at it.
 
 ```bash
-git clone <this repository> cy-ssh && cd cy-ssh/deploy
+git clone <this repository> chh && cd chh/deploy
 cp .env.example .env
 # Fill in the two required values:
 sed -i "s|^SERVER_SECRET=.*|SERVER_SECRET=$(openssl rand -base64 32)|" .env
@@ -30,7 +30,7 @@ echo "TRUST_PROXY=true" >> .env
 docker compose --profile tls up -d
 ```
 
-Caddy obtains and renews a Let's Encrypt certificate. In cy-ssh use `https://sync.example.com`.
+Caddy obtains and renews a Let's Encrypt certificate. In chh use `https://sync.example.com`.
 
 ### Option B: behind your own reverse proxy, or LAN only
 
@@ -75,7 +75,7 @@ There are no plans, quotas or device limits. Every account gets every feature.
 ## Operations
 
 - **Backups:** back up the Postgres volume, e.g.
-  `docker compose exec db pg_dump -U cyssh cyssh | gzip > cyssh-$(date +%F).sql.gz`. Backups contain only
+  `docker compose exec db pg_dump -U chh chh | gzip > chh-$(date +%F).sql.gz`. Backups contain only
   ciphertext, but they're still worth protecting.
 - **Upgrades:** `git pull && docker compose build && docker compose up -d`. Database migrations run
   automatically at startup (they're serialized, so several replicas can start at once).
@@ -89,12 +89,12 @@ There are no plans, quotas or device limits. Every account gets every feature.
 ## Running without Docker
 
 ```bash
-pnpm install --filter @cy-ssh/server...
-pnpm --filter @cy-ssh/server build
+pnpm install --filter @chh/server...
+pnpm --filter @chh/server build
 DATABASE_URL=postgres://… SERVER_SECRET=$(openssl rand -base64 32) node apps/server/dist/index.js
 ```
 
-For local development: `STORE=memory SERVER_SECRET=$(openssl rand -base64 32) pnpm --filter @cy-ssh/server dev`.
+For local development: `STORE=memory SERVER_SECRET=$(openssl rand -base64 32) pnpm --filter @chh/server dev`.
 
 ## API (for the curious)
 

@@ -13,7 +13,7 @@ import {
   type MethodInput,
   type MethodOutput,
   type Namespace,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import { errInfo, log } from '../log';
 
 type Impl<NS extends Namespace, M extends keyof Contract[NS]> = Contract[NS][M] extends {

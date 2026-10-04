@@ -12,7 +12,7 @@ export interface AppHandle {
 
 /** Launches the built app with an isolated, throwaway user-data directory. */
 export async function launchApp(
-  userData = mkdtempSync(join(tmpdir(), 'cy-ssh-e2e-')),
+  userData = mkdtempSync(join(tmpdir(), 'chh-e2e-')),
   extraEnv: Record<string, string> = {},
   opts: { waitFor?: string } = {},
 ): Promise<AppHandle> {
@@ -23,9 +23,9 @@ export async function launchApp(
     args,
     env: {
       ...process.env,
-      CY_SSH_TEST: '1',
-      CY_SSH_USER_DATA: userData,
-      CY_SSH_ALLOW_WEAK_KEYSTORE: '1',
+      CHH_TEST: '1',
+      CHH_USER_DATA: userData,
+      CHH_ALLOW_WEAK_KEYSTORE: '1',
       SSH_AUTH_SOCK: '', // don't let the developer's agent influence auth tests
       ...extraEnv,
     } as Record<string, string>,

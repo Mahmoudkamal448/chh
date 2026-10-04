@@ -1,7 +1,7 @@
 import { FileKey } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { ImportKeyResult } from '@cy-ssh/shared';
+import type { ImportKeyResult } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
@@ -32,7 +32,7 @@ export function ImportKeyDialog({ open, mode, onClose }: { open: boolean; mode: 
 
   const pick = async () => {
     try {
-      const f = await window.cy.keys.pickFile({});
+      const f = await window.chh.keys.pickFile({});
       if (!f) {
         if (!staged) onClose();
         return;
@@ -70,8 +70,8 @@ export function ImportKeyDialog({ open, mode, onClose }: { open: boolean; mode: 
     setMessage(null);
     try {
       const args = { label: label.trim() || undefined, passphrase: passphrase || undefined };
-      if (mode === 'file' && staged) await handle(await window.cy.keys.importStaged({ token: staged.token, ...args }));
-      else if (mode === 'paste' && text.trim()) await handle(await window.cy.keys.importText({ text, ...args }));
+      if (mode === 'file' && staged) await handle(await window.chh.keys.importStaged({ token: staged.token, ...args }));
+      else if (mode === 'paste' && text.trim()) await handle(await window.chh.keys.importText({ text, ...args }));
     } catch (err) {
       setMessage(t(errorKey(err)));
     } finally {

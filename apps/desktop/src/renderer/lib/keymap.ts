@@ -23,7 +23,7 @@ export type CommandId =
   | 'panel.toggle'
   | 'app.lock';
 
-const isMac = () => window.cy.platform === 'darwin';
+const isMac = () => window.chh.platform === 'darwin';
 
 export function defaultKeymap(): Record<CommandId, string> {
   const mac = isMac();

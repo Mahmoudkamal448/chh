@@ -1,4 +1,4 @@
-import type { Change } from '@cy-ssh/shared/sync';
+import type { Change } from '@chh/shared/sync';
 import type { DeviceRecord, PushOutcome, Store, TokenRecord, UserRecord, VaultRecord } from './types';
 
 interface ItemRow extends Change {

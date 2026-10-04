@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { FileEntry } from '@cy-ssh/shared';
+import type { FileEntry } from '@chh/shared';
 import { errorMessage } from '../../lib/errors';
 
 export type PaneSource = { kind: 'local' } | { kind: 'host'; hostId: string; label: string };
@@ -52,7 +52,7 @@ export function usePane(initial: PaneSource): Pane {
   const list = useCallback(async (endpoint: string, path: string) => {
     update({ loading: true });
     try {
-      const res = await window.cy.sftp.list({ endpoint, path });
+      const res = await window.chh.sftp.list({ endpoint, path });
       update({ path: res.path, parent: res.parent, entries: res.entries, loading: false, error: null });
       return true;
     } catch (err) {
@@ -62,7 +62,7 @@ export function usePane(initial: PaneSource): Pane {
   }, []);
 
   const closeRemote = (endpoint: string | null) => {
-    if (endpoint && endpoint !== 'local') void window.cy.sftp.close({ sessionId: endpoint });
+    if (endpoint && endpoint !== 'local') void window.chh.sftp.close({ sessionId: endpoint });
   };
 
   const connect = useCallback(
@@ -70,10 +70,10 @@ export function usePane(initial: PaneSource): Pane {
       closeRemote(ref.current.endpoint);
       update({ source, endpoint: null, status: 'connecting', error: null, entries: [], path: '', parent: null });
       try {
-        const endpoint = source.kind === 'local' ? 'local' : (await window.cy.sftp.open({ hostId: source.hostId })).sessionId;
+        const endpoint = source.kind === 'local' ? 'local' : (await window.chh.sftp.open({ hostId: source.hostId })).sessionId;
         // The user may have switched source while we were connecting.
         if (ref.current.source !== source) return closeRemote(endpoint);
-        const home = await window.cy.sftp.home({ endpoint });
+        const home = await window.chh.sftp.home({ endpoint });
         update({ endpoint, status: 'ready', sep: home.separator });
         await list(endpoint, home.path);
       } catch (err) {
@@ -92,7 +92,7 @@ export function usePane(initial: PaneSource): Pane {
   // Server closed the session (network drop, idle timeout…).
   useEffect(
     () =>
-      window.cy.on('session.status', ({ sessionId, status }) => {
+      window.chh.on('session.status', ({ sessionId, status }) => {
         if (sessionId === ref.current.endpoint && status === 'closed') update({ status: 'closed', endpoint: null });
       }),
     [],

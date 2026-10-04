@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { DEFAULT_APP_SETTINGS, type AppSettings } from '@cy-ssh/shared';
+import { DEFAULT_APP_SETTINGS, type AppSettings } from '@chh/shared';
 
-type Info = Awaited<ReturnType<typeof window.cy.app.info>>;
+type Info = Awaited<ReturnType<typeof window.chh.app.info>>;
 
 export type SettingsSection = 'general' | 'terminal' | 'shortcuts' | 'security' | 'sync';
 
@@ -40,11 +40,11 @@ export const useApp = create<AppState>((set) => ({
   settingsSection: 'general',
   paletteOpen: false,
   async load() {
-    const [info, settings] = await Promise.all([window.cy.app.info({}), window.cy.app.getSettings({})]);
+    const [info, settings] = await Promise.all([window.chh.app.info({}), window.chh.app.getSettings({})]);
     set({ info, settings, resolvedTheme: resolveTheme(settings) });
   },
   async updateSettings(patch) {
-    const settings = await window.cy.app.setSettings(patch);
+    const settings = await window.chh.app.setSettings(patch);
     set({ settings, resolvedTheme: resolveTheme(settings) });
   },
   setSettingsOpen: (settingsOpen, section) => set(section ? { settingsOpen, settingsSection: section } : { settingsOpen }),

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { MockBinding } from '@serialport/binding-mock';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { resolveSettings, type GroupLike, type RunHostStatus, type RunOutput } from '@cy-ssh/shared';
+import { resolveSettings, type GroupLike, type RunHostStatus, type RunOutput } from '@chh/shared';
 import { ExecRunner } from '../../src/session-host/exec/runner';
 import { connectChain, describeSshError, type ConnectCallbacks } from '../../src/session-host/ssh/connect';
 import { parseOs } from '../../src/session-host/ssh/os-detect';

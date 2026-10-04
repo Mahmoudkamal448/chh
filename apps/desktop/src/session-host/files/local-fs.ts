@@ -2,7 +2,7 @@ import { createReadStream, createWriteStream, existsSync } from 'node:fs';
 import { chmod, lstat, mkdir, readdir, rename, rm, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import type { FileEntry } from '@cy-ssh/shared';
+import type { FileEntry } from '@chh/shared';
 import { sortEntries, toFsError, type FsProvider } from './provider';
 
 const isWin = process.platform === 'win32';

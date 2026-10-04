@@ -1,18 +1,18 @@
 {
-  "name": "cy-ssh-monorepo",
+  "name": "chh-monorepo",
   "private": true,
   "version": "0.1.0",
-  "description": "cy-ssh \u00e2\u0080\u0094 a free, cross-platform SSH client and terminal manager",
+  "description": "chh: a free, cross-platform SSH client and terminal manager",
   "packageManager": "pnpm@12.9.1",
   "engines": {
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "pnpm --filter @cy-ssh/desktop dev",
-    "build": "pnpm -r --filter ./packages/** build && pnpm --filter @cy-ssh/desktop build",
+    "dev": "pnpm --filter @chh/desktop dev",
+    "build": "pnpm -r --filter ./packages/** build && pnpm --filter @chh/desktop build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --workspace-concurrency=1 test",
-    "test:e2e": "pnpm --filter @cy-ssh/desktop test:e2e",
-    "rebuild:electron": "pnpm --filter @cy-ssh/desktop rebuild:electron"
+    "test:e2e": "pnpm --filter @chh/desktop test:e2e",
+    "rebuild:electron": "pnpm --filter @chh/desktop rebuild:electron"
   }
 }

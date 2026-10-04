@@ -7,11 +7,11 @@ export function openLocalPty(
 ): Transport {
   const env: Record<string, string> = {};
   for (const [k, v] of Object.entries(process.env)) {
-    if (v !== undefined && !k.startsWith('ELECTRON_') && k !== 'CY_SSH_TEST') env[k] = v;
+    if (v !== undefined && !k.startsWith('ELECTRON_') && k !== 'CHH_TEST') env[k] = v;
   }
   env.TERM = 'xterm-256color';
   env.COLORTERM = 'truecolor';
-  env.TERM_PROGRAM = 'cy-ssh';
+  env.TERM_PROGRAM = 'chh';
 
   ev.status('connecting');
   const proc = pty.spawn(opts.shell.path, opts.shell.args, {

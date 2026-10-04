@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync }
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
-import type { Transfer } from '@cy-ssh/shared';
-import { generateKey, publicKeyLine, writeOpenSshPrivate } from '@cy-ssh/key-formats';
+import type { Transfer } from '@chh/shared';
+import { generateKey, publicKeyLine, writeOpenSshPrivate } from '@chh/key-formats';
 import { LocalFs } from '../../src/session-host/files/local-fs';
 import type { FsProvider } from '../../src/session-host/files/provider';
 import { SftpFs } from '../../src/session-host/files/sftp-fs';

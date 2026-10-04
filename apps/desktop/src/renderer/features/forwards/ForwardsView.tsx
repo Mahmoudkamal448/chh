@@ -1,7 +1,7 @@
 import { ArrowLeftRight, Pencil, Play, Plus, Square, Trash2 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Forward, ForwardKind, Host } from '@cy-ssh/shared';
+import type { Forward, ForwardKind, Host } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, IconButton, Input, Select } from '../../components/ui';
@@ -47,8 +47,8 @@ function ForwardEditor({ editing, hosts, onClose }: { editing: Forward | 'new' |
       autoStart: form.autoStart,
     };
     try {
-      if (existing) await window.cy.forwards.update({ id: existing.id, patch: payload });
-      else await window.cy.forwards.create(payload);
+      if (existing) await window.chh.forwards.update({ id: existing.id, patch: payload });
+      else await window.chh.forwards.create(payload);
       await refresh();
       onClose();
     } catch (err) {
@@ -142,7 +142,7 @@ export function ForwardsView() {
 
   useEffect(() => {
     void refresh();
-    void window.cy.hosts.list({}).then((r) => setHosts(r.items.filter((h) => h.protocol !== 'telnet')));
+    void window.chh.hosts.list({}).then((r) => setHosts(r.items.filter((h) => h.protocol !== 'telnet')));
   }, [refresh]);
 
   const hostLabel = useMemo(() => new Map(hosts.map((h) => [h.id, h.label])), [hosts]);
@@ -151,8 +151,8 @@ export function ForwardsView() {
     const s = status[f.id]?.state;
     setErrors((e) => ({ ...e, [f.id]: '' }));
     try {
-      if (s === 'running' || s === 'starting') await window.cy.forwards.stop({ id: f.id });
-      else await window.cy.forwards.start({ id: f.id });
+      if (s === 'running' || s === 'starting') await window.chh.forwards.stop({ id: f.id });
+      else await window.chh.forwards.start({ id: f.id });
     } catch (err) {
       const { key, detail } = errorMessage(err);
       setErrors((x) => ({ ...x, [f.id]: t(key, { defaultValue: t('errors.internal'), detail }) }));
@@ -228,7 +228,7 @@ export function ForwardsView() {
         danger
         onCancel={() => setDeleting(null)}
         onConfirm={async () => {
-          await window.cy.forwards.remove({ ids: [deleting!.id] });
+          await window.chh.forwards.remove({ ids: [deleting!.id] });
           setDeleting(null);
           await refresh();
         }}

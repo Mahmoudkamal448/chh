@@ -7,7 +7,7 @@ import { Terminal, type ITerminalOptions } from '@xterm/xterm';
 import { ChevronDown, ChevronUp, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_HOST_SETTINGS, resolveSettings, type GroupLike, type HostSettings, type TerminalStream } from '@cy-ssh/shared';
+import { DEFAULT_HOST_SETTINGS, resolveSettings, type GroupLike, type HostSettings, type TerminalStream } from '@chh/shared';
 import { Button, IconButton, Input } from '../../components/ui';
 import { cn } from '../../lib/cn';
 import { errorMessage, splitStatusMessage } from '../../lib/errors';
@@ -24,7 +24,7 @@ import { registerTerminal, unregisterTerminal } from './registry';
 /** Let the app handle its shortcuts instead of sending them to the shell. */
 function isAppShortcut(e: KeyboardEvent): boolean {
   const km = effectiveKeymap(useApp.getState().settings.keymap);
-  const mac = window.cy.platform === 'darwin';
+  const mac = window.chh.platform === 'darwin';
   return COMMAND_IDS.some((id) => {
     if (mac && (id === 'terminal.copy' || id === 'terminal.paste')) return false; // native menu roles handle these
     if (id === 'hosts.search') return false;
@@ -37,7 +37,7 @@ async function settingsFor(pane: TermPane): Promise<HostSettings> {
   const defaults = { ...DEFAULT_HOST_SETTINGS, ...useApp.getState().settings.terminalDefaults };
   if (pane.source.kind !== 'host') return defaults;
   try {
-    const host = await window.cy.hosts.get({ id: pane.source.hostId });
+    const host = await window.chh.hosts.get({ id: pane.source.hostId });
     const groups = useHosts.getState().groups;
     return resolveSettings(host.groupId, host.settings, new Map<string, GroupLike>(groups.map((g) => [g.id, g])), defaults);
   } catch {
@@ -113,7 +113,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       term.unicode.activeVersion = '11';
       term.loadAddon(
         new WebLinksAddon((_e, uri) => {
-          if (/^https?:\/\//.test(uri)) void window.cy.app.openExternal({ url: uri });
+          if (/^https?:\/\//.test(uri)) void window.chh.app.openExternal({ url: uri });
         }),
       );
       term.open(containerRef.current);
@@ -128,7 +128,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       tm.attachCustomKeyEventHandler((e) => {
         if (e.type !== 'keydown') return true;
         const km = effectiveKeymap(useApp.getState().settings.keymap);
-        const mac = window.cy.platform === 'darwin';
+        const mac = window.chh.platform === 'darwin';
         if (!mac && matches(e, km['terminal.copy'])) {
           const sel = tm.getSelection();
           if (sel) void navigator.clipboard.writeText(sel);
@@ -203,7 +203,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
     const term = termRef.current;
     if (!ready || !term) return;
     setExitCode(undefined);
-    const stream = window.cy.attachTerminal(pane.sessionId, {
+    const stream = window.chh.attachTerminal(pane.sessionId, {
       onData: (d) => {
         const n = typeof d === 'string' ? d.length : d.byteLength;
         term.write(d, () => stream.ack(n));
@@ -215,7 +215,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
     const src = paneRef.current.source;
     const capture = new HistoryCapture(term, (command) => {
       if (useApp.getState().settings.historyEnabled) {
-        void window.cy.history.add({ hostId: src.kind === 'host' ? src.hostId : null, source: paneRef.current.title, command });
+        void window.chh.history.add({ hostId: src.kind === 'host' ? src.hostId : null, source: paneRef.current.title, command });
       }
     });
     captureRef.current = capture;
@@ -261,8 +261,8 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
   // Find bar shortcut (dispatched by the global shortcut handler to the focused pane).
   useEffect(() => {
     const onFind = () => visible && focused && setFindOpen(true);
-    window.addEventListener('cy:terminal-find', onFind);
-    return () => window.removeEventListener('cy:terminal-find', onFind);
+    window.addEventListener('chh:terminal-find', onFind);
+    return () => window.removeEventListener('chh:terminal-find', onFind);
   }, [visible, focused]);
 
   const hostIdOf = () => (paneRef.current.source.kind === 'host' ? paneRef.current.source.hostId : null);
@@ -271,7 +271,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
     const term = termRef.current;
     const input = captureRef.current?.typed();
     if (!term || !containerRef.current || !input || input.trim().length < 2) return;
-    const [best] = await window.cy.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 1 });
+    const [best] = await window.chh.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 1 });
     if (!best || captureRef.current?.typed() !== input) return; // user kept typing
     const pos = cursorPosition(term, containerRef.current);
     if (pos) setGhost({ text: best.slice(input.length), left: pos.left, top: pos.top });
@@ -284,7 +284,7 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
     const input = captureRef.current?.typed() ?? '';
     const pos = cursorPosition(term, containerRef.current);
     if (!pos) return;
-    const history = input ? await window.cy.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 8 }) : [];
+    const history = input ? await window.chh.suggest.history({ prefix: input, hostId: hostIdOf(), limit: 8 }) : [];
     const q = input.toLowerCase();
     const snippets = useLibrary
       .getState()
@@ -306,9 +306,9 @@ export function TerminalView({ pane, visible, focused, split }: { pane: TermPane
       setList({ ...l, loading: true, items: l.items.filter((x) => x.kind !== 'ask-ai') });
       try {
         const recent = useApp.getState().settings.ai.sendHistory
-          ? (await window.cy.history.search({ hostId: hostIdOf() ?? undefined, limit: 10 })).map((h) => h.command).reverse()
+          ? (await window.chh.history.search({ hostId: hostIdOf() ?? undefined, limit: 10 })).map((h) => h.command).reverse()
           : [];
-        const { suggestions } = await window.cy.suggest.ai({ line: l.input, hostId: hostIdOf(), recent });
+        const { suggestions } = await window.chh.suggest.ai({ line: l.input, hostId: hostIdOf(), recent });
         const cur = listRef.current;
         if (cur) setList({ ...cur, loading: false, index: cur.items.length, items: [...cur.items, ...suggestions.map((text) => ({ kind: 'ai' as const, text }))] });
       } catch (err) {

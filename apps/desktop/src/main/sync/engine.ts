@@ -1,6 +1,6 @@
 import { hostname } from 'node:os';
-import type { SyncProtocol, SyncStatus } from '@cy-ssh/shared';
-import { compareVv, mergeReplicas, type Replica } from '@cy-ssh/sync-core';
+import type { SyncProtocol, SyncStatus } from '@chh/shared';
+import { compareVv, mergeReplicas, type Replica } from '@chh/sync-core';
 import {
   DEFAULT_KDF,
   MIN_KDF,
@@ -21,7 +21,7 @@ import {
   wrapAccount,
   wrapVaultKey,
   type KdfParams,
-} from '@cy-ssh/vault-crypto';
+} from '@chh/vault-crypto';
 import type { Db } from '../db/database';
 import type { ItemStore, ItemType } from '../db/item-store';
 import { errInfo, log } from '../log';
@@ -56,7 +56,7 @@ const PERIODIC_MS = 5 * 60_000;
 const SECRETS_CONTEXT = 'sync-account';
 
 /**
- * Offline-first sync of the personal vault with a cy-ssh server. Local writes never wait for the
+ * Offline-first sync of the personal vault with a chh server. Local writes never wait for the
  * network; the engine pulls, merges (version vectors + per-field HLC last-writer-wins) and pushes in
  * the background. The server only ever sees ciphertext.
  */

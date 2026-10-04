@@ -8,7 +8,7 @@ import {
   type ImportKeyResult,
   type Key,
   type KeyFields,
-} from '@cy-ssh/shared';
+} from '@chh/shared';
 import {
   KeyFormatError,
   fingerprint,
@@ -17,7 +17,7 @@ import {
   publicKeyLine,
   writeOpenSshPrivate,
   type PrivateKey,
-} from '@cy-ssh/key-formats';
+} from '@chh/key-formats';
 import type { LocalVault } from '../vault/local-vault';
 import { NotFoundError } from './hosts-repo';
 import { uuidv7, type ItemStore, type StoredItem } from './item-store';

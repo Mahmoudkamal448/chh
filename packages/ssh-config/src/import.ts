@@ -16,7 +16,7 @@ export interface ImportCandidate {
   unsupported: string[];
 }
 
-/** Keywords we map onto cy-ssh fields (or that are irrelevant to import). */
+/** Keywords we map onto chh fields (or that are irrelevant to import). */
 const HANDLED = new Set([
   'hostname', 'port', 'user', 'identityfile', 'proxyjump', 'forwardagent', 'localforward', 'remoteforward', 'dynamicforward',
   // Behaviour already covered by app defaults / not meaningful to import:

@@ -1,10 +1,11 @@
 import { join } from 'node:path';
 import { app, dialog, Menu, type BrowserWindow } from 'electron';
-import { BRAND } from '@cy-ssh/shared';
+import { BRAND } from '@chh/shared';
 import { broadcast, openContext, type AppContext } from './context';
 import { ALLOW_WEAK_KEYSTORE, USER_DATA_OVERRIDE } from './env';
 import { registerHandlers } from './ipc/handle';
 import { createHandlers } from './ipc/handlers';
+import { migrateLegacyUserData } from './legacy';
 import { LockManager } from './lock';
 import { errInfo, initLogger, log } from './log';
 import { createLocalKey, keystoreKind, memzero, readKeyFile } from './secrets/local-key';
@@ -39,7 +40,7 @@ if (!app.requestSingleInstanceLock()) {
       title: BRAND.productName,
       message: 'No system keyring found',
       detail:
-        'cy-ssh could not find a Secret Service keyring (e.g. GNOME Keyring or KWallet). Your data will still be ' +
+        'chh could not find a Secret Service keyring (e.g. GNOME Keyring or KWallet). Your data will still be ' +
         'encrypted, but the encryption key will only be obfuscated on disk. Install and unlock a keyring, or set a ' +
         'master password in Settings → Security for full protection.',
       buttons: ['Continue', 'Quit'],
@@ -73,10 +74,24 @@ if (!app.requestSingleInstanceLock()) {
   }
 
   async function boot(): Promise<void> {
+    const migrated = !USER_DATA_OVERRIDE && migrateLegacyUserData(userData);
     initLogger(join(userData, 'logs'));
     log.info({ version: app.getVersion(), platform: process.platform }, 'starting');
+    if (migrated) log.info({ from: 'cy-ssh' }, 'moved data from the pre-rename user-data folder');
 
-    const keyFile = readKeyFile(userData);
+    let keyFile: ReturnType<typeof readKeyFile>;
+    try {
+      keyFile = readKeyFile(userData);
+    } catch (err) {
+      // The OS keychain entry belongs to the app name, so data from a pre-rename build may not be
+      // readable on macOS/Linux. A master-password key file isn't affected.
+      throw new Error(
+        migrated
+          ? `the local database key from the previous version (cy-ssh) can't be read: ${(err as Error).message}. ` +
+              'See docs/PHASE-6.md ("Upgrading from cy-ssh").'
+          : (err as Error).message,
+      );
+    }
     const keystore = keystoreKind();
     if (keyFile.kind !== 'password' && keystore === 'weak' && !(await confirmWeakKeystore(join(userData, 'weak-keystore-accepted')))) {
       app.quit();
@@ -131,7 +146,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.whenReady().then(boot).catch((err) => {
     log.error({ err: errInfo(err) }, 'startup failed');
-    process.stderr.write(`cy-ssh: startup failed: ${(err as Error).message}\n`);
+    process.stderr.write(`chh: startup failed: ${(err as Error).message}\n`);
     dialog.showErrorBox(BRAND.productName, `Startup failed: ${(err as Error).message}`);
     app.exit(1);
   });

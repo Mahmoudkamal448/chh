@@ -5,7 +5,7 @@ import { defineConfig } from 'electron-vite';
 import type { Plugin } from 'vite';
 
 // Workspace packages ship TypeScript source, so they must be bundled rather than externalized.
-const workspacePackages = ['@cy-ssh/shared', '@cy-ssh/sync-core', '@cy-ssh/vault-crypto', '@cy-ssh/key-formats', '@cy-ssh/ssh-config'];
+const workspacePackages = ['@chh/shared', '@chh/sync-core', '@chh/vault-crypto', '@chh/key-formats', '@chh/ssh-config'];
 
 /** Strict CSP for production builds (dev needs inline scripts for React Fast Refresh). */
 function cspPlugin(): Plugin {
@@ -22,7 +22,7 @@ function cspPlugin(): Plugin {
     "frame-ancestors 'none'",
   ].join('; ');
   return {
-    name: 'cy-csp',
+    name: 'chh-csp',
     apply: 'build',
     transformIndexHtml: (html: string) =>
       html.replace('<head>', `<head>\n    <meta http-equiv="Content-Security-Policy" content="${csp}" />`),

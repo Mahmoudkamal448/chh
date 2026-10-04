@@ -74,19 +74,19 @@ apps/desktop/tests/
 pnpm install
 pnpm test                                    # 153 tests (server uses memory store)
 # Server tests against real Postgres:
-docker run -d --name cy-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=cyssh -p 127.0.0.1:55432:5432 postgres:16-alpine
-TEST_DATABASE_URL=postgres://postgres:test@127.0.0.1:55432/cyssh pnpm --filter @cy-ssh/server test
+docker run -d --name cy-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=chh -p 127.0.0.1:55432:5432 postgres:16-alpine
+TEST_DATABASE_URL=postgres://postgres:test@127.0.0.1:55432/chh pnpm --filter @chh/server test
 pnpm test:e2e                                # 19 Playwright tests
 
 # Local sync server for manual testing:
-STORE=memory SERVER_SECRET=$(openssl rand -base64 32) pnpm --filter @cy-ssh/server dev   # http://127.0.0.1:8080
+STORE=memory SERVER_SECRET=$(openssl rand -base64 32) pnpm --filter @chh/server dev   # http://127.0.0.1:8080
 ```
 
 ### Manual checklist
 
 1. Start a server (above, or `deploy/` with Docker Compose). Settings → Sync & account → Create account with
    `http://127.0.0.1:8080`. Save the recovery key.
-2. Start a second instance with another profile: `CY_SSH_USER_DATA=/tmp/cy2 pnpm dev`. Sign in there. Hosts appear,
+2. Start a second instance with another profile: `CHH_USER_DATA=/tmp/cy2 pnpm dev`. Sign in there. Hosts appear,
    and edits on either side show up on the other within a second.
 3. Disconnect the network, edit the same host on both (different fields), reconnect: both changes are kept.
 4. Turn on two-factor authentication, then sign in on another profile: a code is required.

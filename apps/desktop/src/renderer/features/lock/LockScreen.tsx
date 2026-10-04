@@ -1,7 +1,7 @@
 import { Fingerprint, Lock } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { LockState } from '@cy-ssh/shared';
+import type { LockState } from '@chh/shared';
 import { Button, Input } from '../../components/ui';
 
 /** Full-window lock screen. Covers (and blocks input to) everything underneath. */
@@ -32,7 +32,7 @@ export function LockScreen({ state }: { state: LockState }) {
   const unlock = async (biometric = false) => {
     setBusy(true);
     setError(null);
-    const res = await window.cy.lock.unlock(biometric ? { biometric: true } : { secret });
+    const res = await window.chh.lock.unlock(biometric ? { biometric: true } : { secret });
     setBusy(false);
     if (!res.ok) {
       setSecret('');

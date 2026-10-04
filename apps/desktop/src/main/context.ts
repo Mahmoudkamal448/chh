@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 import { BrowserWindow, nativeTheme } from 'electron';
-import { BRAND } from '@cy-ssh/shared';
+import { BRAND } from '@chh/shared';
 import { openDatabase, type Db } from './db/database';
 import { ForwardsRepo } from './db/forwards-repo';
 import { GroupsRepo } from './db/groups-repo';
@@ -21,7 +21,7 @@ import { AiProvider } from './ai';
 import { CloudImporter } from './cloud/import';
 import { SyncEngine } from './sync/engine';
 import { LocalVault } from './vault/local-vault';
-import type { EventName, EventPayload } from '@cy-ssh/shared';
+import type { EventName, EventPayload } from '@chh/shared';
 
 export function broadcast<E extends EventName>(event: E, payload: EventPayload<E>): void {
   for (const w of BrowserWindow.getAllWindows()) emit(w.webContents, event, payload);

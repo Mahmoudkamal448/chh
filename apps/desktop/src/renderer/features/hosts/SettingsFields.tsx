@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import type { HostSettings, HostSettingsOverrides, Protocol } from '@cy-ssh/shared';
+import type { HostSettings, HostSettingsOverrides, Protocol } from '@chh/shared';
 import { Field, Input, Select } from '../../components/ui';
 import { keyKind } from '../../lib/format';
 import { useVault } from '../../stores/vault-store';

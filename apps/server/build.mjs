@@ -15,7 +15,7 @@ await build({
     {
       name: 'externalize-npm',
       setup(b) {
-        b.onResolve({ filter: /^[^./]/ }, (args) => (args.path.startsWith('@cy-ssh/') ? undefined : { path: args.path, external: true }));
+        b.onResolve({ filter: /^[^./]/ }, (args) => (args.path.startsWith('@chh/') ? undefined : { path: args.path, external: true }));
       },
     },
   ],

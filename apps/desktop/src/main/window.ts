@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { BrowserWindow, shell, type IpcMainInvokeEvent } from 'electron';
-import { BRAND } from '@cy-ssh/shared';
+import { BRAND } from '@chh/shared';
 
 const DEV_URL = process.env.ELECTRON_RENDERER_URL;
 

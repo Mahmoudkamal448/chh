@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Key } from '@cy-ssh/shared';
+import type { Key } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, Input } from '../../components/ui';
 import { errorKey } from '../../lib/errors';
@@ -20,7 +20,7 @@ export function ExportKeyDialog({ keyItem, onClose }: { keyItem: Key | null; onC
   const save = async () => {
     if (pass !== confirm) return setError(t('keys.passphraseMismatch'));
     try {
-      const { saved } = await window.cy.keys.exportPrivate({ id: keyItem!.id, passphrase: pass || undefined });
+      const { saved } = await window.chh.keys.exportPrivate({ id: keyItem!.id, passphrase: pass || undefined });
       if (saved) onClose();
     } catch (err) {
       setError(t(errorKey(err)));

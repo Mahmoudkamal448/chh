@@ -4,7 +4,7 @@ import { KeyRound, Star } from 'lucide-react';
 import { OsBadge } from '../../components/OsBadge';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Host } from '@cy-ssh/shared';
+import type { Host } from '@chh/shared';
 import { cn } from '../../lib/cn';
 
 const ROW_HEIGHT = 48;

@@ -1,4 +1,4 @@
-import { AppSettingsSchema, DEFAULT_APP_SETTINGS, type AppSettings } from '@cy-ssh/shared';
+import { AppSettingsSchema, DEFAULT_APP_SETTINGS, type AppSettings } from '@chh/shared';
 import type { Db } from './database';
 
 /** Device-local key/value settings (never synced). */

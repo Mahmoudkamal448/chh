@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RunHostStatus } from '@cy-ssh/shared';
+import type { RunHostStatus } from '@chh/shared';
 
 export interface RunHost {
   hostId: string;
@@ -38,12 +38,12 @@ function patchHost(runId: string, hostId: string, fn: (h: RunHost) => RunHost) {
   useRuns.setState({ runs: { ...runs, [runId]: { ...run, hosts: { ...run.hosts, [hostId]: fn(host) } } } });
 }
 
-window.cy.on('run.status', (s) => patchHost(s.runId, s.hostId, (h) => ({ ...h, status: s.status, exitCode: s.exitCode, error: s.error })));
-window.cy.on('run.output', (o) => patchHost(o.runId, o.hostId, (h) => ({ ...h, output: [...h.output, { stream: o.stream, data: o.data }] })));
+window.chh.on('run.status', (s) => patchHost(s.runId, s.hostId, (h) => ({ ...h, status: s.status, exitCode: s.exitCode, error: s.error })));
+window.chh.on('run.output', (o) => patchHost(o.runId, o.hostId, (h) => ({ ...h, output: [...h.output, { stream: o.stream, data: o.data }] })));
 
 /** Starts a run and returns its id (the caller opens a tab for it). */
 export async function startRun(hostIds: string[], script: string, title: string): Promise<string> {
-  const res = await window.cy.run.start({ hostIds, script, title });
+  const res = await window.chh.run.start({ hostIds, script, title });
   const hosts: Record<string, RunHost> = {};
   for (const h of res.hosts) {
     hosts[h.hostId] = { hostId: h.hostId, label: h.label, status: h.skipped ? 'skipped' : 'queued', skipped: h.skipped, output: [] };

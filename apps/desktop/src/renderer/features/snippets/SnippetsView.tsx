@@ -1,7 +1,7 @@
 import { Code2, Pencil, Play, Plus, Server, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { snippetVariables, type Snippet } from '@cy-ssh/shared';
+import { snippetVariables, type Snippet } from '@chh/shared';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Dialog } from '../../components/Dialog';
 import { Button, Field, IconButton, Input } from '../../components/ui';
@@ -10,7 +10,7 @@ import { useLibrary } from '../../stores/library-store';
 import { activePaneId } from '../../app/commands';
 import { paneIds } from '../../stores/layout';
 import { useTabs } from '../../stores/tabs-store';
-import { fillSnippet } from '@cy-ssh/shared';
+import { fillSnippet } from '@chh/shared';
 import { HostMultiPicker } from '../run/HostMultiPicker';
 import { startRun } from '../../stores/runs-store';
 import { needsVariables, runSnippet } from './run-snippet';
@@ -38,8 +38,8 @@ export function SnippetEditor({ editing, initialScript, onClose }: { editing: Sn
     if (!label.trim() || !script.trim()) return setError(t('snippets.errorRequired'));
     const payload = { label: label.trim(), script, description, tags: tags.split(',').map((x) => x.trim()).filter(Boolean) };
     try {
-      if (existing) await window.cy.snippets.update({ id: existing.id, patch: payload });
-      else await window.cy.snippets.create(payload);
+      if (existing) await window.chh.snippets.update({ id: existing.id, patch: payload });
+      else await window.chh.snippets.create(payload);
       await refresh();
       onClose();
     } catch (err) {
@@ -223,7 +223,7 @@ export function SnippetsView() {
         danger
         onCancel={() => setDeleting(null)}
         onConfirm={async () => {
-          await window.cy.snippets.remove({ ids: [deleting!.id] });
+          await window.chh.snippets.remove({ ids: [deleting!.id] });
           setDeleting(null);
           await refresh();
         }}

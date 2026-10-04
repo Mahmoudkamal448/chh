@@ -37,7 +37,7 @@ test('two devices sync end-to-end encrypted; 2FA protects new sign-ins', async (
     // Device A: create an account.
     const a = await launchApp();
     handles.push(a);
-    await a.page.evaluate(() => window.cy.hosts.create({ label: 'synced-web', address: 'web.example.com', password: 'pw-123' }));
+    await a.page.evaluate(() => window.chh.hosts.create({ label: 'synced-web', address: 'web.example.com', password: 'pw-123' }));
     await openSettings(a.page, 'sync');
     await a.page.getByTestId('sync-mode-register').click();
     await a.page.getByTestId('sync-server').fill(url);
@@ -54,7 +54,7 @@ test('two devices sync end-to-end encrypted; 2FA protects new sign-ins', async (
     expect(JSON.stringify([...store.items.values()])).not.toContain('synced-web');
 
     // Device B: sign in and receive the host.
-    const b = await launchApp(mkdtempSync(join(tmpdir(), 'cy-ssh-e2e-b-')));
+    const b = await launchApp(mkdtempSync(join(tmpdir(), 'chh-e2e-b-')));
     handles.push(b);
     await openSettings(b.page, 'sync');
     await b.page.getByTestId('sync-server').fill(url);
@@ -70,7 +70,7 @@ test('two devices sync end-to-end encrypted; 2FA protects new sign-ins', async (
     await expect(b.page.getByTestId('host-row').filter({ hasText: 'synced-web' })).toBeVisible({ timeout: 15_000 });
 
     // Live: a change on A appears on B without doing anything on B.
-    await a.page.evaluate(() => window.cy.hosts.create({ label: 'live-from-a', address: 'live.example' }));
+    await a.page.evaluate(() => window.chh.hosts.create({ label: 'live-from-a', address: 'live.example' }));
     await expect(b.page.getByTestId('host-row').filter({ hasText: 'live-from-a' })).toBeVisible({ timeout: 15_000 });
     await expect(b.page.getByTestId('tabbar-sync')).toHaveAttribute('data-state', 'idle');
 
@@ -114,7 +114,7 @@ test('lock screen with passcode', async () => {
     const lock = page.getByTestId('lock-screen');
     await expect(lock).toBeVisible();
     // Data APIs are refused while locked, not just hidden.
-    const refused = await page.evaluate(() => window.cy.hosts.list({}).then(() => 'ok', (e) => (e as Error).message));
+    const refused = await page.evaluate(() => window.chh.hosts.list({}).then(() => 'ok', (e) => (e as Error).message));
     expect(refused).toContain('"code":"locked"');
     await page.getByTestId('lock-input').fill('1111');
     await page.getByTestId('lock-submit').click();
@@ -133,7 +133,7 @@ test('master password encrypts the local key and is required at startup', async 
   test.setTimeout(90_000);
   const first = await launchApp();
   const userData = first.userData;
-  await first.page.evaluate(() => window.cy.hosts.create({ label: 'behind-master', address: 'm.example' }));
+  await first.page.evaluate(() => window.chh.hosts.create({ label: 'behind-master', address: 'm.example' }));
   await openSettings(first.page, 'security');
   await first.page.getByTestId('master-password').fill('master-pass-123');
   await first.page.getByTestId('master-password-confirm').fill('master-pass-123');

@@ -1,18 +1,18 @@
 # Security
 
-This document describes how cy-ssh protects data **as of Phase 5**, and what later phases add. The full
+This document describes how chh protects data **as of Phase 5**, and what later phases add. The full
 cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](ARCHITECTURE.md#5-encryption-design).
 
 ## What we protect
 
 | Asset | Where it lives | Protection |
 |---|---|---|
-| Hosts, groups, tags, notes, known hosts, settings | `cy-ssh.db` | Whole-database encryption (SQLite3 Multiple Ciphers, ChaCha20-Poly1305) |
-| Saved passwords | Inside item JSON in `cy-ssh.db` | **Also** sealed with the vault key (XChaCha20-Poly1305) and bound to the item ID and field name |
+| Hosts, groups, tags, notes, known hosts, settings | `chh.db` | Whole-database encryption (SQLite3 Multiple Ciphers, ChaCha20-Poly1305) |
+| Saved passwords | Inside item JSON in `chh.db` | **Also** sealed with the vault key (XChaCha20-Poly1305) and bound to the item ID and field name |
 | Database key | `db.key` | Wrapped by the OS keychain via Electron `safeStorage` (Keychain / DPAPI / libsecret), **or** with a master password set, encrypted with an Argon2id-derived key (256 MiB, 3 passes) |
 | Sync account secrets | `sync_account` table | Tokens and the account key are sealed with the vault key inside the encrypted database |
 | Vault key | `vaults` table | Wrapped by a subkey derived from the database key, with the vault ID as associated data |
-| Keys in the keychain | Inside item JSON in `cy-ssh.db` | The private key is stored as an **unencrypted OpenSSH key sealed with the vault key** (on top of whole-database encryption). The import passphrase is used once and isn't stored |
+| Keys in the keychain | Inside item JSON in `chh.db` | The private key is stored as an **unencrypted OpenSSH key sealed with the vault key** (on top of whole-database encryption). The import passphrase is used once and isn't stored |
 | Identity passwords | Inside item JSON | Sealed with the vault key, like host passwords |
 | Private keys in `~/.ssh` | Your filesystem | Read on demand by the session host and never copied into the database unless you import them |
 
@@ -89,7 +89,7 @@ cryptographic design for sync and team vaults is in [ARCHITECTURE.md §5–6](AR
 - **Agent forwarding** is off by default and labelled as risky: a compromised server can use your agent while
   you're connected (it can't extract the keys). Enable it only for servers you trust.
 - **System OpenSSH engine:** that host is handled entirely by your `ssh` binary, with its own known_hosts and
-  config. cy-ssh doesn't see its passwords.
+  config. chh doesn't see its passwords.
 - **Multi-host runs** use the same authentication and host-key checks as interactive sessions. Output stays in
   memory (not in history).
 - **AI suggestions** are off by default and only run on request. The request contains the current command line,

@@ -1,5 +1,5 @@
 import type { Readable, Writable } from 'node:stream';
-import type { FileEntry } from '@cy-ssh/shared';
+import type { FileEntry } from '@chh/shared';
 
 export class FsError extends Error {
   constructor(

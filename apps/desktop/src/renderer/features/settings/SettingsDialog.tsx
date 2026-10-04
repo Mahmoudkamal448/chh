@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { DEFAULT_HOST_SETTINGS, type LocalShell, type UiTheme } from '@cy-ssh/shared';
+import { DEFAULT_HOST_SETTINGS, type LocalShell, type UiTheme } from '@chh/shared';
 import { Dialog } from '../../components/Dialog';
 import { Button, Checkbox, Field, Input, Kbd, Select } from '../../components/ui';
 import { ThemePicker } from './ThemePicker';
@@ -26,7 +26,7 @@ export function SettingsDialog() {
   const setSection = useApp((s) => s.setSettingsSection);
 
   useEffect(() => {
-    if (open) void window.cy.sessions.localShells({}).then(setShells);
+    if (open) void window.chh.sessions.localShells({}).then(setShells);
     else setRecording(null);
   }, [open]);
 
