@@ -56,7 +56,7 @@ docker run -d --name ufq-website --restart unless-stopped -p 80:80 <your-user>/u
 | Arabic text | `site/index.html` (the text inside each element) |
 | English text | `site/assets/js/i18n.js` (same keys as the `data-i18n` attributes in `index.html`) |
 | Colours, fonts, layout | `site/assets/css/style.css` (colours are at the top in `:root`) |
-| Logo | `site/assets/img/logo.svg` – currently a placeholder; replace it with the real logo (if it's a PNG, update the `logo.svg` paths in `index.html`) |
+| Logo | `site/assets/img/logo.png` (and the small browser-tab icon `favicon.png`) – replace with a new file of the same name to change it |
 | Certificate images | put them in `site/assets/img/certificates/` and follow the comment above the Certificates section in `index.html` |
 | Phone / WhatsApp | search for `27687519` in `index.html` |
 
