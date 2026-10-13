@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="UFQ logo">
+  <!-- Placeholder logo: replace this file with the real UFQ logo (keep the name logo.svg, or update the paths in index.html). -->
+  <path d="M60 6 L104 22 V58 C104 86 84 104 60 114 C36 104 16 86 16 58 V22 Z" fill="#0b3d6b"/>
+  <path d="M60 14 L96 27 V58 C96 81 80 96 60 105 C40 96 24 81 24 58 V27 Z" fill="none" stroke="#f2b632" stroke-width="3"/>
+  <text x="60" y="64" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="27" font-weight="800" fill="#ffffff" letter-spacing="1">UFQ</text>
+  <path d="M44 76 L55 86 L77 68" fill="none" stroke="#2e9e5b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
